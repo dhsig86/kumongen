@@ -143,9 +143,19 @@
         }
 
         if (baseItems.length === 0) return Array(target).fill({ type: 'unknown' });
+        
+        const keyFn = (item) => {
+            if (item.type === 'trace') return item.char;
+            if (item.type === 'syllable') return item.syllable;
+            if (item.type === 'word') return item.word;
+            return '';
+        };
+
+        const declustered = KumonGen.shuffleAndDecluster(baseItems, keyFn);
+
         let result = [];
         for (let i = 0; i < target; i++) {
-            result.push({ ...baseItems[i % baseItems.length] });
+            result.push({ ...declustered[i % declustered.length] });
         }
         return result;
     }
@@ -458,6 +468,57 @@
         if (id === 'p1' && customParams.traceSelected.length === 0) {
             customParams.traceSelected = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
         }
+
+        // Abastecimento automático de palavras sugeridas por nível para dar variedade imediata ao pai
+        if (id === 'p3') {
+            customParams.wordList = [
+                { word: 'BOLA', parts: ['BO','LA'] },
+                { word: 'CASA', parts: ['CA','SA'] },
+                { word: 'DADO', parts: ['DA','DO'] },
+                { word: 'FOCA', parts: ['FO','CA'] },
+                { word: 'GATO', parts: ['GA','TO'] },
+                { word: 'JACA', parts: ['JA','CA'] },
+                { word: 'LIMA', parts: ['LI','MA'] },
+                { word: 'MALA', parts: ['MA','LA'] },
+                { word: 'NOVE', parts: ['NO','VE'] },
+                { word: 'PATO', parts: ['PA','TO'] },
+                { word: 'RATO', parts: ['RA','TO'] },
+                { word: 'SAPO', parts: ['SA','PO'] },
+                { word: 'TATU', parts: ['TA','TU'] },
+                { word: 'VACA', parts: ['VA','CA'] },
+                { word: 'BOLO', parts: ['BO','LO'] },
+                { word: 'COPO', parts: ['CO','PO'] },
+                { word: 'DOCE', parts: ['DO','CE'] },
+                { word: 'LOBO', parts: ['LO','BO'] },
+                { word: 'SUCO', parts: ['SU','CO'] },
+                { word: 'VOTO', parts: ['VO','TO'] },
+                { word: 'FOGO', parts: ['FO','GO'] },
+                { word: 'LIXO', parts: ['LI','XO'] },
+                { word: 'TETO', parts: ['TE','TO'] },
+                { word: 'GELO', parts: ['GE','LO'] }
+            ];
+        } else if (id === 'p4') {
+            customParams.wordList = [
+                { word: 'BANANA', parts: ['BA','NA','NA'] },
+                { word: 'PIPOCA', parts: ['PI','PO','CA'] },
+                { word: 'PETECA', parts: ['PE','TE','CA'] },
+                { word: 'SAPATO', parts: ['SA','PA','TO'] },
+                { word: 'TOMATE', parts: ['TO','MA','TE'] },
+                { word: 'SACOLA', parts: ['SA','CO','LA'] },
+                { word: 'XÍCARA', parts: ['XÍ','CA','RA'] },
+                { word: 'PANELA', parts: ['PA','NE','LA'] },
+                { word: 'CABELO', parts: ['CA','BE','LO'] },
+                { word: 'JANELA', parts: ['JA','NE','LA'] },
+                { word: 'BONECO', parts: ['BO','NE','CO'] },
+                { word: 'PIJAMA', parts: ['PI','JA','MA'] },
+                { word: 'GELADO', parts: ['GE','LA','DO'] },
+                { word: 'TELEFONE', parts: ['TE','LE','FO','NE'] },
+                { word: 'CHOCOLATE', parts: ['CHO','CO','LA','TE'] },
+                { word: 'GELADEIRA', parts: ['GE','LA','DEI','RA'] },
+                { word: 'DADO', parts: ['DA','DO'] } // Fallback seguro
+            ];
+        }
+
         saveState();
         renderLevelList();
         updateParamPanel();

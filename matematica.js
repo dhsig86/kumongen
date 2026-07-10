@@ -85,14 +85,24 @@
                 break;
 
             case 'math':
+                let lastA = null;
                 for (let i = 0; i < target; i++) {
-                    let a = Math.floor(Math.random() * (customParams.max - customParams.min + 1)) + customParams.min;
+                    let a;
+                    let attempts = 0;
+                    const rangeSize = customParams.max - customParams.min + 1;
+                    do {
+                        a = Math.floor(Math.random() * rangeSize) + customParams.min;
+                        attempts++;
+                    } while (a === lastA && attempts < 10 && rangeSize > 1);
+                    
+                    lastA = a;
+                    let displayA = a;
                     if (customParams.operator === '-' && !customParams.allowNegative) {
-                        a = Math.max(a, customParams.operand);
+                        displayA = Math.max(a, customParams.operand);
                     }
                     baseItems.push({
                         type: 'math',
-                        operand1: a,
+                        operand1: displayA,
                         operator: customParams.operator,
                         operand2: customParams.operand
                     });
@@ -144,9 +154,18 @@
             case 'compare':
                 if (customParams.compRandom) {
                     const compCount = Math.max(customParams.compCount, target);
+                    let lastPairStr = null;
                     for (let i = 0; i < compCount; i++) {
-                        let a = Math.floor(Math.random() * (customParams.compMax - customParams.compMin + 1)) + customParams.compMin;
-                        let b = Math.floor(Math.random() * (customParams.compMax - customParams.compMin + 1)) + customParams.compMin;
+                        let a, b, pairStr;
+                        let attempts = 0;
+                        do {
+                            a = Math.floor(Math.random() * (customParams.compMax - customParams.compMin + 1)) + customParams.compMin;
+                            b = Math.floor(Math.random() * (customParams.compMax - customParams.compMin + 1)) + customParams.compMin;
+                            pairStr = `${a},${b}`;
+                            attempts++;
+                        } while (pairStr === lastPairStr && attempts < 10);
+                        
+                        lastPairStr = pairStr;
                         baseItems.push({ type: 'compare', pair: [a, b] });
                     }
                 } else {
@@ -168,9 +187,21 @@
         }
 
         if (baseItems.length === 0) return Array(target).fill({ type: 'unknown' });
+        
+        const keyFn = (item) => {
+            if (item.type === 'quantity') return item.value;
+            if (item.type === 'sequence') return item.sequence.join(',');
+            if (item.type === 'tens') return item.number;
+            if (item.type === 'compare') return item.pair.join(',');
+            if (item.type === 'neighbors') return item.center;
+            return '';
+        };
+
+        const declustered = KumonGen.shuffleAndDecluster(baseItems, keyFn);
+        
         let result = [];
         for (let i = 0; i < target; i++) {
-            result.push({ ...baseItems[i % baseItems.length] });
+            result.push({ ...declustered[i % declustered.length] });
         }
         return result;
     }

@@ -567,6 +567,30 @@ const KumonGen = (function() {
         document.body.appendChild(modal);
     }
 
+    function shuffleAndDecluster(arr, keyFn) {
+        if (!arr || arr.length <= 1) return arr;
+        
+        let shuffled = [...arr];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        
+        for (let i = 0; i < shuffled.length - 1; i++) {
+            if (keyFn(shuffled[i]) === keyFn(shuffled[i + 1])) {
+                for (let j = i + 2; j < shuffled.length; j++) {
+                    if (keyFn(shuffled[i]) !== keyFn(shuffled[j])) {
+                        let temp = shuffled[i + 1];
+                        shuffled[i + 1] = shuffled[j];
+                        shuffled[j] = temp;
+                        break;
+                    }
+                }
+            }
+        }
+        return shuffled;
+    }
+
     // Expõe a função pública globalmente para que os botões do widget possam acessá-la
     window.KumonGen_toggleTaskCompletion = toggleTaskCompletion;
     window.KumonGen_showTutorialModal = showTutorialModal;
@@ -580,6 +604,7 @@ const KumonGen = (function() {
         getHistory,
         getScore,
         showTutorialModal,
+        shuffleAndDecluster,
         toggleTaskCompletion: (id) => {
             const res = toggleTaskCompletion(id);
             renderScoreboardWidget();

@@ -108,9 +108,18 @@
         }
 
         if (baseItems.length === 0) return Array(target).fill({ type: 'unknown' });
+        
+        const keyFn = (item) => {
+            if (item.type === 'trace') return item.char;
+            if (item.type === 'word') return item.word;
+            return '';
+        };
+
+        const declustered = KumonGen.shuffleAndDecluster(baseItems, keyFn);
+
         let result = [];
         for (let i = 0; i < target; i++) {
-            result.push({ ...baseItems[i % baseItems.length] });
+            result.push({ ...declustered[i % declustered.length] });
         }
         return result;
     }
@@ -333,6 +342,49 @@
         if (id === 'i1' && customParams.traceSelected.length === 0) {
             customParams.traceSelected = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
         }
+
+        // Abastecimento automático de palavras em inglês sugeridas por nível
+        if (id === 'i2') {
+            customParams.wordList = [
+                { word: 'CAT', parts: ['C','A','T'] },
+                { word: 'DOG', parts: ['D','O','G'] },
+                { word: 'SUN', parts: ['S','U','N'] },
+                { word: 'CAR', parts: ['C','A','R'] },
+                { word: 'BED', parts: ['B','E','D'] },
+                { word: 'HAT', parts: ['H','A','T'] },
+                { word: 'FOG', parts: ['F','O','G'] },
+                { word: 'LEG', parts: ['L','E','G'] },
+                { word: 'PIG', parts: ['P','I','G'] },
+                { word: 'BUS', parts: ['B','U','S'] },
+                { word: 'MAP', parts: ['M','A','P'] },
+                { word: 'PEN', parts: ['P','E','N'] },
+                { word: 'FOX', parts: ['F','O','X'] },
+                { word: 'BAT', parts: ['B','A','T'] },
+                { word: 'CUP', parts: ['C','U','P'] },
+                { word: 'NUG', parts: ['N','U','G'] },
+                { word: 'BOX', parts: ['B','O','X'] }
+            ];
+        } else if (id === 'i3') {
+            customParams.wordList = [
+                { word: 'BIRD', parts: ['B','IR','D'] },
+                { word: 'FISH', parts: ['F','I','SH'] },
+                { word: 'TREE', parts: ['T','R','EE'] },
+                { word: 'BOOK', parts: ['B','OO','K'] },
+                { word: 'HOUSE', parts: ['H','OU','SE'] },
+                { word: 'CLOCK', parts: ['C','LO','CK'] },
+                { word: 'SNAKE', parts: ['S','NA','KE'] },
+                { word: 'FLOWER', parts: ['F','LO','WER'] },
+                { word: 'TRAIN', parts: ['T','R','AI','N'] },
+                { word: 'PLANE', parts: ['P','L','A','NE'] },
+                { word: 'FROG', parts: ['F','R','O','G'] },
+                { word: 'DUCK', parts: ['D','U','C','K'] },
+                { word: 'STAR', parts: ['S','T','A','R'] },
+                { word: 'BABY', parts: ['B','A','B','Y'] },
+                { word: 'BOAT', parts: ['B','OA','T'] },
+                { word: 'MILK', parts: ['M','I','L','K'] }
+            ];
+        }
+
         saveState();
         renderLevelList();
         updateParamPanel();
