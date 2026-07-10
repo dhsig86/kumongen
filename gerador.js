@@ -140,6 +140,64 @@ const KumonGen = (function() {
         });
     }
 
+    // Dica visual de impressão adaptada ao tamanho do caderno
+    function showPrintTip(totalPages) {
+        const existing = document.getElementById('print-tip-toast');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.id = 'print-tip-toast';
+        toast.className = 'fixed bottom-5 right-5 z-50 max-w-sm bg-slate-900 border border-slate-700 text-white rounded-2xl p-4 shadow-2xl flex flex-col gap-3 animate-bounce-subtle text-xs md:text-sm';
+        
+        let tipText = '';
+        if (totalPages === 2) {
+            tipText = `
+                <div class="flex gap-2">
+                    <div class="bg-indigo-600/20 text-indigo-400 w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm">
+                        <i class="fas fa-print"></i>
+                    </div>
+                    <div>
+                        <strong class="text-white block mb-0.5 text-xs uppercase tracking-wider">Dica de Impressão</strong>
+                        <p class="text-slate-300 text-[11px] leading-relaxed">Este caderno tem 2 tarefas e cabe em <strong>1 única folha A4</strong> (paisagem). Basta imprimir no modo padrão!</p>
+                    </div>
+                </div>
+            `;
+        } else {
+            const sheets = totalPages / 2;
+            tipText = `
+                <div class="flex gap-2">
+                    <div class="bg-indigo-600/20 text-indigo-400 w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm">
+                        <i class="fas fa-copy"></i>
+                    </div>
+                    <div>
+                        <strong class="text-white block mb-0.5 text-xs uppercase tracking-wider">Dica Frente e Verso</strong>
+                        <p class="text-slate-300 text-[11px] leading-relaxed">Este caderno usará <strong>${sheets} folhas A4</strong>. Para economizar papel e imprimir frente-e-verso:</p>
+                        <ol class="list-decimal pl-4 mt-1.5 space-y-0.5 text-slate-400 text-[10px] leading-normal">
+                            <li>Imprima primeiro apenas as <strong>páginas ímpares</strong> (Folha 1, 3, etc.).</li>
+                            <li>Recoloque as folhas na bandeja viradas e imprima as <strong>páginas pares</strong> no verso.</li>
+                        </ol>
+                    </div>
+                </div>
+            `;
+        }
+
+        toast.innerHTML = `
+            ${tipText}
+            <div class="flex justify-end mt-1 border-t border-slate-800 pt-2">
+                <button onclick="document.getElementById('print-tip-toast').remove()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold py-1 px-3 rounded-lg transition-colors">
+                    Entendi!
+                </button>
+            </div>
+        `;
+        document.body.appendChild(toast);
+
+        // Remove automaticamente após 12 segundos
+        setTimeout(() => {
+            const el = document.getElementById('print-tip-toast');
+            if (el) el.remove();
+        }, 12000);
+    }
+
     // GERAÇÃO DE PDF MULTIPÁGINA
     async function generatePDF(elementId = 'a4-sheet', subjectTitle, levelTitle, totalPages = 2, allItems, level, linesPerPage) {
         const element = document.getElementById(elementId);
@@ -220,6 +278,9 @@ const KumonGen = (function() {
 
             // Salva no histórico local
             saveHistory(subjectTitle, levelTitle, numPages);
+
+            // Exibe dica amigável de impressão
+            showPrintTip(numPages);
 
         } catch (error) {
             console.error(error);
