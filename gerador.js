@@ -354,55 +354,153 @@ const KumonGen = (function() {
         if (!container) return;
 
         const score = getScore();
-        const history = getHistory().slice(0, 3); // mostra as 3 últimas
+
+        container.innerHTML = `
+            <button onclick="KumonGen_showParentalControlModal()" class="w-full flex items-center justify-between bg-gradient-to-r from-yellow-50 to-orange-50 hover:from-yellow-100 hover:to-orange-100 border border-yellow-200 rounded-xl p-2.5 text-slate-700 transition-all font-bold text-xs shadow-sm hover:shadow">
+                <span class="flex items-center gap-1.5 text-amber-800">
+                    <i class="fas fa-chart-line text-[10px]"></i> Controle dos Pais / Progresso
+                </span>
+                <span class="text-[9px] bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                    <i class="fas fa-star text-[8px]"></i> ${score.stars}
+                </span>
+            </button>
+        `;
+    }
+
+    // Modal de Controle Parental e Estatísticas detalhadas de progresso
+    function showParentalControlModal() {
+        const existing = document.getElementById('parental-modal');
+        if (existing) existing.remove();
+
+        const score = getScore();
+        const history = getHistory();
 
         let historyHtml = '';
         if (history.length === 0) {
-            historyHtml = `<div class="text-[10px] text-slate-400 italic">Nenhum caderno gerado ainda.</div>`;
+            historyHtml = `
+                <div class="text-center py-8 text-slate-400 text-xs">
+                    <i class="fas fa-folder-open text-3xl mb-2 block opacity-30"></i>
+                    Nenhum caderno gerado ainda.
+                </div>
+            `;
         } else {
             history.forEach(task => {
-                const checkedClass = task.completed ? 'text-green-500' : 'text-slate-300 hover:text-green-400';
-                const checkIcon = task.completed ? 'fa-check-circle' : 'fa-circle';
-                const decoration = task.completed ? 'line-through text-slate-400' : 'text-slate-700 font-medium';
+                const checkedClass = task.completed 
+                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' 
+                    : 'bg-slate-100 border-slate-300 text-slate-400 hover:border-emerald-500 hover:text-emerald-400';
+                
+                const checkIcon = task.completed ? 'fa-check' : 'fa-plus';
+                const decoration = task.completed ? 'line-through text-slate-400 font-normal' : 'text-slate-700 font-bold';
+                const badgeColor = task.subject === 'Matemática' 
+                    ? 'bg-blue-50 text-blue-600' 
+                    : task.subject === 'Português' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600';
+                
                 historyHtml += `
-                    <div class="flex items-center justify-between bg-white px-2 py-1.5 rounded border border-slate-100 text-[10px] mb-1">
-                        <div class="truncate mr-2 text-left flex-1">
-                            <span class="${decoration}">${task.levelTitle}</span>
-                            <span class="text-[8px] text-slate-400 block">${task.date} · ${task.pages} pág.</span>
+                    <div class="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-xl border border-slate-100 text-xs mb-2">
+                        <div class="truncate mr-2 text-left flex-1 min-w-0">
+                            <div class="flex items-center gap-1.5 mb-0.5">
+                                <span class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full ${badgeColor}">${task.subject}</span>
+                                <span class="${decoration} text-xs truncate block">${task.levelTitle}</span>
+                            </div>
+                            <span class="text-[10px] text-slate-400 block">${task.date} · ${task.pages} pág.</span>
                         </div>
-                        <button onclick="KumonGen.toggleTaskCompletion('${task.id}')" class="transition-colors ${checkedClass}">
-                            <i class="far ${checkIcon} text-sm"></i>
+                        <button onclick="KumonGen_toggleTaskCompletionParental('${task.id}')" class="w-8 h-8 border-2 rounded-lg flex items-center justify-center transition-all ${checkedClass}">
+                            <i class="fas ${checkIcon} text-[10px]"></i>
                         </button>
                     </div>
                 `;
             });
         }
 
-        container.innerHTML = `
-            <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-3 mb-4 text-slate-800">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-[10px] font-black text-amber-800 uppercase tracking-wider">Meu Progresso</span>
-                    <span class="text-xs font-bold text-amber-600 flex items-center gap-0.5">
-                        <i class="fas fa-star text-yellow-500"></i> ${score.stars}
-                    </span>
-                </div>
-                <div class="grid grid-cols-2 gap-2 text-center mb-3">
-                    <div class="bg-white/80 rounded p-1 border border-yellow-100">
-                        <div class="text-[8px] text-slate-400 uppercase font-bold">Pontos</div>
-                        <div class="text-sm font-black text-amber-700">${score.points}</div>
+        // Estatística simples de controle parental (o que já foi treinado)
+        const subjectsCount = {};
+        history.forEach(h => {
+            subjectsCount[h.subject] = (subjectsCount[h.subject] || 0) + 1;
+        });
+        const statsHtml = Object.entries(subjectsCount).map(([sub, count]) => {
+            const pct = Math.round((count / history.length) * 100);
+            const barColor = sub === 'Matemática' ? 'bg-blue-500' : sub === 'Português' ? 'bg-green-500' : 'bg-red-500';
+            return `
+                <div class="mb-3">
+                    <div class="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
+                        <span>${sub}</span>
+                        <span>${count} cadernos (${pct}%)</span>
                     </div>
-                    <div class="bg-white/80 rounded p-1 border border-yellow-100">
-                        <div class="text-[8px] text-slate-400 uppercase font-bold">Cadernos</div>
-                        <div class="text-sm font-black text-amber-700">${score.completions}/${score.total}</div>
+                    <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div class="${barColor} h-full rounded-full transition-all" style="width: ${pct}%"></div>
                     </div>
                 </div>
-                <div class="border-t border-yellow-100 pt-2">
-                    <div class="text-[8px] font-bold text-slate-400 uppercase mb-1.5 text-left">Cadernos Recentes:</div>
-                    ${historyHtml}
+            `;
+        }).join('') || '<p class="text-xs text-slate-400 italic">Gere cadernos para ver estatísticas de estudo.</p>';
+
+        const modal = document.createElement('div');
+        modal.id = 'parental-modal';
+        modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm';
+        modal.innerHTML = `
+            <div class="bg-white rounded-3xl max-w-md w-full max-h-[85vh] overflow-y-auto shadow-2xl border border-slate-100 flex flex-col text-slate-800 transition-all transform scale-100">
+                <!-- Header -->
+                <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-yellow-50 to-orange-50 rounded-t-3xl">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-chart-pie text-amber-600 text-xl"></i>
+                        <h2 class="text-sm font-black text-slate-900 uppercase tracking-wider">Controle dos Pais & Progresso</h2>
+                    </div>
+                    <button onclick="document.getElementById('parental-modal').remove()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+                <!-- Body -->
+                <div class="p-5 space-y-5">
+                    <!-- Resumo Geral -->
+                    <div class="grid grid-cols-3 gap-3 text-center">
+                        <div class="bg-slate-50 rounded-2xl p-2 border border-slate-100">
+                            <div class="text-[9px] text-slate-400 uppercase font-black">Pontos</div>
+                            <div class="text-base font-black text-slate-700">${score.points}</div>
+                        </div>
+                        <div class="bg-slate-50 rounded-2xl p-2 border border-slate-100">
+                            <div class="text-[9px] text-slate-400 uppercase font-black">Estrelas</div>
+                            <div class="text-base font-black text-amber-500 flex items-center justify-center gap-0.5"><i class="fas fa-star text-xs"></i> ${score.stars}</div>
+                        </div>
+                        <div class="bg-slate-50 rounded-2xl p-2 border border-slate-100">
+                            <div class="text-[9px] text-slate-400 uppercase font-black">Cadernos</div>
+                            <div class="text-base font-black text-emerald-600">${score.completions}/${score.total}</div>
+                        </div>
+                    </div>
+
+                    <!-- Frequência de Estudos -->
+                    <div class="border-t border-slate-100 pt-4">
+                        <h4 class="text-xs font-black text-slate-400 uppercase tracking-wider mb-2.5">Matérias mais Treinadas</h4>
+                        ${statsHtml}
+                    </div>
+
+                    <!-- Histórico de Exercícios -->
+                    <div class="border-t border-slate-100 pt-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-xs font-black text-slate-400 uppercase tracking-wider">Histórico de Atividades</h4>
+                            <span class="text-[10px] text-slate-400">Marque o que a criança concluiu</span>
+                        </div>
+                        <div class="max-h-52 overflow-y-auto pr-1">
+                            ${historyHtml}
+                        </div>
+                    </div>
+                </div>
+                <!-- Footer -->
+                <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end rounded-b-3xl">
+                    <button onclick="document.getElementById('parental-modal').remove()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-5 rounded-xl transition-all text-xs">
+                        Fechar Painel
+                    </button>
                 </div>
             </div>
         `;
+        document.body.appendChild(modal);
     }
+
+    // Função de trigger de conclusão que redesenha o modal de controle parental
+    window.KumonGen_toggleTaskCompletionParental = (id) => {
+        toggleTaskCompletion(id);
+        showParentalControlModal();
+    };
+
+    window.KumonGen_showParentalControlModal = showParentalControlModal;
 
     // Modal de tutorial interativo integrado na interface
     function showTutorialModal() {
