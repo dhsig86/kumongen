@@ -464,13 +464,14 @@
     }
 
     window.selectLevel = function(id) {
+        const previousLevel = currentLevelId;
         currentLevelId = id;
         if (id === 'p1' && customParams.traceSelected.length === 0) {
             customParams.traceSelected = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
         }
 
-        // Abastecimento automático de palavras sugeridas por nível para dar variedade imediata ao pai
-        if (id === 'p3') {
+        // Abastecimento automático de palavras sugeridas por nível (só ao trocar de nível, preservando customizações)
+        if (id === 'p3' && previousLevel !== 'p3') {
             customParams.wordList = [
                 { word: 'BOLA', parts: ['BO','LA'] },
                 { word: 'CASA', parts: ['CA','SA'] },
@@ -497,7 +498,7 @@
                 { word: 'TETO', parts: ['TE','TO'] },
                 { word: 'GELO', parts: ['GE','LO'] }
             ];
-        } else if (id === 'p4') {
+        } else if (id === 'p4' && previousLevel !== 'p4') {
             customParams.wordList = [
                 { word: 'BANANA', parts: ['BA','NA','NA'] },
                 { word: 'PIPOCA', parts: ['PI','PO','CA'] },
@@ -515,7 +516,7 @@
                 { word: 'TELEFONE', parts: ['TE','LE','FO','NE'] },
                 { word: 'CHOCOLATE', parts: ['CHO','CO','LA','TE'] },
                 { word: 'GELADEIRA', parts: ['GE','LA','DEI','RA'] },
-                { word: 'DADO', parts: ['DA','DO'] } // Fallback seguro
+                { word: 'CAVALO', parts: ['CA','VA','LO'] }
             ];
         }
 

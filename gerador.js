@@ -525,7 +525,7 @@ const KumonGen = (function() {
                 <!-- Body -->
                 <div class="p-6 space-y-4 text-xs md:text-sm">
                     <p class="text-slate-600 leading-relaxed">
-                        Bem-vindo ao **KumonGen**! Este gerador auxilia na criação de materiais impressos estruturados para o aprendizado das crianças.
+                        Bem-vindo ao <strong>KumonGen</strong>! Este gerador auxilia na criação de materiais impressos estruturados para o aprendizado das crianças.
                     </p>
                     
                     <div class="space-y-3">
@@ -552,7 +552,7 @@ const KumonGen = (function() {
                             <i class="fas fa-trophy text-amber-600"></i> Sistema de Conquistas (Scoreboard)
                         </h4>
                         <p class="text-amber-800 text-[11px] md:text-xs leading-relaxed">
-                            Crie um incentivo extra! Gerar cada PDF dá <strong>+10 pontos</strong>. Quando a criança terminar a tarefa no papel, clique na bolinha <i class="far fa-circle text-slate-400"></i> no histórico para marcar como **Concluído**. Isso adiciona <strong>+50 pontos</strong> adicionais e <strong>+1 estrela</strong> ao Quadro de Conquistas!
+                            Crie um incentivo extra! Gerar cada PDF dá <strong>+10 pontos</strong>. Quando a criança terminar a tarefa no papel, clique na bolinha <i class="far fa-circle text-slate-400"></i> no histórico para marcar como <strong>Concluído</strong>. Isso adiciona <strong>+50 pontos</strong> adicionais e <strong>+1 estrela</strong> ao Quadro de Conquistas!
                         </p>
                     </div>
                 </div>

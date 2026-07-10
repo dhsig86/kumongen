@@ -338,13 +338,14 @@
     }
 
     window.selectLevel = function(id) {
+        const previousLevel = currentLevelId;
         currentLevelId = id;
         if (id === 'i1' && customParams.traceSelected.length === 0) {
             customParams.traceSelected = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
         }
 
-        // Abastecimento automático de palavras em inglês sugeridas por nível
-        if (id === 'i2') {
+        // Abastecimento automático de palavras em inglês (só ao trocar de nível, preservando customizações)
+        if (id === 'i2' && previousLevel !== 'i2') {
             customParams.wordList = [
                 { word: 'CAT', parts: ['C','A','T'] },
                 { word: 'DOG', parts: ['D','O','G'] },
@@ -361,10 +362,10 @@
                 { word: 'FOX', parts: ['F','O','X'] },
                 { word: 'BAT', parts: ['B','A','T'] },
                 { word: 'CUP', parts: ['C','U','P'] },
-                { word: 'NUG', parts: ['N','U','G'] },
+                { word: 'MUG', parts: ['M','U','G'] },
                 { word: 'BOX', parts: ['B','O','X'] }
             ];
-        } else if (id === 'i3') {
+        } else if (id === 'i3' && previousLevel !== 'i3') {
             customParams.wordList = [
                 { word: 'BIRD', parts: ['B','IR','D'] },
                 { word: 'FISH', parts: ['F','I','SH'] },
