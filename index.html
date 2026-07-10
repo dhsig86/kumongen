@@ -35,7 +35,12 @@
                     <i class="fas fa-trophy"></i>
                 </div>
                 <div>
-                    <h2 class="text-xl font-black text-white">Quadro de Conquistas</h2>
+                    <div class="flex items-center gap-1.5">
+                        <h2 class="text-xl font-black text-white">Quadro de Conquistas</h2>
+                        <button onclick="KumonGen_showTutorialModal()" class="text-indigo-400 hover:text-indigo-300 text-sm transition-colors" title="Como funciona? / Tutorial">
+                            <i class="fas fa-question-circle"></i>
+                        </button>
+                    </div>
                     <p class="text-xs text-slate-400">Marque as tarefas impressas como concluídas para ganhar estrelas!</p>
                 </div>
             </div>
@@ -112,31 +117,16 @@
         </p>
     </div>
 
+    <!-- Scripts comuns -->
+    <script src="gerador.js"></script>
     <script>
         function getScore() {
-            const history = JSON.parse(localStorage.getItem('kumongen_history') || '[]');
-            const createdCount = history.length;
-            const completedCount = history.filter(t => t.completed).length;
-
-            const points = (createdCount * 10) + (completedCount * 50);
-            const stars = completedCount;
-
-            return {
-                points,
-                stars,
-                completions: completedCount,
-                total: createdCount
-            };
+            return KumonGen.getScore();
         }
 
         function toggleTask(id) {
-            const history = JSON.parse(localStorage.getItem('kumongen_history') || '[]');
-            const task = history.find(t => t.id === id);
-            if (task) {
-                task.completed = !task.completed;
-                localStorage.setItem('kumongen_history', JSON.stringify(history));
-                updateDashboard();
-            }
+            KumonGen.toggleTaskCompletion(id);
+            updateDashboard();
         }
 
         function updateDashboard() {

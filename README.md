@@ -2,15 +2,17 @@ KumonGen · Gerador de Cadernos Personalizados
 Este é um gerador de exercícios no estilo Kumon, desenvolvido como uma SPA (página única) para uso doméstico. O foco principal é auxiliar crianças com dificuldades em matemática (como discalculia), oferecendo cadernos de treino adaptáveis e de fácil expansão.
 
 Funcionalidades
-✅ Escolha entre Português (traçado de letras, sílabas, palavras) e Matemática (quantidade, adição, sequências, dezenas, comparação, vizinhos).
+✅ **Disciplinas**: Português (traçado, sílabas, formação de palavras), Inglês (traçado, palavras CVC, termos fáceis) e Matemática (quantidade, dezenas, vizinhos, sequências, comparação, adição/subtração).
 
-✅ Pré‑visualização em tamanho real (A4 paisagem) com duas páginas lado a lado.
+✅ **Geração Multipágina (Eficiência)**: Escolha gerar cadernos com 2, 4, 6 ou 8 páginas de exercícios de uma só vez. A lógica de sorteio dinâmico garante que cada página tenha exercícios diferentes.
 
-✅ Ajuste de zoom e número de linhas por página.
+✅ **Quadro de Conquistas (Scoreboard)**: Sistema gamificado e persistente localmente via `LocalStorage`. As crianças ganham pontos ao gerar PDFs (+10 pts) e ao marcá-los como concluídos (+50 pts e 1 estrela) na lista de histórico recente.
 
-✅ Geração de PDF pronto para impressão (A4 paisagem, alta qualidade).
+✅ **Escala Universal Inteligente**: Visualização do caderno A4 responsiva para celulares, tablets e desktops sem quebrar o layout das folhas de impressão.
 
-✅ Banco de dados central (LevelLibrary) em JSON – fácil de expandir sem conhecimentos de programação.
+✅ **Banco de Dados Editável**: Níveis e exercícios definidos centralizadamente nos arquivos JS de cada matéria – fácil de estender.
+
+✅ **Uso Offline Completo**: O gerador funciona inteiramente no navegador do usuário, podendo ser executado mesmo sem internet (offline) através do protocolo local `file:///`.
 
 Como usar
 Acesse a página (GitHub Pages ou abra o arquivo index.html localmente).

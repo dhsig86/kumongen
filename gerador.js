@@ -343,8 +343,74 @@ const KumonGen = (function() {
         `;
     }
 
+    // Modal de tutorial interativo integrado na interface
+    function showTutorialModal() {
+        const existing = document.getElementById('tutorial-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'tutorial-modal';
+        modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm';
+        modal.innerHTML = `
+            <div class="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-2xl border border-slate-100 flex flex-col text-slate-800 transition-all transform scale-100">
+                <!-- Header -->
+                <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-3xl">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-graduation-cap text-blue-600 text-2xl animate-bounce-subtle"></i>
+                        <h2 class="text-sm font-black text-slate-900 uppercase tracking-wider">Tutorial KumonGen</h2>
+                    </div>
+                    <button onclick="document.getElementById('tutorial-modal').remove()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+                <!-- Body -->
+                <div class="p-6 space-y-4 text-xs md:text-sm">
+                    <p class="text-slate-600 leading-relaxed">
+                        Bem-vindo ao **KumonGen**! Este gerador auxilia na criação de materiais impressos estruturados para o aprendizado das crianças.
+                    </p>
+                    
+                    <div class="space-y-3">
+                        <div class="flex gap-3 text-left">
+                            <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 font-bold text-xs flex items-center justify-center flex-shrink-0">1</div>
+                            <p class="text-slate-700 flex-1"><strong>Escolha o Nível</strong>: Na barra lateral esquerda, selecione o nível desejado (ex: quantidade, adição simples, traçado de alfabeto ou formação de palavras).</p>
+                        </div>
+                        <div class="flex gap-3 text-left">
+                            <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 font-bold text-xs flex items-center justify-center flex-shrink-0">2</div>
+                            <p class="text-slate-700 flex-1"><strong>Ajuste os Parâmetros</strong>: Altere os valores de repetições, operadores, intervalos ou adicione novas palavras na lista para personalizar os exercícios.</p>
+                        </div>
+                        <div class="flex gap-3 text-left">
+                            <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 font-bold text-xs flex items-center justify-center flex-shrink-0">3</div>
+                            <p class="text-slate-700 flex-1"><strong>Folhas e Zoom</strong>: Defina a quantidade de páginas do caderno (2, 4, 6 ou 8 páginas) e quantas linhas por folha. O preview A4 se atualiza e se ajusta automaticamente para celulares e tablets.</p>
+                        </div>
+                        <div class="flex gap-3 text-left">
+                            <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 font-bold text-xs flex items-center justify-center flex-shrink-0">4</div>
+                            <p class="text-slate-700 flex-1"><strong>Gere o PDF</strong>: Clique em <strong>GERAR PDF</strong> para baixar um arquivo pronto para impressão (folha A4 paisagem, com duas páginas A5 lado a lado por folha).</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-4 mt-2 text-left">
+                        <h4 class="font-black text-amber-900 flex items-center gap-1.5 mb-1 text-xs md:text-sm">
+                            <i class="fas fa-trophy text-amber-600"></i> Sistema de Conquistas (Scoreboard)
+                        </h4>
+                        <p class="text-amber-800 text-[11px] md:text-xs leading-relaxed">
+                            Crie um incentivo extra! Gerar cada PDF dá <strong>+10 pontos</strong>. Quando a criança terminar a tarefa no papel, clique na bolinha <i class="far fa-circle text-slate-400"></i> no histórico para marcar como **Concluído**. Isso adiciona <strong>+50 pontos</strong> adicionais e <strong>+1 estrela</strong> ao Quadro de Conquistas!
+                        </p>
+                    </div>
+                </div>
+                <!-- Footer -->
+                <div class="p-5 border-t border-slate-100 bg-slate-50 flex justify-end rounded-b-3xl">
+                    <button onclick="document.getElementById('tutorial-modal').remove()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-md shadow-blue-600/10 text-xs md:text-sm">
+                        Entendi, vamos treinar!
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
     // Expõe a função pública globalmente para que os botões do widget possam acessá-la
     window.KumonGen_toggleTaskCompletion = toggleTaskCompletion;
+    window.KumonGen_showTutorialModal = showTutorialModal;
 
     return {
         initRefs,
@@ -354,6 +420,7 @@ const KumonGen = (function() {
         adjustPreviewScale,
         getHistory,
         getScore,
+        showTutorialModal,
         toggleTaskCompletion: (id) => {
             const res = toggleTaskCompletion(id);
             renderScoreboardWidget();
