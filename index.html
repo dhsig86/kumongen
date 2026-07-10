@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KumonGen · Início</title>
+    <!-- Tailwind via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        }
+        @keyframes bounceSubtle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+        .animate-bounce-subtle {
+            animation: bounceSubtle 4s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 py-12">
+    <div class="max-w-4xl w-full text-center">
+        <h1 class="text-5xl font-black text-white mb-2">
+            Kumon<span class="text-indigo-400">Gen</span>
+        </h1>
+        <p class="text-xl text-slate-300 mb-10">Gerador de cadernos personalizados</p>
+
+        <!-- Scoreboard Central -->
+        <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-slate-700/80 rounded-3xl p-6 mb-10 shadow-2xl text-slate-200 flex flex-col md:flex-row gap-6 items-center justify-between text-left transition-all hover:border-indigo-500/30">
+            <div class="flex items-center gap-4">
+                <div class="bg-gradient-to-br from-yellow-400 to-amber-500 w-16 h-16 rounded-2xl flex items-center justify-center text-slate-950 text-3xl shadow-lg shadow-yellow-500/20 animate-bounce-subtle">
+                    <i class="fas fa-trophy"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-black text-white">Quadro de Conquistas</h2>
+                    <p class="text-xs text-slate-400">Marque as tarefas impressas como concluídas para ganhar estrelas!</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-4 w-full md:w-auto">
+                <div class="bg-slate-950/40 border border-slate-800 rounded-2xl px-5 py-3 flex-1 text-center min-w-[100px]">
+                    <div class="text-[10px] text-slate-400 uppercase font-black tracking-wider">Pontos</div>
+                    <div id="totalPoints" class="text-2xl font-black text-indigo-400">0</div>
+                </div>
+                <div class="bg-slate-950/40 border border-slate-800 rounded-2xl px-5 py-3 flex-1 text-center min-w-[100px]">
+                    <div class="text-[10px] text-slate-400 uppercase font-black tracking-wider">Estrelas</div>
+                    <div class="text-2xl font-black text-yellow-400 flex items-center justify-center gap-1">
+                        <i class="fas fa-star text-sm"></i> <span id="starVal">0</span>
+                    </div>
+                </div>
+                <div class="bg-slate-950/40 border border-slate-800 rounded-2xl px-5 py-3 flex-1 text-center min-w-[100px]">
+                    <div class="text-[10px] text-slate-400 uppercase font-black tracking-wider">Cadernos</div>
+                    <div id="totalCompletions" class="text-2xl font-black text-emerald-400">0/0</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Matemática - Azul e branco -->
+            <a href="matematica.html" class="group bg-blue-600 hover:bg-blue-700 rounded-2xl p-8 shadow-2xl transition-all transform hover:scale-105">
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-calculator text-white text-5xl mb-4"></i>
+                    <h2 class="text-2xl font-bold text-white mb-2">Matemática</h2>
+                    <p class="text-blue-100">Números, contas, desafios</p>
+                    <span class="mt-4 inline-block bg-white text-blue-600 px-4 py-2 rounded-full text-sm font-bold group-hover:bg-blue-50">Acessar →</span>
+                </div>
+            </a>
+
+            <!-- Português - Verde e amarelo -->
+            <a href="portugues.html" class="group bg-gradient-to-br from-green-600 to-yellow-500 hover:from-green-700 hover:to-yellow-600 rounded-2xl p-8 shadow-2xl transition-all transform hover:scale-105">
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-font text-white text-5xl mb-4"></i>
+                    <h2 class="text-2xl font-bold text-white mb-2">Português</h2>
+                    <p class="text-green-100">Letras, sílabas, palavras</p>
+                    <span class="mt-4 inline-block bg-white text-green-600 px-4 py-2 rounded-full text-sm font-bold group-hover:bg-green-50">Acessar →</span>
+                </div>
+            </a>
+
+            <!-- Inglês - Vermelho e azul -->
+            <a href="ingles.html" class="group bg-gradient-to-br from-red-600 to-blue-600 hover:from-red-700 hover:to-blue-700 rounded-2xl p-8 shadow-2xl transition-all transform hover:scale-105">
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-language text-white text-5xl mb-4"></i>
+                    <h2 class="text-2xl font-bold text-white mb-2">Inglês</h2>
+                    <p class="text-red-100">Alphabet, words, phonics</p>
+                    <span class="mt-4 inline-block bg-white text-red-600 px-4 py-2 rounded-full text-sm font-bold group-hover:bg-red-50">Acessar →</span>
+                </div>
+            </a>
+        </div>
+
+        <!-- Histórico e Controle de Tarefas -->
+        <div class="bg-slate-800/40 border border-slate-700/50 backdrop-blur rounded-3xl p-6 md:p-8 mt-10 text-left shadow-xl">
+            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fas fa-history text-indigo-400"></i> Histórico de Atividades Recentes
+            </h3>
+            <div id="historyList" class="space-y-3">
+                <!-- Inserido via JS -->
+            </div>
+        </div>
+
+        <!-- Botão de doação -->
+        <div class="mt-10">
+            <a href="https://www.paypal.com/donate/?hosted_button_id=33K7CJ2EQELNU" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-all transform hover:scale-105">
+                <i class="fas fa-heart"></i> Apoie este projeto
+            </a>
+        </div>
+
+        <p class="mt-10 text-slate-500 text-sm">
+            criado por Dario Hart · Free use 2026
+        </p>
+    </div>
+
+    <script>
+        function getScore() {
+            const history = JSON.parse(localStorage.getItem('kumongen_history') || '[]');
+            const createdCount = history.length;
+            const completedCount = history.filter(t => t.completed).length;
+
+            const points = (createdCount * 10) + (completedCount * 50);
+            const stars = completedCount;
+
+            return {
+                points,
+                stars,
+                completions: completedCount,
+                total: createdCount
+            };
+        }
+
+        function toggleTask(id) {
+            const history = JSON.parse(localStorage.getItem('kumongen_history') || '[]');
+            const task = history.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                localStorage.setItem('kumongen_history', JSON.stringify(history));
+                updateDashboard();
+            }
+        }
+
+        function updateDashboard() {
+            const score = getScore();
+            document.getElementById('totalPoints').innerText = score.points;
+            document.getElementById('starVal').innerText = score.stars;
+            document.getElementById('totalCompletions').innerText = `${score.completions}/${score.total}`;
+
+            const history = JSON.parse(localStorage.getItem('kumongen_history') || '[]');
+            const historyContainer = document.getElementById('historyList');
+
+            if (history.length === 0) {
+                historyContainer.innerHTML = `
+                    <div class="text-center py-8 text-slate-400 text-sm">
+                        <i class="fas fa-folder-open text-4xl mb-3 block opacity-30"></i>
+                        Nenhum caderno gerado ainda. Escolha uma das disciplinas acima para começar!
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            // Mostra os 5 últimos
+            history.slice(0, 5).forEach(task => {
+                const checkedClass = task.completed 
+                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' 
+                    : 'bg-slate-700/30 border-slate-600 text-slate-400 hover:border-emerald-500 hover:text-emerald-400';
+                
+                const checkIcon = task.completed ? 'fa-check' : 'fa-plus';
+                const subjectBadge = getSubjectBadge(task.subject);
+                const textDecoration = task.completed ? 'line-through text-slate-500' : 'text-white';
+                const statusText = task.completed 
+                    ? '<span class="text-emerald-400 font-semibold text-[10px] uppercase bg-emerald-500/10 px-2 py-0.5 rounded-full flex items-center gap-1"><i class="fas fa-check-double text-[8px]"></i> Concluído (+50 pts)</span>' 
+                    : '<span class="text-slate-400 text-[10px] uppercase bg-slate-700/50 px-2 py-0.5 rounded-full">Pendente</span>';
+
+                html += `
+                    <div class="flex items-center justify-between p-4 bg-slate-900/40 border border-slate-800/80 rounded-2xl transition-all hover:bg-slate-900/60">
+                        <div class="flex items-center gap-4 min-w-0">
+                            ${subjectBadge}
+                            <div class="truncate">
+                                <h4 class="font-bold text-sm md:text-base ${textDecoration}">${task.levelTitle}</h4>
+                                <div class="flex flex-wrap items-center gap-2 mt-1">
+                                    <span class="text-[10px] text-slate-400">${task.date}</span>
+                                    <span class="text-[10px] text-slate-500 font-mono">${task.pages} pág.</span>
+                                    ${statusText}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button onclick="toggleTask('${task.id}')" class="w-10 h-10 border-2 rounded-xl flex items-center justify-center transition-all ${checkedClass}">
+                            <i class="fas ${checkIcon}"></i>
+                        </button>
+                    </div>
+                `;
+            });
+            historyContainer.innerHTML = html;
+        }
+
+        function getSubjectBadge(subject) {
+            if (subject === 'Matemática') {
+                return `
+                    <div class="bg-blue-600/20 text-blue-400 w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0">
+                        <i class="fas fa-calculator"></i>
+                    </div>
+                `;
+            } else if (subject === 'Português') {
+                return `
+                    <div class="bg-green-600/20 text-green-400 w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0">
+                        <i class="fas fa-font"></i>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div class="bg-red-600/20 text-red-400 w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0">
+                        <i class="fas fa-language"></i>
+                    </div>
+                `;
+            }
+        }
+
+        window.toggleTask = toggleTask;
+
+        document.addEventListener('DOMContentLoaded', updateDashboard);
+        window.addEventListener('storage', updateDashboard);
+    </script>
+</body>
+</html>

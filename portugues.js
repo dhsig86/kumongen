@@ -1,0 +1,536 @@
+// portugues.js - Lógica específica para Português com interface amigável
+(function() {
+    // ---------- BANCO DE DADOS ----------
+    const LevelLibrary = {
+        portugues: [
+            {
+                id: 'p1',
+                title: 'P1 · Alfabeto (traçado)',
+                type: 'trace',
+                instruction: 'Selecione as letras para treinar.'
+            },
+            {
+                id: 'p2',
+                title: 'P2 · Sílabas simples',
+                type: 'syllables',
+                instruction: 'Escolha as famílias silábicas.'
+            },
+            {
+                id: 'p3',
+                title: 'P3 · Palavras curtas (2 sílabas)',
+                type: 'wordbuilding',
+                instruction: 'Adicione palavras e suas sílabas.'
+            },
+            {
+                id: 'p4',
+                title: 'P4 · Palavras com 3 ou 4 sílabas',
+                type: 'wordbuilding',
+                instruction: 'Adicione palavras mais longas.'
+            }
+        ]
+    };
+
+    // ---------- ESTADO LOCAL ----------
+    let currentLevelId = 'p1';
+    let itemsPerPage = 8;
+    let currentZoom = 0.7;
+
+    // Elementos DOM
+    let pageLeft, pageRight, levelListDiv, paramPanel, zoomSpan, zoomContainer;
+
+    // ---------- PARÂMETROS CUSTOMIZÁVEIS ----------
+    let customParams = {
+        // Para trace
+        traceSelected: [],  // será preenchido com todas no init
+        traceRepeat: 2,
+        // Para syllables
+        syllableFamilies: {
+            'BA': true, 'BE': true, 'BI': true, 'BO': true, 'BU': true,
+            'CA': true, 'CE': true, 'CI': true, 'CO': true, 'CU': true,
+            'DA': true, 'DE': true, 'DI': true, 'DO': true, 'DU': true,
+            'FA': true, 'FE': true, 'FI': true, 'FO': true, 'FU': true,
+            'GA': true, 'GE': true, 'GI': true, 'GO': true, 'GU': true,
+            'JA': true, 'JE': true, 'JI': true, 'JO': true, 'JU': true,
+            'LA': true, 'LE': true, 'LI': true, 'LO': true, 'LU': true,
+            'MA': true, 'ME': true, 'MI': true, 'MO': true, 'MU': true,
+            'NA': true, 'NE': true, 'NI': true, 'NO': true, 'NU': true,
+            'PA': true, 'PE': true, 'PI': true, 'PO': true, 'PU': true,
+            'RA': true, 'RE': true, 'RI': true, 'RO': true, 'RU': true,
+            'SA': true, 'SE': true, 'SI': true, 'SO': true, 'SU': true,
+            'TA': true, 'TE': true, 'TI': true, 'TO': true, 'TU': true,
+            'VA': true, 'VE': true, 'VI': true, 'VO': true, 'VU': true,
+            'ZA': true, 'ZE': true, 'ZI': true, 'ZO': true, 'ZU': true
+        },
+        syllableRepeat: 2,
+        // Para wordbuilding
+        wordList: [
+            { word: 'BOLA', parts: ['BO','LA'] },
+            { word: 'CASA', parts: ['CA','SA'] },
+            { word: 'DADO', parts: ['DA','DO'] },
+            { word: 'FOCA', parts: ['FO','CA'] },
+            { word: 'GATO', parts: ['GA','TO'] },
+            { word: 'JACA', parts: ['JA','CA'] },
+            { word: 'LIMA', parts: ['LI','MA'] },
+            { word: 'MALA', parts: ['MA','LA'] },
+            { word: 'NOVE', parts: ['NO','VE'] },
+            { word: 'PATO', parts: ['PA','TO'] },
+            { word: 'RATO', parts: ['RA','TO'] },
+            { word: 'SAPO', parts: ['SA','PO'] },
+            { word: 'TATU', parts: ['TA','TU'] },
+            { word: 'VACA', parts: ['VA','CA'] }
+        ],
+        wordRepeat: 2
+    };
+
+    // ---------- PERSISTÊNCIA (LOCAL STORAGE) ----------
+    function loadSavedState() {
+        const savedLevelId = localStorage.getItem('kumongen_por_level');
+        if (savedLevelId) {
+            currentLevelId = savedLevelId;
+        }
+
+        const savedParams = localStorage.getItem('kumongen_por_params');
+        if (savedParams) {
+            try {
+                const parsed = JSON.parse(savedParams);
+                customParams = { ...customParams, ...parsed };
+            } catch (e) {
+                console.error("Erro ao ler parametros salvos de portugues", e);
+            }
+        }
+    }
+
+    function saveState() {
+        localStorage.setItem('kumongen_por_level', currentLevelId);
+        localStorage.setItem('kumongen_por_params', JSON.stringify(customParams));
+    }
+
+    // ---------- FUNÇÕES DE GERAÇÃO DE ITENS ----------
+    function generateItemsForLevel(level, count) {
+        if (!level) return [];
+        const target = count || (itemsPerPage * 2);
+
+        let baseItems = [];
+
+        switch (level.type) {
+            case 'trace':
+                customParams.traceSelected.forEach(letter => {
+                    for (let i = 0; i < customParams.traceRepeat; i++) {
+                        baseItems.push({ type: 'trace', char: letter });
+                    }
+                });
+                break;
+
+            case 'syllables':
+                const selectedSyllables = Object.keys(customParams.syllableFamilies).filter(s => customParams.syllableFamilies[s]);
+                selectedSyllables.forEach(syllable => {
+                    for (let i = 0; i < customParams.syllableRepeat; i++) {
+                        baseItems.push({ type: 'syllable', syllable: syllable });
+                    }
+                });
+                break;
+
+            case 'wordbuilding':
+                customParams.wordList.forEach(wordObj => {
+                    for (let i = 0; i < customParams.wordRepeat; i++) {
+                        baseItems.push({ type: 'word', word: wordObj.word, parts: wordObj.parts });
+                    }
+                });
+                break;
+
+            default:
+                return Array(target).fill({ type: 'unknown' });
+        }
+
+        if (baseItems.length === 0) return Array(target).fill({ type: 'unknown' });
+        let result = [];
+        for (let i = 0; i < target; i++) {
+            result.push({ ...baseItems[i % baseItems.length] });
+        }
+        return result;
+    }
+
+    // ---------- PAINEL DE PARÂMETROS ----------
+    function updateParamPanel() {
+        const level = LevelLibrary.portugues.find(l => l.id === currentLevelId);
+        if (!level || !paramPanel) return;
+
+        let html = '';
+
+        switch (level.type) {
+            case 'trace':
+                html = renderTracePanel();
+                break;
+            case 'syllables':
+                html = renderSyllablesPanel();
+                break;
+            case 'wordbuilding':
+                html = renderWordPanel();
+                break;
+            default:
+                html = '<div class="text-slate-400">Sem parâmetros adicionais.</div>';
+        }
+
+        paramPanel.innerHTML = html;
+        attachParamEvents(level.type);
+    }
+
+    function renderTracePanel() {
+        const allLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        let checkboxes = '';
+        allLetters.forEach(letter => {
+            const checked = customParams.traceSelected.includes(letter) ? 'checked' : '';
+            checkboxes += `
+                <label class="inline-flex items-center gap-1 mr-2 mb-1">
+                    <input type="checkbox" class="trace-letter" value="${letter}" ${checked}>
+                    <span class="text-xs">${letter}</span>
+                </label>
+            `;
+        });
+
+        return `
+            <div class="param-control">
+                <div class="mb-2">
+                    <label class="block text-xs font-bold mb-1">Letras para treinar:</label>
+                    <div class="bg-white p-2 rounded max-h-40 overflow-y-auto border border-slate-200">
+                        ${checkboxes}
+                    </div>
+                </div>
+                <div class="param-row">
+                    <label>Repetições:</label>
+                    <input type="number" id="traceRepeat" value="${customParams.traceRepeat}" min="1" max="5">
+                </div>
+                <div class="button-group">
+                    <button id="selectAllTrace">Selecionar todas</button>
+                    <button id="clearAllTrace">Limpar</button>
+                    <button id="randomTrace">Aleatório</button>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderSyllablesPanel() {
+        const families = {};
+        Object.keys(customParams.syllableFamilies).sort().forEach(s => {
+            const first = s[0];
+            if (!families[first]) families[first] = [];
+            families[first].push(s);
+        });
+
+        let html = '<div class="param-control">';
+        html += '<div class="mb-2"><label class="block text-xs font-bold mb-1">Famílias silábicas:</label>';
+        html += '<div class="bg-white p-2 rounded max-h-60 overflow-y-auto border border-slate-200">';
+
+        for (let letter in families) {
+            html += `<div class="font-bold text-xs mt-1">${letter}</div>`;
+            families[letter].forEach(syl => {
+                const checked = customParams.syllableFamilies[syl] ? 'checked' : '';
+                html += `
+                    <label class="inline-flex items-center gap-1 mr-3 mb-1">
+                        <input type="checkbox" class="syllable-item" value="${syl}" ${checked}>
+                        <span class="text-xs">${syl}</span>
+                    </label>
+                `;
+            });
+        }
+
+        html += '</div></div>';
+        html += `
+            <div class="param-row">
+                <label>Repetições:</label>
+                <input type="number" id="syllableRepeat" value="${customParams.syllableRepeat}" min="1" max="5">
+            </div>
+            <div class="button-group">
+                <button id="selectAllSyllables">Selecionar todas</button>
+                <button id="clearAllSyllables">Limpar</button>
+                <button id="randomSyllables">Aleatório</button>
+            </div>
+        </div>`;
+        return html;
+    }
+
+    function renderWordPanel() {
+        let wordItems = '';
+        customParams.wordList.forEach((w, index) => {
+            wordItems += `
+                <div class="flex items-center justify-between bg-slate-100 p-1 mb-1 rounded">
+                    <span class="text-xs font-bold">${w.word}</span>
+                    <span class="text-xs text-slate-600">[${w.parts.join(' ')}]</span>
+                    <button class="remove-word text-red-500 hover:text-red-700" data-index="${index}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+        });
+
+        return `
+            <div class="param-control">
+                <div class="mb-2">
+                    <label class="block text-xs font-bold mb-1">Palavras cadastradas:</label>
+                    <div id="wordListContainer" class="bg-white p-2 rounded max-h-40 overflow-y-auto border border-slate-200">
+                        ${wordItems || '<div class="text-slate-400 text-xs">Nenhuma palavra</div>'}
+                    </div>
+                </div>
+                <div class="border-t border-slate-200 my-2 pt-2">
+                    <label class="block text-xs font-bold mb-1">Adicionar nova palavra:</label>
+                    <div class="flex-row-params">
+                        <input type="text" id="newWord" placeholder="Palavra (ex: BOLA)" class="flex-1 text-xs border rounded px-2 py-1">
+                        <input type="text" id="newParts" placeholder="Partes separadas por espaço (ex: BO LA)" class="flex-1 text-xs border rounded px-2 py-1">
+                        <button id="addWordBtn" class="bg-green-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-green-700 whitespace-nowrap">
+                            <i class="fas fa-plus mr-1"></i>Adicionar
+                        </button>
+                    </div>
+                </div>
+                <div class="param-row">
+                    <label>Repetições:</label>
+                    <input type="number" id="wordRepeat" value="${customParams.wordRepeat}" min="1" max="5">
+                </div>
+            </div>
+        `;
+    }
+
+    function attachParamEvents(type) {
+        setTimeout(() => {
+            if (type === 'trace') {
+                // Checkboxes
+                document.querySelectorAll('.trace-letter').forEach(cb => {
+                    cb.addEventListener('change', (e) => {
+                        const letter = e.target.value;
+                        if (e.target.checked) {
+                            if (!customParams.traceSelected.includes(letter)) {
+                                customParams.traceSelected.push(letter);
+                            }
+                        } else {
+                            customParams.traceSelected = customParams.traceSelected.filter(l => l !== letter);
+                        }
+                        saveState();
+                        refreshPreview();
+                    });
+                });
+
+                document.getElementById('selectAllTrace')?.addEventListener('click', () => {
+                    document.querySelectorAll('.trace-letter').forEach(cb => {
+                        cb.checked = true;
+                        const letter = cb.value;
+                        if (!customParams.traceSelected.includes(letter)) {
+                            customParams.traceSelected.push(letter);
+                        }
+                    });
+                    saveState();
+                    refreshPreview();
+                });
+
+                document.getElementById('clearAllTrace')?.addEventListener('click', () => {
+                    document.querySelectorAll('.trace-letter').forEach(cb => {
+                        cb.checked = false;
+                    });
+                    customParams.traceSelected = [];
+                    saveState();
+                    refreshPreview();
+                });
+
+                document.getElementById('randomTrace')?.addEventListener('click', () => {
+                    const selected = [];
+                    document.querySelectorAll('.trace-letter').forEach(cb => {
+                        const random = Math.random() > 0.5;
+                        cb.checked = random;
+                        if (random) selected.push(cb.value);
+                    });
+                    customParams.traceSelected = selected;
+                    saveState();
+                    refreshPreview();
+                });
+
+                const repeat = document.getElementById('traceRepeat');
+                if (repeat) repeat.addEventListener('change', (e) => {
+                    customParams.traceRepeat = parseInt(e.target.value) || 2;
+                    saveState();
+                    refreshPreview();
+                });
+            }
+
+            if (type === 'syllables') {
+                document.querySelectorAll('.syllable-item').forEach(cb => {
+                    cb.addEventListener('change', (e) => {
+                        customParams.syllableFamilies[e.target.value] = e.target.checked;
+                        saveState();
+                        refreshPreview();
+                    });
+                });
+
+                document.getElementById('selectAllSyllables')?.addEventListener('click', () => {
+                    document.querySelectorAll('.syllable-item').forEach(cb => {
+                        cb.checked = true;
+                        customParams.syllableFamilies[cb.value] = true;
+                    });
+                    saveState();
+                    refreshPreview();
+                });
+
+                document.getElementById('clearAllSyllables')?.addEventListener('click', () => {
+                    document.querySelectorAll('.syllable-item').forEach(cb => {
+                        cb.checked = false;
+                        customParams.syllableFamilies[cb.value] = false;
+                    });
+                    saveState();
+                    refreshPreview();
+                });
+
+                document.getElementById('randomSyllables')?.addEventListener('click', () => {
+                    document.querySelectorAll('.syllable-item').forEach(cb => {
+                        const random = Math.random() > 0.5;
+                        cb.checked = random;
+                        customParams.syllableFamilies[cb.value] = random;
+                    });
+                    saveState();
+                    refreshPreview();
+                });
+
+                const repeat = document.getElementById('syllableRepeat');
+                if (repeat) repeat.addEventListener('change', (e) => {
+                    customParams.syllableRepeat = parseInt(e.target.value) || 2;
+                    saveState();
+                    refreshPreview();
+                });
+            }
+
+            if (type === 'wordbuilding') {
+                document.getElementById('addWordBtn')?.addEventListener('click', () => {
+                    const wordInput = document.getElementById('newWord');
+                    const partsInput = document.getElementById('newParts');
+                    if (wordInput.value.trim() && partsInput.value.trim()) {
+                        const newWord = {
+                            word: wordInput.value.trim().toUpperCase(),
+                            parts: partsInput.value.trim().split(/\s+/).map(p => p.toUpperCase())
+                        };
+                        customParams.wordList.push(newWord);
+                        wordInput.value = '';
+                        partsInput.value = '';
+                        saveState();
+                        updateParamPanel();
+                        refreshPreview();
+                    } else {
+                        alert('Preencha a palavra e as partes!');
+                    }
+                });
+
+                const container = document.getElementById('wordListContainer');
+                if (container) {
+                    container.addEventListener('click', (e) => {
+                        if (e.target.closest('.remove-word')) {
+                            const btn = e.target.closest('.remove-word');
+                            const index = btn.getAttribute('data-index');
+                            if (index !== null) {
+                                customParams.wordList.splice(parseInt(index), 1);
+                                saveState();
+                                updateParamPanel();
+                                refreshPreview();
+                            }
+                        }
+                    });
+                }
+
+                const repeat = document.getElementById('wordRepeat');
+                if (repeat) repeat.addEventListener('change', (e) => {
+                    customParams.wordRepeat = parseInt(e.target.value) || 2;
+                    saveState();
+                    refreshPreview();
+                });
+            }
+        }, 50);
+    }
+
+    function renderLevelList() {
+        if (!levelListDiv) return;
+        const levels = LevelLibrary.portugues;
+        let html = '';
+        levels.forEach(lvl => {
+            const active = (lvl.id === currentLevelId) ? 'border-green-500 bg-green-50' : 'border-slate-100 hover:border-green-200';
+            html += `<button onclick="selectLevel('${lvl.id}')" class="w-full text-left p-3 rounded-xl border-2 transition-all ${active}">
+                <div class="text-xs font-bold ${lvl.id === currentLevelId ? 'text-green-700' : 'text-slate-600'}">${lvl.title}</div>
+            </button>`;
+        });
+        levelListDiv.innerHTML = html;
+    }
+
+    window.selectLevel = function(id) {
+        currentLevelId = id;
+        if (id === 'p1' && customParams.traceSelected.length === 0) {
+            customParams.traceSelected = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        }
+        saveState();
+        renderLevelList();
+        updateParamPanel();
+        refreshPreview();
+    };
+
+    function refreshPreview() {
+        const level = LevelLibrary.portugues.find(l => l.id === currentLevelId);
+        if (!level) return;
+
+        const allItems = generateItemsForLevel(level, itemsPerPage * 2);
+        const leftItems = allItems.slice(0, itemsPerPage);
+        const rightItems = allItems.slice(itemsPerPage, itemsPerPage * 2);
+
+        KumonGen.buildPage(pageLeft, level, 1, leftItems);
+        KumonGen.buildPage(pageRight, level, 2, rightItems);
+    }
+
+    function init() {
+        pageLeft = document.getElementById('pageLeft');
+        pageRight = document.getElementById('pageRight');
+        levelListDiv = document.getElementById('levelList');
+        paramPanel = document.getElementById('paramPanel');
+        zoomSpan = document.getElementById('zoomValue');
+        zoomContainer = document.getElementById('zoomContainer');
+
+        loadSavedState();
+
+        KumonGen.initRefs();
+
+        if (customParams.traceSelected.length === 0) {
+            customParams.traceSelected = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        }
+
+        renderLevelList();
+        updateParamPanel();
+        refreshPreview();
+
+        const linesSelect = document.getElementById('linesPerPage');
+        if (linesSelect) {
+            linesSelect.addEventListener('change', (e) => {
+                itemsPerPage = parseInt(e.target.value);
+                refreshPreview();
+            });
+        }
+
+        if (zoomSpan) zoomSpan.innerText = Math.round(currentZoom * 100) + '%';
+        if (zoomContainer) zoomContainer.style.transform = `scale(${currentZoom})`;
+
+        window.addEventListener('storage', () => {
+            KumonGen.initRefs();
+        });
+    }
+
+    window.adjustZoom = KumonGen.adjustZoom;
+    
+    window.generatePDF = () => {
+        const level = LevelLibrary.portugues.find(l => l.id === currentLevelId);
+        if (!level) return;
+
+        const pagesEl = document.getElementById('pagesPerBook');
+        const totalPages = pagesEl ? parseInt(pagesEl.value) : 2;
+
+        const allItems = generateItemsForLevel(level, totalPages * itemsPerPage);
+
+        KumonGen.generatePDF('a4-sheet', 'Português', level.title, totalPages, allItems, level, itemsPerPage);
+    };
+
+    window.refreshPreview = refreshPreview;
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();

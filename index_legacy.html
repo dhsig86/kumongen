@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KumonGen · Clarice's Playground</title>
+    <!-- Tailwind (CDN) para estilização rápida -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- html2canvas + jsPDF para gerar PDF fiel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- ícones via lucide (versão simplificada inline) – usaremos uma versão leve via CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        /* pequenos ajustes manuais para simular ícones ausentes */
+        .icon { display: inline-block; width: 1.2em; text-align: center; }
+        /* qualidade de impressão / preview */
+        #a4-sheet {
+            background: white;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        @media print {
+            body { background: white; }
+            .no-print { display: none !important; }
+            #a4-sheet { box-shadow: none; margin: 0 auto; }
+        }
+        .dashed-center-line {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            border-left: 1px dashed #cbd5e1;
+            pointer-events: none;
+        }
+        .footer-pag {
+            border-top: 1px solid #e2e8f0;
+        }
+        /* caixas de resposta */
+        .answer-box {
+            border-bottom: 2px solid #1e293b;
+            min-width: 60px;
+            height: 1.5rem;
+        }
+        .trace-cell {
+            border: 1px dashed #94a3b8;
+            background: repeating-linear-gradient(45deg, #f8fafc, #f8fafc 8px, #f1f5f9 8px, #f1f5f9 16px);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 font-sans antialiased overflow-hidden h-screen flex">
+
+<!-- ----------------------------------------------------------------------
+     BANCO DE DADOS CENTRAL (FACILMENTE EXPANSÍVEL)
+     ---------------------------------------------------------------------- -->
+<script>
+(function(){
+    // #############  BANCO DE DADOS JSON (cresça conforme necessidade) #############
+    window.LevelLibrary = {
+        portugues: [
+            { 
+                id: 'p1', 
+                title: 'P1 · Alfabeto (traçado)', 
+                type: 'trace', 
+                letters: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'], 
+                instruction: 'Cubra o pontilhado e treine a letra.' 
+            },
+            { 
+                id: 'p2', 
+                title: 'P2 · Sílabas simples (BA-BE-BI...)', 
+                type: 'syllables', 
+                syllables: ['BA', 'BE', 'BI', 'BO', 'BU', 'CA', 'CE', 'CI'], 
+                instruction: 'Leia e copie as sílabas.' 
+            },
+            { 
+                id: 'p3', 
+                title: 'P3 · Palavras curtas', 
+                type: 'wordbuilding', 
+                words: [
+                    { word: 'BOLA', parts: ['BO','LA'] },
+                    { word: 'CASA', parts: ['CA','SA'] },
+                    { word: 'DADO', parts: ['DA','DO'] },
+                    { word: 'FOCA', parts: ['FO','CA'] }
+                ],
+                instruction: 'Junte as sílabas e forme a palavra.'
+            }
+        ],
+        matematica: [
+            {
+                id: 'm1',
+                title: 'M1 · Números 1 a 5 (quantidade)',
+                type: 'quantity',
+                numbers: [1, 2, 3, 4, 5],
+                instruction: 'Desenhe a quantidade de círculos.'
+            },
+            {
+                id: 'm2',
+                title: 'M2 · Adição +1 (até 10)',
+                type: 'math',
+                operator: '+',
+                operand: 1,
+                range: [1, 9],
+                instruction: 'Some mentalmente e escreva o resultado.'
+            },
+            {
+                id: 'm3',
+                title: 'M3 · Complete a sequência (1-10)',
+                type: 'sequence',
+                sequences: [
+                    [1, 2, '__', 4, 5],
+                    [5, 6, 7, '__', 9],
+                    [8, '__', 10],
+                    [2, 3, '__', 5]
+                ],
+                instruction: 'Escreva o número que falta.'
+            },
+            {
+                id: 'm4',
+                title: 'M4 · Dezena + unidade (11-19)',
+                type: 'tens',
+                numbers: [11, 13, 15, 17, 19],
+                instruction: 'Pinte um grupo de 10 e depois as unidades.'
+            },
+            {
+                id: 'm5',
+                title: 'M5 · Comparação (maior/menor)',
+                type: 'compare',
+                pairs: [[3,5], [7,2], [4,4], [6,9], [1,8]],
+                instruction: 'Circule o número maior (ou igual).'
+            },
+            {
+                id: 'm6',
+                title: 'M6 · Adição +2 (até 20)',
+                type: 'math',
+                operator: '+',
+                operand: 2,
+                range: [1, 18],
+                instruction: 'Continue somando 2.'
+            },
+            {
+                id: 'm7',
+                title: 'M7 · Números vizinhos (1-20)',
+                type: 'neighbors',
+                centers: [5, 10, 15, 18],
+                instruction: 'Escreva o número que vem antes e depois.'
+            }
+        ]
+    };
+
+    // configurações globais do gerador
+    window.APP_CONFIG = {
+        itemsPerPage: 8,          // linhas por página (total = 2 * itemsPerPage)
+        defaultZoom: 0.7,
+        subject: 'matematica',
+        selectedLevelId: 'm1'
+    };
+})();
+</script>
+
+<!------------------------- LAYOUT PRINCIPAL ------------------------->
+<!-- sidebar (controles) -->
+<aside class="no-print w-80 bg-white shadow-2xl flex flex-col z-20 text-slate-800 overflow-y-auto">
+    <div class="p-6 bg-indigo-700 text-white">
+        <h1 class="text-xl font-black flex items-center gap-2">
+            <i class="fas fa-database"></i> KUMON·GEN <span class="text-indigo-300 text-xs ml-1">v6</span>
+        </h1>
+        <p class="text-[10px] uppercase tracking-widest font-bold opacity-70">caderno sob medida</p>
+    </div>
+
+    <div class="flex-1 p-5 space-y-6">
+        <!-- 1. matéria -->
+        <div>
+            <label class="text-[10px] font-black text-slate-400 uppercase block mb-3">1. área</label>
+            <div class="flex p-1 bg-slate-100 rounded-xl">
+                <button id="btnPort" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all" onclick="switchSubject('portugues')">
+                    <i class="fas fa-font"></i> Português
+                </button>
+                <button id="btnMat" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all" onclick="switchSubject('matematica')">
+                    <i class="fas fa-calculator"></i> Matemática
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. nível (preenchido via js) -->
+        <div>
+            <label class="text-[10px] font-black text-slate-400 uppercase block mb-3">2. nível</label>
+            <div id="levelList" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+        </div>
+
+        <!-- 3. ajustes -->
+        <div>
+            <label class="text-[10px] font-black text-slate-400 uppercase block mb-3">3. visual / repetição</label>
+            <div class="bg-slate-50 p-3 rounded-xl space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs">linhas/página</span>
+                    <select id="linesPerPage" class="border rounded px-2 py-1 text-xs" onchange="changeLinesPerPage()">
+                        <option value="6">6</option>
+                        <option value="8" selected>8</option>
+                        <option value="10">10</option>
+                        <option value="12">12</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs">zoom</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="adjustZoom(-0.1)" class="bg-white border w-6 h-6 rounded"><i class="fas fa-minus"></i></button>
+                        <span id="zoomValue" class="text-xs font-mono w-12 text-center">70%</span>
+                        <button onclick="adjustZoom(0.1)" class="bg-white border w-6 h-6 rounded"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. ações -->
+        <div class="border-t border-slate-100 pt-4 space-y-2">
+            <button onclick="refreshPreview()" class="w-full flex items-center justify-center gap-2 bg-indigo-100 text-indigo-700 p-3 rounded-xl hover:bg-indigo-200 font-bold text-sm">
+                <i class="fas fa-sync-alt"></i> atualizar preview
+            </button>
+            <button onclick="generatePDF()" class="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white p-4 rounded-xl hover:bg-indigo-700 shadow-lg font-black text-sm">
+                <i class="fas fa-file-pdf"></i> GERAR PDF (A4 paisagem)
+            </button>
+        </div>
+        <p class="text-[8px] text-slate-400 text-center pt-2">✨ para imprimir, use o PDF gerado</p>
+    </div>
+</aside>
+
+<!-- preview principal (a4 sheet) -->
+<main class="flex-1 overflow-auto bg-[#0F172A] flex items-start justify-center p-8 no-print" id="previewContainer">
+    <div id="zoomContainer" class="transition-transform duration-200 origin-top" style="transform:scale(0.7)">
+        <!-- folha A4 paisagem -->
+        <div id="a4-sheet" class="bg-white shadow-2xl flex relative" style="width:297mm; height:210mm; padding:8mm 10mm; box-sizing:border-box;">
+            <!-- linha central simulando dobra (apenas visual) -->
+            <div class="dashed-center-line"></div>
+
+            <!-- página esquerda -->
+            <div id="pageLeft" class="w-1/2 h-full flex flex-col pr-6 border-r border-slate-100">
+                <!-- header será preenchido por js -->
+            </div>
+
+            <!-- página direita -->
+            <div id="pageRight" class="w-1/2 h-full flex flex-col pl-6">
+                <!-- header será preenchido por js -->
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- ----------------------------------------------------------------------
+     LÓGICA PRINCIPAL (JAVASCRIPT)
+     ---------------------------------------------------------------------- -->
+<script>
+    (function() {
+        // ---------- referências DOM ----------
+        const pageLeft = document.getElementById('pageLeft');
+        const pageRight = document.getElementById('pageRight');
+        const levelListDiv = document.getElementById('levelList');
+        const btnPort = document.getElementById('btnPort');
+        const btnMat = document.getElementById('btnMat');
+        const zoomContainer = document.getElementById('zoomContainer');
+        const zoomSpan = document.getElementById('zoomValue');
+
+        // estado reativo (simples)
+        let currentSubject = APP_CONFIG.subject;
+        let currentLevelId = APP_CONFIG.selectedLevelId;
+        let currentZoom = APP_CONFIG.defaultZoom;
+        let itemsPerPage = APP_CONFIG.itemsPerPage;
+
+        // ---------- funções auxiliares ----------
+        function adjustZoom(delta) {
+            currentZoom = Math.min(1.2, Math.max(0.4, currentZoom + delta));
+            zoomContainer.style.transform = `scale(${currentZoom})`;
+            zoomSpan.innerText = Math.round(currentZoom*100)+'%';
+        }
+
+        function changeLinesPerPage() {
+            itemsPerPage = parseInt(document.getElementById('linesPerPage').value);
+            refreshPreview();
+        }
+
+        function switchSubject(subj) {
+            currentSubject = subj;
+            // atualizar botões
+            btnPort.className = `flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${subj==='portugues' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`;
+            btnMat.className = `flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${subj==='matematica' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`;
+            // pegar primeiro nível da matéria como default
+            const levels = LevelLibrary[subj];
+            if (levels && levels.length) {
+                currentLevelId = levels[0].id;
+            }
+            renderLevelList();
+            refreshPreview();
+        }
+
+        // renderiza lista de níveis com botões
+        function renderLevelList() {
+            const levels = LevelLibrary[currentSubject] || [];
+            let html = '';
+            levels.forEach(lvl => {
+                const active = (lvl.id === currentLevelId) ? 'border-indigo-500 bg-indigo-50' : 'border-slate-100 hover:border-slate-200';
+                html += `<button onclick="selectLevel('${lvl.id}')" class="w-full text-left p-3 rounded-xl border-2 transition-all ${active}">
+                    <div class="text-xs font-bold ${lvl.id === currentLevelId ? 'text-indigo-700' : 'text-slate-600'}">${lvl.title}</div>
+                    <div class="text-[10px] text-slate-400 mt-0.5 uppercase">tipo: ${lvl.type}</div>
+                </button>`;
+            });
+            levelListDiv.innerHTML = html;
+        }
+
+        window.selectLevel = function(id) {
+            currentLevelId = id;
+            renderLevelList();
+            refreshPreview();
+        };
+
+        // geração de itens conforme o nível
+        function generateItemsForLevel(level) {
+            if (!level) return [];
+
+            let items = [];
+
+            switch (level.type) {
+                case 'quantity':
+                    // repete cada número algumas vezes
+                    level.numbers.forEach(n => {
+                        for (let i=0; i<2; i++) items.push({ type: 'quantity', value: n });
+                    });
+                    break;
+
+                case 'math':
+                    for (let i=0; i<itemsPerPage*2; i++) {
+                        let a = Math.floor(Math.random() * (level.range[1] - level.range[0] + 1)) + level.range[0];
+                        items.push({ 
+                            type: 'math', 
+                            operand1: a, 
+                            operator: level.operator, 
+                            operand2: level.operand 
+                        });
+                    }
+                    break;
+
+                case 'sequence':
+                    // usa as sequências pré-definidas, repete
+                    level.sequences.forEach(seq => {
+                        items.push({ type: 'sequence', sequence: seq });
+                        items.push({ type: 'sequence', sequence: seq }); // repetição
+                    });
+                    // preenche até 2*itemsPerPage (aproximadamente)
+                    while (items.length < itemsPerPage*2) {
+                        items.push({ type: 'sequence', sequence: [1,2,'__',4] });
+                    }
+                    break;
+
+                case 'tens':
+                    level.numbers.forEach(num => {
+                        for (let i=0; i<2; i++) items.push({ type: 'tens', number: num });
+                    });
+                    break;
+
+                case 'compare':
+                    level.pairs.forEach(p => {
+                        items.push({ type: 'compare', pair: p });
+                        items.push({ type: 'compare', pair: p });
+                    });
+                    break;
+
+                case 'neighbors':
+                    level.centers.forEach(c => {
+                        items.push({ type: 'neighbors', center: c });
+                        items.push({ type: 'neighbors', center: c });
+                    });
+                    break;
+
+                case 'trace':
+                    level.letters.forEach(l => {
+                        for (let i=0; i<2; i++) items.push({ type: 'trace', char: l });
+                    });
+                    break;
+
+                case 'syllables':
+                    level.syllables.forEach(s => {
+                        for (let i=0; i<2; i++) items.push({ type: 'syllable', syllable: s });
+                    });
+                    break;
+
+                case 'wordbuilding':
+                    level.words.forEach(w => {
+                        items.push({ type: 'word', word: w.word, parts: w.parts });
+                        items.push({ type: 'word', word: w.word, parts: w.parts });
+                    });
+                    break;
+
+                default:
+                    items = Array(itemsPerPage*2).fill({ type: 'unknown' });
+            }
+
+            // limitar ao tamanho exato (cortar ou repetir)
+            const target = itemsPerPage * 2;
+            if (items.length > target) items = items.slice(0, target);
+            while (items.length < target) {
+                items.push({ type: 'unknown' });
+            }
+            return items;
+        }
+
+        // renderiza header dentro de uma página (left or right)
+        function renderPageHeader(container, level, pageNum) {
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'flex justify-between items-start border-b-2 border-slate-900 pb-2';
+            headerDiv.innerHTML = `
+                <div class="flex-1">
+                    <h3 class="text-base font-black leading-none text-slate-900 uppercase">${level?.title || ''}</h3>
+                    <p class="text-[7px] font-bold text-slate-500 mt-1 uppercase max-w-[200px]">${level?.instruction || ''}</p>
+                </div>
+                <div class="flex flex-col items-end gap-1">
+                    <div class="flex gap-2 text-[6px] font-bold text-slate-400">
+                        <span>DATA: ___/___/___</span> <span>TEMP: ___ min</span>
+                    </div>
+                    <div class="border border-slate-900 px-2 py-1 min-w-[120px]">
+                        <span class="text-[7px] font-bold block">NOME:</span>
+                        <div class="h-1"></div>
+                    </div>
+                </div>
+            `;
+            container.innerHTML = ''; // limpa
+            container.appendChild(headerDiv);
+
+            // corpo (grid) - será preenchido depois
+            const gridDiv = document.createElement('div');
+            gridDiv.className = 'flex-1 pt-3 overflow-hidden';
+            container.appendChild(gridDiv);
+
+            const footerDiv = document.createElement('div');
+            footerDiv.className = 'footer-pag pt-1 flex justify-between items-center mt-1';
+            footerDiv.innerHTML = `
+                <span class="text-[6px] font-bold text-slate-400 uppercase tracking-widest">KumonGen</span>
+                <span class="bg-slate-900 text-white px-2 py-0.5 rounded-full text-[7px] font-bold">PÁG ${pageNum}</span>
+            `;
+            container.appendChild(footerDiv);
+
+            return gridDiv; // retorna o container do grid
+        }
+
+        // desenha um item específico no grid
+        function renderItemCell(item, index) {
+            const cell = document.createElement('div');
+            cell.className = 'flex items-center gap-2 border-b border-slate-100 pb-2';
+
+            // número do item
+            const numSpan = document.createElement('span');
+            numSpan.className = 'text-[9px] font-black text-slate-300 w-4';
+            numSpan.innerText = (index+1);
+            cell.appendChild(numSpan);
+
+            // conteúdo variável
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'flex-1 flex items-center';
+
+            if (item.type === 'quantity') {
+                contentDiv.innerHTML = `
+                    <span class="text-2xl font-black w-10">${item.value}</span>
+                    <div class="flex gap-1 ml-2">
+                        ${Array.from({length:5}, (_,i)=> '<div class="w-4 h-4 rounded-full border border-slate-400"></div>').join('')}
+                    </div>
+                    <div class="w-12 border-b-2 border-slate-400 ml-4"></div>
+                `;
+            }
+            else if (item.type === 'math') {
+                contentDiv.innerHTML = `
+                    <span class="text-lg font-light text-slate-800 italic">${item.operand1} ${item.operator} ${item.operand2} =</span>
+                    <div class="w-14 h-8 border-2 border-slate-300 rounded-lg ml-4"></div>
+                `;
+            }
+            else if (item.type === 'sequence') {
+                const seq = item.sequence.map(v => v === '__' ? '___' : v).join(' · ');
+                contentDiv.innerHTML = `
+                    <span class="text-sm font-mono">${seq}</span>
+                    <div class="w-20 border-b-2 border-slate-400 ml-4"></div>
+                `;
+            }
+            else if (item.type === 'tens') {
+                const num = item.number;
+                const tens = Math.floor(num/10);
+                const units = num % 10;
+                let blocks = '';
+                for (let i=0; i<tens; i++) blocks += '<div class="inline-block w-5 h-5 bg-indigo-200 border border-indigo-400 mr-0.5"></div>';
+                blocks += ' ';
+                for (let i=0; i<units; i++) blocks += '<div class="inline-block w-5 h-5 bg-amber-200 border border-amber-400 mr-0.5"></div>';
+                contentDiv.innerHTML = `
+                    <span class="text-base font-bold w-8">${num}</span>
+                    <div class="flex items-center ml-1">${blocks}</div>
+                    <div class="w-16 border-b-2 border-slate-400 ml-4"></div>
+                `;
+            }
+            else if (item.type === 'compare') {
+                contentDiv.innerHTML = `
+                    <span class="text-base">${item.pair[0]}  _   ${item.pair[1]}</span>
+                    <div class="w-12 border-b-2 border-slate-400 ml-4"></div>
+                `;
+            }
+            else if (item.type === 'neighbors') {
+                contentDiv.innerHTML = `
+                    <span class="text-sm">__, ${item.center}, __</span>
+                    <div class="w-20 border-b-2 border-slate-400 ml-4"></div>
+                `;
+            }
+            else if (item.type === 'trace') {
+                contentDiv.innerHTML = `
+                    <span class="text-4xl font-black text-slate-200 border-2 border-dashed border-slate-300 px-2 rounded select-none">${item.char}</span>
+                    <span class="flex-1 border-b-2 border-dotted border-slate-300 mx-2"></span>
+                    <div class="w-12 h-12 border-2 border-slate-400 trace-cell"></div>
+                `;
+            }
+            else if (item.type === 'syllable') {
+                contentDiv.innerHTML = `
+                    <span class="text-2xl font-bold text-slate-400 border-r pr-2 mr-2">${item.syllable}</span>
+                    <div class="w-12 h-10 border-2 border-slate-300 mr-1"></div>
+                    <div class="w-12 h-10 border-2 border-slate-300"></div>
+                `;
+            }
+            else if (item.type === 'word') {
+                const partsHtml = item.parts.map(p => `<span class="bg-slate-50 border px-1 py-0.5 text-sm">${p}</span>`).join('<span class="mx-0.5">+</span>');
+                contentDiv.innerHTML = `
+                    <div class="flex items-center gap-1">${partsHtml}</div>
+                    <div class="w-28 border-b-4 border-double border-slate-400 ml-4"></div>
+                `;
+            }
+            else {
+                contentDiv.innerHTML = `<span class="text-slate-300">?</span>`;
+            }
+
+            cell.appendChild(contentDiv);
+            return cell;
+        }
+
+        // preenche as duas páginas
+        function refreshPreview() {
+            const level = LevelLibrary[currentSubject].find(l => l.id === currentLevelId);
+            if (!level) return;
+
+            const items = generateItemsForLevel(level);
+            const leftItems = items.slice(0, itemsPerPage);
+            const rightItems = items.slice(itemsPerPage, itemsPerPage*2);
+
+            // limpar paginas
+            pageLeft.innerHTML = '';
+            pageRight.innerHTML = '';
+
+            // cabeçalhos e grids
+            const leftGrid = renderPageHeader(pageLeft, level, 1);
+            const rightGrid = renderPageHeader(pageRight, level, 2);
+
+            // preencher grids
+            leftItems.forEach((it, idx) => {
+                leftGrid.appendChild(renderItemCell(it, idx));
+            });
+            rightItems.forEach((it, idx) => {
+                rightGrid.appendChild(renderItemCell(it, idx));
+            });
+        }
+
+        // gerar PDF com jsPDF + html2canvas
+        window.generatePDF = function() {
+            const element = document.getElementById('a4-sheet');
+            html2canvas(element, {
+                scale: 2,
+                backgroundColor: '#ffffff',
+                logging: false,
+                windowWidth: 297*3.7795275*2, // conversão aproximada (1mm = 3.78px) dobra para qualidade
+            }).then((canvas) => {
+                const imgData = canvas.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
+                pdf.save(`kumon_${currentSubject}_${currentLevelId}.pdf`);
+            });
+        };
+
+        // inicialização
+        function init() {
+            renderLevelList();
+            switchSubject(currentSubject);  // já seta botões e nível
+            zoomSpan.innerText = Math.round(currentZoom*100)+'%';
+            zoomContainer.style.transform = `scale(${currentZoom})`;
+        }
+
+        // expõe funções globais
+        window.switchSubject = switchSubject;
+        window.refreshPreview = refreshPreview;
+        window.adjustZoom = adjustZoom;
+        window.changeLinesPerPage = changeLinesPerPage;
+        window.selectLevel = selectLevel;
+
+        init();
+    })();
+</script>
+
+<!-- pequeno ajuste para alinhamento do preview no centro -->
+</body>
+</html>
