@@ -28,22 +28,8 @@
         </h1>
         <p class="text-xl text-slate-300 mb-10">Gerador de cadernos personalizados</p>
 
-        <!-- Botão discreto de progresso -->
-        <div class="flex items-center justify-center gap-3 mb-10">
-            <button onclick="KumonGen_showParentalControlModal()" class="flex items-center gap-3 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/80 hover:border-indigo-500/50 rounded-2xl px-5 py-3 text-slate-300 transition-all shadow-lg hover:shadow-xl">
-                <i class="fas fa-trophy text-amber-400 text-lg"></i>
-                <span class="font-bold text-sm text-white">Quadro de Conquistas</span>
-                <span class="text-xs bg-amber-500/20 text-amber-400 px-2.5 py-1 rounded-full flex items-center gap-1">
-                    <i class="fas fa-star text-[10px]"></i> <span id="starVal">0</span>
-                </span>
-            </button>
-            <button onclick="KumonGen_showTutorialModal()" class="text-indigo-400 hover:text-indigo-300 transition-colors" title="Tutorial">
-                <i class="fas fa-question-circle text-xl"></i>
-            </button>
-        </div>
-        
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Matemática - Azul e branco -->
+            <!-- Matemática -->
             <a href="matematica.html" class="group bg-blue-600 hover:bg-blue-700 rounded-2xl p-8 shadow-2xl transition-all transform hover:scale-105">
                 <div class="flex flex-col items-center">
                     <i class="fas fa-calculator text-white text-5xl mb-4"></i>
@@ -53,7 +39,7 @@
                 </div>
             </a>
 
-            <!-- Português - Verde e amarelo -->
+            <!-- Português -->
             <a href="portugues.html" class="group bg-gradient-to-br from-green-600 to-yellow-500 hover:from-green-700 hover:to-yellow-600 rounded-2xl p-8 shadow-2xl transition-all transform hover:scale-105">
                 <div class="flex flex-col items-center">
                     <i class="fas fa-font text-white text-5xl mb-4"></i>
@@ -63,7 +49,7 @@
                 </div>
             </a>
 
-            <!-- Inglês - Vermelho e azul -->
+            <!-- Inglês -->
             <a href="ingles.html" class="group bg-gradient-to-br from-red-600 to-blue-600 hover:from-red-700 hover:to-blue-700 rounded-2xl p-8 shadow-2xl transition-all transform hover:scale-105">
                 <div class="flex flex-col items-center">
                     <i class="fas fa-language text-white text-5xl mb-4"></i>
@@ -74,29 +60,10 @@
             </a>
         </div>
 
-        <!-- Botão de doação -->
-        <div class="mt-10">
-            <a href="https://www.paypal.com/donate/?hosted_button_id=33K7CJ2EQELNU" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-all transform hover:scale-105">
-                <i class="fas fa-heart"></i> Apoie este projeto
-            </a>
-        </div>
-
         <p class="mt-10 text-slate-500 text-sm">
             criado por Dario Hart · Free use 2026
         </p>
     </div>
-
-    <!-- Scripts comuns -->
-    <script src="gerador.js"></script>
-    <script>
-        function updateDashboard() {
-            const score = KumonGen.getScore();
-            const starEl = document.getElementById('starVal');
-            if (starEl) starEl.innerText = score.stars;
-        }
-
-        document.addEventListener('DOMContentLoaded', updateDashboard);
-        window.addEventListener('storage', updateDashboard);
-    </script>
 </body>
 </html>
+
