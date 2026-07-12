@@ -3,6 +3,9 @@ const KumonGen = (function() {
     let zoomContainer = null;
     let zoomSpan = null;
     let currentZoom = 0.7;
+    let isGeneratingPDF = false;
+    let refreshTimer = null;
+    let resizeTimer = null;
 
     // Inicializa referências (deve ser chamado após o carregamento da página)
     function initRefs() {
@@ -23,7 +26,7 @@ const KumonGen = (function() {
     }
 
     // Escala responsiva automática (universal)
-    function adjustPreviewScale() {
+    function _doAdjustPreviewScale() {
         const container = document.getElementById('previewContainer');
         const zoomContainer = document.getElementById('zoomContainer');
         const sheet = document.getElementById('a4-sheet');
@@ -44,6 +47,12 @@ const KumonGen = (function() {
             zoomContainer.style.transformOrigin = 'top center';
             if (zoomSpan) zoomSpan.innerText = Math.round(currentZoom * 100) + '%';
         }
+    }
+
+    // Wrapper com debounce para evitar reflows excessivos durante resize
+    function adjustPreviewScale() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(_doAdjustPreviewScale, 150);
     }
 
     // Constrói uma página (esquerda ou direita)
@@ -200,8 +209,11 @@ const KumonGen = (function() {
 
     // GERAÇÃO DE PDF MULTIPÁGINA
     async function generatePDF(elementId = 'a4-sheet', subjectTitle, levelTitle, totalPages = 2, allItems, level, linesPerPage) {
+        if (isGeneratingPDF) return;
+        isGeneratingPDF = true;
+
         const element = document.getElementById(elementId);
-        if (!element) return;
+        if (!element) { isGeneratingPDF = false; return; }
 
         // Salva transform original do zoomContainer
         const originalTransform = zoomContainer ? zoomContainer.style.transform : '';
@@ -277,6 +289,22 @@ const KumonGen = (function() {
 
             pdf.save(`kumon_${subjectTitle.toLowerCase()}_${new Date().toISOString().slice(0,10)}.pdf`);
 
+            // Toast de sucesso
+            const successToast = document.createElement('div');
+            successToast.id = 'pdf-success-toast';
+            successToast.className = 'fixed bottom-5 right-5 z-50 max-w-sm bg-emerald-700 border border-emerald-500 text-white rounded-2xl p-4 shadow-2xl flex items-center gap-3 animate-bounce-subtle text-xs md:text-sm';
+            successToast.innerHTML = `
+                <div class="bg-emerald-500/30 text-emerald-200 w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <span class="font-bold">PDF salvo com sucesso! Agora é só imprimir 🖨️</span>
+            `;
+            document.body.appendChild(successToast);
+            setTimeout(() => {
+                const el = document.getElementById('pdf-success-toast');
+                if (el) el.remove();
+            }, 4000);
+
             // Salva no histórico local
             saveHistory(subjectTitle, levelTitle, numPages);
 
@@ -287,6 +315,7 @@ const KumonGen = (function() {
             console.error(error);
             alert('Erro ao gerar PDF: ' + error.message);
         } finally {
+            isGeneratingPDF = false;
             document.body.removeChild(loader);
             if (zoomContainer) zoomContainer.style.transform = originalTransform;
             
@@ -299,7 +328,9 @@ const KumonGen = (function() {
 
     // ---------- SISTEMA DE LOCAL STORAGE, SCOREBOARD E HISTÓRICO ----------
     function saveHistory(subject, levelTitle, pages) {
-        const history = JSON.parse(localStorage.getItem('kumongen_history') || '[]');
+        let history;
+        try { history = JSON.parse(localStorage.getItem('kumongen_history') || '[]'); }
+        catch (e) { history = []; }
         const entry = {
             id: Date.now().toString(),
             date: new Date().toLocaleDateString('pt-BR'),
@@ -316,11 +347,14 @@ const KumonGen = (function() {
     }
 
     function getHistory() {
-        return JSON.parse(localStorage.getItem('kumongen_history') || '[]');
+        try { return JSON.parse(localStorage.getItem('kumongen_history') || '[]'); }
+        catch (e) { return []; }
     }
 
     function toggleTaskCompletion(id) {
-        const history = JSON.parse(localStorage.getItem('kumongen_history') || '[]');
+        let history;
+        try { history = JSON.parse(localStorage.getItem('kumongen_history') || '[]'); }
+        catch (e) { history = []; }
         const task = history.find(t => t.id === id);
         if (task) {
             task.completed = !task.completed;
@@ -334,7 +368,9 @@ const KumonGen = (function() {
     }
 
     function getScore() {
-        const history = JSON.parse(localStorage.getItem('kumongen_history') || '[]');
+        let history;
+        try { history = JSON.parse(localStorage.getItem('kumongen_history') || '[]'); }
+        catch (e) { history = []; }
         const createdCount = history.length;
         const completedCount = history.filter(t => t.completed).length;
 
@@ -606,10 +642,12 @@ const KumonGen = (function() {
         getScore,
         showTutorialModal,
         shuffleAndDecluster,
-        toggleTaskCompletion: (id) => {
-            const res = toggleTaskCompletion(id);
-            renderScoreboardWidget();
-            return res;
+        toggleTaskCompletion,
+        scheduleRefresh: function() {
+            clearTimeout(refreshTimer);
+            refreshTimer = setTimeout(() => {
+                if (window.refreshPreview) window.refreshPreview();
+            }, 300);
         }
     };
 })();
