@@ -9,6 +9,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="KumonGen">
     <meta name="description" content="KumonGen — Gerador gratuito de cadernos de exercícios personalizados de Inglês para crianças. Alphabet, words e phonics em folhas A4.">
     <meta property="og:title" content="KumonGen · Inglês">
     <meta property="og:description" content="Gere cadernos de exercícios de Inglês personalizados para impressão.">
@@ -32,6 +37,11 @@
                 <a href="https://www.paypal.com/donate/?hosted_button_id=33K7CJ2EQELNU" target="_blank" rel="noopener noreferrer" class="text-pink-500 hover:text-pink-600 transition-colors" title="Apoie este projeto" aria-label="Apoie este projeto"><i class="fas fa-heart"></i></a>
                 <button onclick="KumonGen_showTutorialModal()" class="hover:underline flex items-center gap-1 font-bold text-slate-500 hover:text-red-600"><i class="fas fa-question-circle"></i> Tutorial</button>
             </div>
+        </div>
+        <div class="flex gap-1 mt-2">
+            <a href="matematica.html" class="flex-1 text-center text-[10px] font-bold py-1 rounded bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-700 transition-colors">MAT</a>
+            <a href="portugues.html" class="flex-1 text-center text-[10px] font-bold py-1 rounded bg-slate-100 text-slate-500 hover:bg-green-100 hover:text-green-700 transition-colors">POR</a>
+            <span class="flex-1 text-center text-[10px] font-black py-1 rounded bg-red-100 text-red-700">ENG</span>
         </div>
 
         <!-- Scoreboard Widget -->
@@ -109,6 +119,15 @@
     window.addEventListener('resize', KumonGen.adjustPreviewScale);
     window.addEventListener('load', KumonGen.adjustPreviewScale);
     document.addEventListener('DOMContentLoaded', KumonGen.adjustPreviewScale);
+
+    // Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('[KumonGen] SW registrado:', reg.scope))
+          .catch(err => console.error('[KumonGen] SW falhou:', err));
+      });
+    }
 </script>
 </body>
 </html>
