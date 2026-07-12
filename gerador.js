@@ -253,8 +253,9 @@ const KumonGen = (function() {
                 // Pequena pausa para garantir renderização do DOM
                 await new Promise(resolve => setTimeout(resolve, 200));
 
+                const pdfScale = window.innerWidth <= 768 ? 2 : 3; // scale 2 no mobile (menos memória), 3 no desktop (máxima nitidez)
                 const canvas = await html2canvas(element, {
-                    scale: 3, // Otimizado para não estourar memória em celulares
+                    scale: pdfScale,
                     backgroundColor: '#ffffff',
                     logging: false,
                     allowTaint: false,
