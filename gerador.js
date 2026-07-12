@@ -7,6 +7,25 @@ const KumonGen = (function() {
     let refreshTimer = null;
     let resizeTimer = null;
 
+    // Lazy-load de scripts externos (html2canvas, jsPDF)
+    function loadScript(src) {
+        return new Promise((resolve, reject) => {
+            if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+            const s = document.createElement('script');
+            s.src = src;
+            s.onload = resolve;
+            s.onerror = () => reject(new Error('Falha ao carregar: ' + src));
+            document.head.appendChild(s);
+        });
+    }
+
+    // Sanitiza texto para uso seguro em innerHTML
+    function sanitizeText(text) {
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    }
+
     // Inicializa referências (deve ser chamado após o carregamento da página)
     function initRefs() {
         zoomContainer = document.getElementById('zoomContainer');
@@ -220,6 +239,16 @@ const KumonGen = (function() {
         if (isGeneratingPDF) return;
         isGeneratingPDF = true;
 
+        // Carrega libs sob demanda
+        try {
+            await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+            await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+        } catch (loadErr) {
+            isGeneratingPDF = false;
+            alert('Erro ao carregar bibliotecas. Verifique sua conexão.');
+            return;
+        }
+
         const element = document.getElementById(elementId);
         if (!element) { isGeneratingPDF = false; return; }
 
@@ -406,7 +435,7 @@ const KumonGen = (function() {
                     <i class="fas fa-chart-line text-[10px]"></i> Controle dos Pais / Progresso
                 </span>
                 <span class="text-[9px] bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full flex items-center gap-0.5">
-                    <i class="fas fa-star text-[8px]"></i> ${score.stars}
+                    <i class="fas fa-star text-[8px]"></i> ${sanitizeText(score.stars)}
                 </span>
             </button>
         `;
@@ -444,10 +473,10 @@ const KumonGen = (function() {
                     <div class="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-xl border border-slate-100 text-xs mb-2">
                         <div class="truncate mr-2 text-left flex-1 min-w-0">
                             <div class="flex items-center gap-1.5 mb-0.5">
-                                <span class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full ${badgeColor}">${task.subject}</span>
-                                <span class="${decoration} text-xs truncate block">${task.levelTitle}</span>
+                                <span class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full ${badgeColor}">${sanitizeText(task.subject)}</span>
+                                <span class="${decoration} text-xs truncate block">${sanitizeText(task.levelTitle)}</span>
                             </div>
-                            <span class="text-[10px] text-slate-400 block">${task.date} · ${task.pages} pág.</span>
+                            <span class="text-[10px] text-slate-400 block">${sanitizeText(task.date)} · ${sanitizeText(task.pages)} pág.</span>
                         </div>
                         <button onclick="KumonGen_toggleTaskCompletionParental('${task.id}')" class="w-8 h-8 border-2 rounded-lg flex items-center justify-center transition-all ${checkedClass}">
                             <i class="fas ${checkIcon} text-[10px]"></i>
@@ -468,8 +497,8 @@ const KumonGen = (function() {
             return `
                 <div class="mb-3">
                     <div class="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
-                        <span>${sub}</span>
-                        <span>${count} cadernos (${pct}%)</span>
+                        <span>${sanitizeText(sub)}</span>
+                        <span>${sanitizeText(count)} cadernos (${sanitizeText(pct)}%)</span>
                     </div>
                     <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                         <div class="${barColor} h-full rounded-full transition-all" style="width: ${pct}%"></div>
@@ -503,15 +532,15 @@ const KumonGen = (function() {
                     <div class="grid grid-cols-3 gap-3 text-center">
                         <div class="bg-slate-50 rounded-2xl p-2 border border-slate-100">
                             <div class="text-[9px] text-slate-400 uppercase font-black">Pontos</div>
-                            <div class="text-base font-black text-slate-700">${score.points}</div>
+                            <div class="text-base font-black text-slate-700">${sanitizeText(score.points)}</div>
                         </div>
                         <div class="bg-slate-50 rounded-2xl p-2 border border-slate-100">
                             <div class="text-[9px] text-slate-400 uppercase font-black">Estrelas</div>
-                            <div class="text-base font-black text-amber-500 flex items-center justify-center gap-0.5"><i class="fas fa-star text-xs"></i> ${score.stars}</div>
+                            <div class="text-base font-black text-amber-500 flex items-center justify-center gap-0.5"><i class="fas fa-star text-xs"></i> ${sanitizeText(score.stars)}</div>
                         </div>
                         <div class="bg-slate-50 rounded-2xl p-2 border border-slate-100">
                             <div class="text-[9px] text-slate-400 uppercase font-black">Cadernos</div>
-                            <div class="text-base font-black text-emerald-600">${score.completions}/${score.total}</div>
+                            <div class="text-base font-black text-emerald-600">${sanitizeText(score.completions)}/${sanitizeText(score.total)}</div>
                         </div>
                     </div>
 
