@@ -108,6 +108,13 @@
     </div>
 </aside>
 
+<!-- Botão mobile para scroll até o preview -->
+<div class="md:hidden no-print sticky top-0 z-10 bg-slate-800/90 backdrop-blur-sm p-2 text-center">
+    <button onclick="document.getElementById('previewContainer').scrollIntoView({behavior:'smooth'})" class="text-xs text-slate-300 hover:text-white font-bold py-1 px-4 rounded-full bg-slate-700 hover:bg-slate-600 transition-colors">
+        <i class="fas fa-eye"></i> Ver Preview ↓
+    </button>
+</div>
+
 <!-- PREVIEW (A4 paisagem) -->
 <main class="flex-1 overflow-auto bg-[#0F172A] flex items-start justify-center p-8 no-print" id="previewContainer">
     <div id="zoomContainer" class="transition-transform duration-200 origin-top" style="transform:scale(0.7)">

@@ -13,6 +13,14 @@ const KumonGen = (function() {
         zoomSpan = document.getElementById('zoomValue');
         adjustPreviewScale();
         renderScoreboardWidget();
+
+        // Abre tutorial automaticamente na primeira visita
+        if (!localStorage.getItem('kumongen_tutorial_seen')) {
+            setTimeout(() => {
+                showTutorialModal();
+                localStorage.setItem('kumongen_tutorial_seen', 'true');
+            }, 500);
+        }
     }
 
     // Ajusta zoom da pré-visualização (telas grandes)
@@ -473,6 +481,10 @@ const KumonGen = (function() {
         const modal = document.createElement('div');
         modal.id = 'parental-modal';
         modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-label', 'Controle Parental');
+        modal.setAttribute('tabindex', '-1');
         modal.innerHTML = `
             <div class="bg-white rounded-3xl max-w-md w-full max-h-[85vh] overflow-y-auto shadow-2xl border border-slate-100 flex flex-col text-slate-800 transition-all transform scale-100">
                 <!-- Header -->
@@ -529,6 +541,22 @@ const KumonGen = (function() {
             </div>
         `;
         document.body.appendChild(modal);
+
+        // ESC para fechar
+        const escHandler = (e) => { if (e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', escHandler); } };
+        document.addEventListener('keydown', escHandler);
+
+        // Cleanup do ESC handler nos botões de fechar existentes
+        modal.querySelectorAll('button').forEach(btn => {
+            const originalOnclick = btn.getAttribute('onclick');
+            if (originalOnclick && originalOnclick.includes('remove')) {
+                btn.removeAttribute('onclick');
+                btn.addEventListener('click', () => { modal.remove(); document.removeEventListener('keydown', escHandler); });
+            }
+        });
+
+        // Focus trap: move foco para dentro do modal
+        modal.focus();
     }
 
     // Função de trigger de conclusão que redesenha o modal de controle parental
@@ -547,6 +575,10 @@ const KumonGen = (function() {
         const modal = document.createElement('div');
         modal.id = 'tutorial-modal';
         modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-label', 'Tutorial');
+        modal.setAttribute('tabindex', '-1');
         modal.innerHTML = `
             <div class="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-2xl border border-slate-100 flex flex-col text-slate-800 transition-all transform scale-100">
                 <!-- Header -->
@@ -602,6 +634,22 @@ const KumonGen = (function() {
             </div>
         `;
         document.body.appendChild(modal);
+
+        // ESC para fechar
+        const escHandler = (e) => { if (e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', escHandler); } };
+        document.addEventListener('keydown', escHandler);
+
+        // Cleanup do ESC handler nos botões de fechar existentes
+        modal.querySelectorAll('button').forEach(btn => {
+            const originalOnclick = btn.getAttribute('onclick');
+            if (originalOnclick && originalOnclick.includes('remove')) {
+                btn.removeAttribute('onclick');
+                btn.addEventListener('click', () => { modal.remove(); document.removeEventListener('keydown', escHandler); });
+            }
+        });
+
+        // Focus trap: move foco para dentro do modal
+        modal.focus();
     }
 
     function shuffleAndDecluster(arr, keyFn) {
