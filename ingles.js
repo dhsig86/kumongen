@@ -417,7 +417,7 @@
                 { word: 'TREE', parts: ['T','R','EE'] },
                 { word: 'BOOK', parts: ['B','OO','K'] },
                 { word: 'FROG', parts: ['F','R','O','G'] },
-                { word: 'DUCK', parts: ['D','U','C','K'] },
+                { word: 'DUCK', parts: ['D','U','CK'] },
                 { word: 'STAR', parts: ['S','T','A','R'] },
                 { word: 'BOAT', parts: ['B','OA','T'] },
                 { word: 'MILK', parts: ['M','I','L','K'] },

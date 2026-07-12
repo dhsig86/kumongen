@@ -92,8 +92,6 @@
             'CHA': true, 'CHE': true, 'CHI': true, 'CHO': true, 'CHU': true,
             'LHA': true, 'LHE': true, 'LHI': true, 'LHO': true, 'LHU': true,
             'NHA': true, 'NHE': true, 'NHI': true, 'NHO': true, 'NHU': true,
-            'RRA': true, 'RRE': true, 'RRI': true, 'RRO': true, 'RRU': true,
-            'SSA': true, 'SSE': true, 'SSI': true, 'SSO': true, 'SSU': true,
             'QUA': true, 'QUE': true, 'QUI': true, 'QUO': true,
             'GUA': true, 'GUE': true, 'GUI': true
         },
