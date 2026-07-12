@@ -22,7 +22,7 @@
             },
             {
                 id: 'i4',
-                title: 'I4 · Sight Words',
+                title: 'I4 · Snap Words',
                 type: 'wordbuilding',
                 instruction: 'Treine as palavras mais comuns do inglês.'
             },
