@@ -5,11 +5,12 @@
         matematica: [
             { id: 'm1', title: 'M1 · Quantidade', type: 'quantity', numbers: [1,2,3,4,5], instruction: 'Pinte a quantidade de círculos.' },
             { id: 'm2', title: 'M2 · Adição', type: 'math', operator: '+', operand: 1, range: [1,9], instruction: 'Resolva as adições.' },
-            { id: 'm3', title: 'M3 · Sequências', type: 'sequence', sequences: [[1,2,'__',4,5],[5,6,7,'__',9],[8,'__',10]], instruction: 'Complete a sequência.' },
+            { id: 'm3', title: 'M3 · Sequências', type: 'sequence', sequences: [[1,2,'__',4,5],[5,6,7,'__',9],[8,'__',10,11,12],['__',3,4,5,6],[2,4,'__',8,10],[10,20,'__',40,50],[5,10,15,'__',25],[3,6,'__',12,15],[1,'__',3,'__',5],[7,8,9,'__',11],[15,'__',17,18,19],[20,19,'__',17,16]], instruction: 'Complete a sequência.' },
             { id: 'm4', title: 'M4 · Dezenas', type: 'tens', numbers: [11,12,13,14,15,16,17,18,19], instruction: 'Pinte os grupos de 10 e unidades.' },
-            { id: 'm5', title: 'M5 · Comparação', type: 'compare', pairs: [[3,5],[7,2],[4,4],[6,9]], instruction: 'Circule o maior (ou igual).' },
+            { id: 'm5', title: 'M5 · Comparação', type: 'compare', pairs: [[3,5],[7,2],[4,4],[6,9],[1,8],[5,5],[10,3],[2,7],[8,6],[9,1],[3,3],[6,4]], instruction: 'Circule o maior (ou igual).' },
             { id: 'm6', title: 'M6 · Subtração', type: 'math', operator: '-', operand: 1, range: [2,10], instruction: 'Resolva as subtrações.' },
-            { id: 'm7', title: 'M7 · Vizinhos', type: 'neighbors', centers: [5,10,15,18], instruction: 'Escreva o antes e depois.' }
+            { id: 'm7', title: 'M7 · Vizinhos', type: 'neighbors', centers: [3,5,7,10,12,15,18,20,25,30,42,50], instruction: 'Escreva o antes e depois.' },
+            { id: 'm8', title: 'M8 · Multiplicação', type: 'math', operator: '×', operand: 2, range: [1,10], instruction: 'Resolva as multiplicações.' }
         ]
     };
 
@@ -37,12 +38,12 @@
         seqHoles: 1, // novo: número de lacunas
         tensDezena: 1, // novo: dezena (ex: 1 para 10-19)
         tensSequencial: true, // novo: se true, ordem crescente; se false, aleatório
-        compPairs: [[3,5],[7,2],[4,4],[6,9]],
+        compPairs: [[3,5],[7,2],[4,4],[6,9],[1,8],[5,5],[10,3],[2,7],[8,6],[9,1],[3,3],[6,4]],
         compRandom: false,
         compMin: 1,
         compMax: 10,
         compCount: 4,
-        neighborCenters: [5,10,15,18]
+        neighborCenters: [3,5,7,10,12,15,18,20,25,30,42,50]
     };
 
     // ---------- PERSISTÊNCIA (LOCAL STORAGE) ----------
@@ -248,7 +249,7 @@
     function renderMathPanel() {
         return `
             <div class="param-control">
-                <div class="param-row"><label>Operador:</label><select id="mathOperator"><option value="+" ${customParams.operator === '+' ? 'selected' : ''}>+</option><option value="-" ${customParams.operator === '-' ? 'selected' : ''}>-</option></select></div>
+                <div class="param-row"><label>Operador:</label><select id="mathOperator"><option value="+" ${customParams.operator === '+' ? 'selected' : ''}>+</option><option value="-" ${customParams.operator === '-' ? 'selected' : ''}>-</option><option value="×" ${customParams.operator === '×' ? 'selected' : ''}>×</option></select></div>
                 <div class="param-row"><label>Valor:</label><input type="number" id="mathOperand" value="${customParams.operand}" min="1" max="20"></div>
                 <div class="param-row"><label>Mínimo:</label><input type="number" id="mathMin" value="${customParams.min}" min="1" max="50"></div>
                 <div class="param-row"><label>Máximo:</label><input type="number" id="mathMax" value="${customParams.max}" min="1" max="50"></div>

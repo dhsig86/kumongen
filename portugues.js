@@ -26,6 +26,18 @@
                 title: 'P4 · Palavras com 3 ou 4 sílabas',
                 type: 'wordbuilding',
                 instruction: 'Adicione palavras mais longas.'
+            },
+            {
+                id: 'p5',
+                title: 'P5 · Sílabas complexas',
+                type: 'syllables',
+                instruction: 'Escolha as famílias de sílabas complexas.'
+            },
+            {
+                id: 'p6',
+                title: 'P6 · Dígrafos',
+                type: 'syllables',
+                instruction: 'Treine as sílabas com dígrafos.'
             }
         ]
     };
@@ -62,6 +74,29 @@
             'ZA': true, 'ZE': true, 'ZI': true, 'ZO': true, 'ZU': true
         },
         syllableRepeat: 2,
+        syllableComplexFamilies: {
+            'BRA': true, 'BRE': true, 'BRI': true, 'BRO': true, 'BRU': true,
+            'CRA': true, 'CRE': true, 'CRI': true, 'CRO': true, 'CRU': true,
+            'DRA': true, 'DRE': true, 'DRI': true, 'DRO': true, 'DRU': true,
+            'FRA': true, 'FRE': true, 'FRI': true, 'FRO': true, 'FRU': true,
+            'GRA': true, 'GRE': true, 'GRI': true, 'GRO': true, 'GRU': true,
+            'PRA': true, 'PRE': true, 'PRI': true, 'PRO': true, 'PRU': true,
+            'TRA': true, 'TRE': true, 'TRI': true, 'TRO': true, 'TRU': true,
+            'BLA': true, 'BLE': true, 'BLI': true, 'BLO': true, 'BLU': true,
+            'CLA': true, 'CLE': true, 'CLI': true, 'CLO': true, 'CLU': true,
+            'FLA': true, 'FLE': true, 'FLI': true, 'FLO': true, 'FLU': true,
+            'GLA': true, 'GLE': true, 'GLI': true, 'GLO': true, 'GLU': true,
+            'PLA': true, 'PLE': true, 'PLI': true, 'PLO': true, 'PLU': true
+        },
+        syllableDigraphFamilies: {
+            'CHA': true, 'CHE': true, 'CHI': true, 'CHO': true, 'CHU': true,
+            'LHA': true, 'LHE': true, 'LHI': true, 'LHO': true, 'LHU': true,
+            'NHA': true, 'NHE': true, 'NHI': true, 'NHO': true, 'NHU': true,
+            'RRA': true, 'RRE': true, 'RRI': true, 'RRO': true, 'RRU': true,
+            'SSA': true, 'SSE': true, 'SSI': true, 'SSO': true, 'SSU': true,
+            'QUA': true, 'QUE': true, 'QUI': true, 'QUO': true,
+            'GUA': true, 'GUE': true, 'GUI': true
+        },
         // Para wordbuilding
         wordList: [
             { word: 'BOLA', parts: ['BO','LA'] },
@@ -77,7 +112,33 @@
             { word: 'RATO', parts: ['RA','TO'] },
             { word: 'SAPO', parts: ['SA','PO'] },
             { word: 'TATU', parts: ['TA','TU'] },
-            { word: 'VACA', parts: ['VA','CA'] }
+            { word: 'VACA', parts: ['VA','CA'] },
+            { word: 'BOLO', parts: ['BO','LO'] },
+            { word: 'COPO', parts: ['CO','PO'] },
+            { word: 'DOCE', parts: ['DO','CE'] },
+            { word: 'LOBO', parts: ['LO','BO'] },
+            { word: 'SUCO', parts: ['SU','CO'] },
+            { word: 'VOTO', parts: ['VO','TO'] },
+            { word: 'FOGO', parts: ['FO','GO'] },
+            { word: 'LIXO', parts: ['LI','XO'] },
+            { word: 'TETO', parts: ['TE','TO'] },
+            { word: 'GELO', parts: ['GE','LO'] },
+            { word: 'MURO', parts: ['MU','RO'] },
+            { word: 'LAGO', parts: ['LA','GO'] },
+            { word: 'SINO', parts: ['SI','NO'] },
+            { word: 'RODA', parts: ['RO','DA'] },
+            { word: 'PENA', parts: ['PE','NA'] },
+            { word: 'LUVA', parts: ['LU','VA'] },
+            { word: 'DEDO', parts: ['DE','DO'] },
+            { word: 'NABO', parts: ['NA','BO'] },
+            { word: 'FADA', parts: ['FA','DA'] },
+            { word: 'JIPE', parts: ['JI','PE'] },
+            { word: 'TUBO', parts: ['TU','BO'] },
+            { word: 'REDE', parts: ['RE','DE'] },
+            { word: 'MEDO', parts: ['ME','DO'] },
+            { word: 'PIPA', parts: ['PI','PA'] },
+            { word: 'SOPA', parts: ['SO','PA'] },
+            { word: 'VIDA', parts: ['VI','DA'] }
         ],
         wordRepeat: 2
     };
@@ -121,14 +182,18 @@
                 });
                 break;
 
-            case 'syllables':
-                const selectedSyllables = Object.keys(customParams.syllableFamilies).filter(s => customParams.syllableFamilies[s]);
+            case 'syllables': {
+                let sylMap = customParams.syllableFamilies;
+                if (currentLevelId === 'p5') sylMap = customParams.syllableComplexFamilies;
+                if (currentLevelId === 'p6') sylMap = customParams.syllableDigraphFamilies;
+                const selectedSyllables = Object.keys(sylMap).filter(s => sylMap[s]);
                 selectedSyllables.forEach(syllable => {
                     for (let i = 0; i < customParams.syllableRepeat; i++) {
                         baseItems.push({ type: 'syllable', syllable: syllable });
                     }
                 });
                 break;
+            }
 
             case 'wordbuilding':
                 customParams.wordList.forEach(wordObj => {
@@ -219,9 +284,16 @@
         `;
     }
 
+    function getSyllableMapForCurrentLevel() {
+        if (currentLevelId === 'p5') return customParams.syllableComplexFamilies;
+        if (currentLevelId === 'p6') return customParams.syllableDigraphFamilies;
+        return customParams.syllableFamilies;
+    }
+
     function renderSyllablesPanel() {
+        const sylMap = getSyllableMapForCurrentLevel();
         const families = {};
-        Object.keys(customParams.syllableFamilies).sort().forEach(s => {
+        Object.keys(sylMap).sort().forEach(s => {
             const first = s[0];
             if (!families[first]) families[first] = [];
             families[first].push(s);
@@ -234,7 +306,7 @@
         for (let letter in families) {
             html += `<div class="font-bold text-xs mt-1">${letter}</div>`;
             families[letter].forEach(syl => {
-                const checked = customParams.syllableFamilies[syl] ? 'checked' : '';
+                const checked = sylMap[syl] ? 'checked' : '';
                 html += `
                     <label class="inline-flex items-center gap-1 mr-3 mb-1">
                         <input type="checkbox" class="syllable-item" value="${syl}" ${checked}>
@@ -360,9 +432,11 @@
             }
 
             if (type === 'syllables') {
+                const sylMap = getSyllableMapForCurrentLevel();
+
                 document.querySelectorAll('.syllable-item').forEach(cb => {
                     cb.addEventListener('change', (e) => {
-                        customParams.syllableFamilies[e.target.value] = e.target.checked;
+                        sylMap[e.target.value] = e.target.checked;
                         saveState();
                         refreshPreview();
                     });
@@ -371,7 +445,7 @@
                 document.getElementById('selectAllSyllables')?.addEventListener('click', () => {
                     document.querySelectorAll('.syllable-item').forEach(cb => {
                         cb.checked = true;
-                        customParams.syllableFamilies[cb.value] = true;
+                        sylMap[cb.value] = true;
                     });
                     saveState();
                     refreshPreview();
@@ -380,7 +454,7 @@
                 document.getElementById('clearAllSyllables')?.addEventListener('click', () => {
                     document.querySelectorAll('.syllable-item').forEach(cb => {
                         cb.checked = false;
-                        customParams.syllableFamilies[cb.value] = false;
+                        sylMap[cb.value] = false;
                     });
                     saveState();
                     refreshPreview();
@@ -390,7 +464,7 @@
                     document.querySelectorAll('.syllable-item').forEach(cb => {
                         const random = Math.random() > 0.5;
                         cb.checked = random;
-                        customParams.syllableFamilies[cb.value] = random;
+                        sylMap[cb.value] = random;
                     });
                     saveState();
                     refreshPreview();
@@ -496,7 +570,23 @@
                 { word: 'FOGO', parts: ['FO','GO'] },
                 { word: 'LIXO', parts: ['LI','XO'] },
                 { word: 'TETO', parts: ['TE','TO'] },
-                { word: 'GELO', parts: ['GE','LO'] }
+                { word: 'GELO', parts: ['GE','LO'] },
+                { word: 'MURO', parts: ['MU','RO'] },
+                { word: 'LAGO', parts: ['LA','GO'] },
+                { word: 'SINO', parts: ['SI','NO'] },
+                { word: 'RODA', parts: ['RO','DA'] },
+                { word: 'PENA', parts: ['PE','NA'] },
+                { word: 'LUVA', parts: ['LU','VA'] },
+                { word: 'DEDO', parts: ['DE','DO'] },
+                { word: 'NABO', parts: ['NA','BO'] },
+                { word: 'FADA', parts: ['FA','DA'] },
+                { word: 'JIPE', parts: ['JI','PE'] },
+                { word: 'TUBO', parts: ['TU','BO'] },
+                { word: 'REDE', parts: ['RE','DE'] },
+                { word: 'MEDO', parts: ['ME','DO'] },
+                { word: 'PIPA', parts: ['PI','PA'] },
+                { word: 'SOPA', parts: ['SO','PA'] },
+                { word: 'VIDA', parts: ['VI','DA'] }
             ];
         } else if (id === 'p4' && previousLevel !== 'p4') {
             customParams.wordList = [
@@ -506,17 +596,30 @@
                 { word: 'SAPATO', parts: ['SA','PA','TO'] },
                 { word: 'TOMATE', parts: ['TO','MA','TE'] },
                 { word: 'SACOLA', parts: ['SA','CO','LA'] },
-                { word: 'XÍCARA', parts: ['XÍ','CA','RA'] },
                 { word: 'PANELA', parts: ['PA','NE','LA'] },
                 { word: 'CABELO', parts: ['CA','BE','LO'] },
                 { word: 'JANELA', parts: ['JA','NE','LA'] },
                 { word: 'BONECO', parts: ['BO','NE','CO'] },
                 { word: 'PIJAMA', parts: ['PI','JA','MA'] },
                 { word: 'GELADO', parts: ['GE','LA','DO'] },
-                { word: 'TELEFONE', parts: ['TE','LE','FO','NE'] },
-                { word: 'CHOCOLATE', parts: ['CHO','CO','LA','TE'] },
+                { word: 'CAVALO', parts: ['CA','VA','LO'] },
+                { word: 'MACACO', parts: ['MA','CA','CO'] },
+                { word: 'RAPOSA', parts: ['RA','PO','SA'] },
+                { word: 'COMIDA', parts: ['CO','MI','DA'] },
+                { word: 'SALADA', parts: ['SA','LA','DA'] },
+                { word: 'CANETA', parts: ['CA','NE','TA'] },
+                { word: 'PATETA', parts: ['PA','TE','TA'] },
+                { word: 'MENINO', parts: ['ME','NI','NO'] },
+                { word: 'MENINA', parts: ['ME','NI','NA'] },
+                { word: 'TUCANO', parts: ['TU','CA','NO'] },
+                { word: 'GIRAFA', parts: ['GI','RA','FA'] },
+                { word: 'BICICLETA', parts: ['BI','CI','CLE','TA'] },
                 { word: 'GELADEIRA', parts: ['GE','LA','DEI','RA'] },
-                { word: 'CAVALO', parts: ['CA','VA','LO'] }
+                { word: 'CHOCOLATE', parts: ['CHO','CO','LA','TE'] },
+                { word: 'TELEFONE', parts: ['TE','LE','FO','NE'] },
+                { word: 'ABACAXI', parts: ['A','BA','CA','XI'] },
+                { word: 'BORBOLETA', parts: ['BOR','BO','LE','TA'] },
+                { word: 'TARTARUGA', parts: ['TAR','TA','RU','GA'] }
             ];
         }
 
