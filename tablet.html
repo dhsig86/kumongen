@@ -10,6 +10,7 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="KumonTablet">
@@ -91,9 +92,22 @@
 <body class="bg-slate-950 text-slate-100 flex flex-col h-full overflow-hidden font-sans antialiased select-none">
 
     <!-- Canvas para Efeito de Confetes na Conclusão -->
-    <canvas id="confettiCanvas" class="fixed inset-0 pointer-events-none z-50 w-full h-full"></canvas>
+    <canvas id="confettiCanvas" style="pointer-events:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:50"></canvas>
 
-    <!-- BARRA SUPERIOR (HEADER INTERATIVO TABLET) -->
+    <!-- MODAL: EXEMPLO GUIADO KUMON (Worked Example no início da rodada) -->
+    <div id="workedExampleModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:40;background:rgba(2,6,23,0.8);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);justify-content:center;align-items:center;padding:1rem">
+        <!-- Injetado dinamicamente via JS -->
+    </div>
+
+    <!-- MODAL: RODADA CONCLUÍDA & EMISSÃO DE CERTIFICADO -->
+    <div id="roundFinishedModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:40;background:rgba(2,6,23,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);justify-content:center;align-items:center;padding:1rem">
+        <!-- Injetado dinamicamente via JS -->
+    </div>
+
+    <!-- MODAL: CONQUISTAS E TROFÉUS -->
+    <div id="badgesModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:40;background:rgba(2,6,23,0.8);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);justify-content:center;align-items:center;padding:1rem">
+        <!-- Injetado dinamicamente via JS -->
+    </div>
     <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 px-3 md:px-6 py-2.5 flex items-center justify-between flex-shrink-0 z-30">
         <!-- Lado Esquerdo: Voltar + Seletor de Matéria e Nível -->
         <div class="flex items-center gap-2 md:gap-3">
@@ -209,22 +223,6 @@
             </div>
         </div>
     </main>
-
-    <!-- MODAL: EXEMPLO GUIADO KUMON (Worked Example no início da rodada) -->
-    <div id="workedExampleModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
-        <!-- Injetado dinamicamente via JS -->
-    </div>
-
-    <!-- MODAL: RODADA CONCLUÍDA & EMISSÃO DE CERTIFICADO -->
-    <div id="roundFinishedModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-40 hidden flex items-center justify-center p-4">
-        <!-- Injetado dinamicamente via JS -->
-    </div>
-
-    <!-- MODAL: CONQUISTAS E TROFÉUS -->
-    <div id="badgesModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
-        <!-- Injetado dinamicamente via JS -->
-    </div>
-
     <!-- SCRIPTS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="gerador.js"></script>
@@ -233,6 +231,16 @@
     <script src="portugues.js"></script>
     <script src="ingles.js"></script>
     <script src="tablet-player.js"></script>
+
+    <!-- Debug: mostra erros JS na tela (remover em produção final) -->
+    <script>
+        window.addEventListener('error', function(e) {
+            var d = document.createElement('div');
+            d.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:red;color:white;padding:12px;font-size:12px;z-index:9999;font-family:monospace;max-height:40vh;overflow:auto';
+            d.textContent = 'ERRO JS: ' + e.message + ' em ' + (e.filename||'').split('/').pop() + ':' + e.lineno;
+            document.body.appendChild(d);
+        });
+    </script>
 
     <!-- Service Worker para funcionamento 100% offline -->
     <script>

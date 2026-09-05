@@ -702,7 +702,7 @@
                 this.renderWorkedExample(item, level);
                 return;
             } else if (exampleContainer) {
-                exampleContainer.classList.add('hidden');
+                exampleContainer.style.display = 'none';
             }
 
             // Exibição da instrução
@@ -719,9 +719,9 @@
             const numericTypes = ['math', 'quantity', 'sequence', 'tens'];
             if (keypadWrapper) {
                 if (numericTypes.includes(item.type)) {
-                    keypadWrapper.classList.remove('hidden');
+                    keypadWrapper.style.display = '';
                 } else {
-                    keypadWrapper.classList.add('hidden');
+                    keypadWrapper.style.display = 'none';
                 }
             }
 
@@ -805,14 +805,14 @@
                 </div>
             `;
 
-            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
             const btn = document.getElementById('dismissExampleBtn');
             if (btn) {
                 btn.addEventListener('click', () => {
                     sound.init();
                     sound.playSuccess();
                     Session.workedExampleDismissed = true;
-                    modal.classList.add('hidden');
+                    modal.style.display = 'none';
                     this.renderCurrentQuestion();
                 });
             }
@@ -1528,7 +1528,7 @@
                 </div>
             `;
 
-            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
 
             const certBtn = document.getElementById('downloadCertBtn');
             if (certBtn) {
@@ -1549,7 +1549,7 @@
             const playAgainBtn = document.getElementById('playAgainBtn');
             if (playAgainBtn) {
                 playAgainBtn.addEventListener('click', () => {
-                    modal.classList.add('hidden');
+                    modal.style.display = 'none';
                     this.startRound();
                 });
             }
@@ -1619,10 +1619,10 @@
                 </div>
             `;
 
-            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
             const closeBtn = document.getElementById('closeBadgesBtn');
             if (closeBtn) {
-                closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+                closeBtn.addEventListener('click', () => modal.style.display = 'none');
             }
         }
     };
