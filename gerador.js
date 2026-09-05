@@ -108,80 +108,227 @@ const KumonGen = (function() {
     }
 
     // Edição inline amigável para pais (WYSIWYG ao clicar na folha)
-    function promptInlineEdit(item, idx, pageNum) {
+    // Edição inline visual e moderna para pais (WYSIWYG ao clicar no exercício na folha A4)
+    function promptInlineEdit(item, idx, pageNum, level) {
         if (!item) return;
+
+        // Remove modal anterior se aberto
+        const oldModal = document.getElementById('kumonInlineEditModal');
+        if (oldModal) oldModal.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'kumonInlineEditModal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(2,6,23,0.75);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:1rem';
+
+        // Prepara campos conforme tipo do exercício
+        let fieldsHtml = '';
         if (item.type === 'math') {
-            const currentStr = `${item.operand1} ${item.operator} ${item.operand2}`;
-            const input = window.prompt(`Editar conta #${idx + 1} da pág. ${pageNum} (ex: 4 + 2):`, currentStr);
-            if (input && input.trim()) {
-                const parts = input.trim().split(/\s+/);
-                if (parts.length === 3) {
-                    const op1 = parseInt(parts[0], 10);
-                    const op = parts[1];
-                    const op2 = parseInt(parts[2], 10);
+            fieldsHtml = `
+                <div class="flex items-center justify-center gap-2.5 my-4">
+                    <input type="number" id="editOp1" value="${item.operand1}" class="w-20 text-center text-3xl font-black bg-slate-100 border-2 border-slate-300 rounded-2xl p-2.5 focus:outline-none focus:border-blue-500">
+                    <select id="editOperator" class="text-2xl font-black bg-slate-100 border-2 border-slate-300 rounded-2xl p-2.5 focus:outline-none focus:border-blue-500 cursor-pointer">
+                        <option value="+" ${item.operator === '+' ? 'selected' : ''}>+</option>
+                        <option value="-" ${item.operator === '-' ? 'selected' : ''}>−</option>
+                        <option value="×" ${item.operator === '×' || item.operator === '*' ? 'selected' : ''}>×</option>
+                        <option value="÷" ${item.operator === '÷' || item.operator === '/' ? 'selected' : ''}>÷</option>
+                    </select>
+                    <input type="number" id="editOp2" value="${item.operand2}" class="w-20 text-center text-3xl font-black bg-slate-100 border-2 border-slate-300 rounded-2xl p-2.5 focus:outline-none focus:border-blue-500">
+                </div>
+            `;
+        } else if (item.type === 'quantity') {
+            fieldsHtml = `
+                <div class="flex flex-col items-center my-4">
+                    <label class="text-xs font-bold text-slate-500 mb-2">Total de bolinhas para contar:</label>
+                    <div class="flex items-center gap-3">
+                        <button type="button" id="btnDecQty" class="w-11 h-11 rounded-2xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-black text-2xl active:scale-95 transition-all cursor-pointer">-</button>
+                        <input type="number" id="editQuantity" value="${item.value}" min="1" max="30" class="w-24 text-center text-3xl font-black bg-slate-100 border-2 border-slate-300 rounded-2xl p-2 focus:outline-none focus:border-blue-500">
+                        <button type="button" id="btnIncQty" class="w-11 h-11 rounded-2xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-black text-2xl active:scale-95 transition-all cursor-pointer">+</button>
+                    </div>
+                </div>
+            `;
+        } else if (item.type === 'sequence') {
+            fieldsHtml = `
+                <div class="flex flex-col my-4">
+                    <label class="text-xs font-bold text-slate-500 mb-1.5">Sequência (use '__' onde o aluno deve preencher):</label>
+                    <input type="text" id="editSequence" value="${item.sequence.join(' ')}" class="w-full text-center text-xl font-mono font-black bg-slate-100 border-2 border-slate-300 rounded-2xl p-3 focus:outline-none focus:border-blue-500">
+                    <span class="text-[11px] text-slate-400 text-center mt-1">Exemplo: 2 4 6 __ 10</span>
+                </div>
+            `;
+        } else if (item.type === 'compare') {
+            fieldsHtml = `
+                <div class="flex items-center justify-center gap-4 my-4">
+                    <input type="number" id="editCompareA" value="${item.pair[0]}" class="w-20 text-center text-3xl font-black bg-slate-100 border-2 border-slate-300 rounded-2xl p-2.5">
+                    <span class="text-slate-400 font-bold text-lg">vs</span>
+                    <input type="number" id="editCompareB" value="${item.pair[1]}" class="w-20 text-center text-3xl font-black bg-slate-100 border-2 border-slate-300 rounded-2xl p-2.5">
+                </div>
+            `;
+        } else if (item.type === 'neighbors') {
+            fieldsHtml = `
+                <div class="flex flex-col items-center my-4">
+                    <label class="text-xs font-bold text-slate-500 mb-2">Número Central (vizinhos):</label>
+                    <input type="number" id="editCenter" value="${item.center}" class="w-24 text-center text-3xl font-black bg-slate-100 border-2 border-slate-300 rounded-2xl p-2.5">
+                </div>
+            `;
+        } else if (item.type === 'word') {
+            const curVal = item.parts ? item.parts.join('-') : (item.word || '');
+            fieldsHtml = `
+                <div class="flex flex-col my-4">
+                    <label class="text-xs font-bold text-slate-500 mb-1.5">Palavra (hífen separa sílabas, ex: BO-LA):</label>
+                    <input type="text" id="editWord" value="${curVal}" class="w-full text-center text-2xl font-black uppercase bg-slate-100 border-2 border-slate-300 rounded-2xl p-3">
+                </div>
+            `;
+        } else if (item.type === 'trace') {
+            fieldsHtml = `
+                <div class="flex flex-col items-center my-4">
+                    <label class="text-xs font-bold text-slate-500 mb-1.5">Letra do traçado pontilhado:</label>
+                    <input type="text" id="editChar" maxlength="1" value="${item.char}" class="w-20 text-center text-4xl font-black uppercase bg-slate-100 border-2 border-slate-300 rounded-2xl p-2">
+                </div>
+            `;
+        } else if (item.type === 'syllable') {
+            fieldsHtml = `
+                <div class="flex flex-col items-center my-4">
+                    <label class="text-xs font-bold text-slate-500 mb-1.5">Sílaba para treino:</label>
+                    <input type="text" id="editSyllable" maxlength="4" value="${item.syllable}" class="w-28 text-center text-3xl font-black uppercase bg-slate-100 border-2 border-slate-300 rounded-2xl p-2">
+                </div>
+            `;
+        } else {
+            fieldsHtml = `<div class="text-sm text-slate-500 my-4 text-center">Tipo de exercício: ${item.type}</div>`;
+        }
+
+        modal.innerHTML = `
+            <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border-4 border-blue-500 text-slate-800">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-2">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-base shadow-inner">
+                            <i class="fas fa-pen"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-black text-sm text-slate-900">Editar Exercício #${idx + 1}</h4>
+                            <span class="text-[10px] text-slate-400 font-bold">Folha · Página ${pageNum}</span>
+                        </div>
+                    </div>
+                    <button id="closeEditModalBtn" class="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                ${fieldsHtml}
+
+                <div class="flex flex-col gap-2 mt-4">
+                    <button type="button" id="btnRerollItem" class="w-full py-2.5 bg-amber-50 hover:bg-amber-100 border-2 border-amber-300 text-amber-900 font-black text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95 cursor-pointer">
+                        <i class="fas fa-dice text-amber-600 text-sm"></i> 🎲 Sortear Nova Questão Deste Nível
+                    </button>
+
+                    <div class="grid grid-cols-2 gap-2 mt-1">
+                        <button type="button" id="btnCancelEdit" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer">
+                            Cancelar
+                        </button>
+                        <button type="button" id="btnSaveEdit" class="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl transition-colors shadow flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer">
+                            <i class="fas fa-check"></i> Salvar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Stepper para quantidade
+        const btnDec = modal.querySelector('#btnDecQty');
+        const btnInc = modal.querySelector('#btnIncQty');
+        const inputQty = modal.querySelector('#editQuantity');
+        if (btnDec && inputQty) {
+            btnDec.onclick = () => { inputQty.value = Math.max(1, parseInt(inputQty.value || 1, 10) - 1); };
+        }
+        if (btnInc && inputQty) {
+            btnInc.onclick = () => { inputQty.value = Math.min(30, parseInt(inputQty.value || 1, 10) + 1); };
+        }
+
+        // Fechar modal
+        const closeBtn = modal.querySelector('#closeEditModalBtn');
+        const cancelBtn = modal.querySelector('#btnCancelEdit');
+        if (closeBtn) closeBtn.onclick = () => modal.remove();
+        if (cancelBtn) cancelBtn.onclick = () => modal.remove();
+
+        // Sortear nova questão
+        const rerollBtn = modal.querySelector('#btnRerollItem');
+        if (rerollBtn) {
+            rerollBtn.onclick = () => {
+                let generated = null;
+                if (window.KumonSubjects && level) {
+                    for (const key of Object.keys(window.KumonSubjects)) {
+                        const sub = window.KumonSubjects[key];
+                        if (sub && sub.levels && sub.levels.some(l => l.id === level.id)) {
+                            const newItems = sub.generate(level, 1);
+                            if (newItems && newItems.length) {
+                                generated = newItems[0];
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (generated) {
+                    Object.assign(item, generated);
+                    modal.remove();
+                    if (window.refreshPreview) window.refreshPreview();
+                    promptInlineEdit(item, idx, pageNum, level);
+                } else {
+                    alert('Não foi possível sortear automaticamente para este nível.');
+                }
+            };
+        }
+
+        // Salvar alterações
+        const saveBtn = modal.querySelector('#btnSaveEdit');
+        if (saveBtn) {
+            saveBtn.onclick = () => {
+                if (item.type === 'math') {
+                    const op1 = parseInt(modal.querySelector('#editOp1').value, 10);
+                    const op = modal.querySelector('#editOperator').value;
+                    const op2 = parseInt(modal.querySelector('#editOp2').value, 10);
                     if (!isNaN(op1) && !isNaN(op2)) {
                         item.operand1 = op1;
                         item.operator = op;
                         item.operand2 = op2;
-                        if (window.refreshPreview) window.refreshPreview();
                     }
+                } else if (item.type === 'quantity') {
+                    const q = parseInt(modal.querySelector('#editQuantity').value, 10);
+                    if (!isNaN(q)) item.value = Math.max(1, Math.min(30, q));
+                } else if (item.type === 'sequence') {
+                    const s = modal.querySelector('#editSequence').value.trim();
+                    if (s) {
+                        item.sequence = s.split(/\s+/).map(v => v === '__' ? '__' : (isNaN(Number(v)) ? v : Number(v)));
+                    }
+                } else if (item.type === 'compare') {
+                    const a = parseInt(modal.querySelector('#editCompareA').value, 10);
+                    const b = parseInt(modal.querySelector('#editCompareB').value, 10);
+                    if (!isNaN(a) && !isNaN(b)) item.pair = [a, b];
+                } else if (item.type === 'neighbors') {
+                    const c = parseInt(modal.querySelector('#editCenter').value, 10);
+                    if (!isNaN(c)) item.center = c;
+                } else if (item.type === 'word') {
+                    const w = modal.querySelector('#editWord').value.trim().toUpperCase();
+                    if (w) {
+                        if (w.includes('-')) {
+                            item.parts = w.split('-');
+                            item.word = item.parts.join('');
+                        } else {
+                            item.word = w;
+                            item.parts = [w];
+                        }
+                    }
+                } else if (item.type === 'trace') {
+                    const ch = modal.querySelector('#editChar').value.trim().toUpperCase();
+                    if (ch) item.char = ch[0];
+                } else if (item.type === 'syllable') {
+                    const syl = modal.querySelector('#editSyllable').value.trim().toUpperCase();
+                    if (syl) item.syllable = syl;
                 }
-            }
-        } else if (item.type === 'quantity') {
-            const input = window.prompt(`Editar quantidade #${idx + 1} (1 a 10):`, item.value);
-            if (input && !isNaN(parseInt(input, 10))) {
-                item.value = Math.max(1, Math.min(20, parseInt(input, 10)));
+
+                modal.remove();
                 if (window.refreshPreview) window.refreshPreview();
-            }
-        } else if (item.type === 'sequence') {
-            const currentStr = item.sequence.join(' ');
-            const input = window.prompt(`Editar sequência #${idx + 1} (separe por espaços, '__' para lacuna):`, currentStr);
-            if (input && input.trim()) {
-                item.sequence = input.trim().split(/\s+/).map(v => v === '__' ? '__' : (isNaN(Number(v)) ? v : Number(v)));
-                if (window.refreshPreview) window.refreshPreview();
-            }
-        } else if (item.type === 'compare') {
-            const currentStr = `${item.pair[0]} ${item.pair[1]}`;
-            const input = window.prompt(`Editar par de números #${idx + 1} (ex: 7 4):`, currentStr);
-            if (input && input.trim()) {
-                const parts = input.trim().split(/\s+/).map(Number);
-                if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-                    item.pair = parts;
-                    if (window.refreshPreview) window.refreshPreview();
-                }
-            }
-        } else if (item.type === 'neighbors') {
-            const input = window.prompt(`Editar número central #${idx + 1}:`, item.center);
-            if (input && !isNaN(parseInt(input, 10))) {
-                item.center = parseInt(input, 10);
-                if (window.refreshPreview) window.refreshPreview();
-            }
-        } else if (item.type === 'word') {
-            const currentParts = item.parts ? item.parts.join('-') : (item.word || '');
-            const input = window.prompt(`Editar palavra #${idx + 1} (separe sílabas por hífen, ex: BO-LA):`, currentParts);
-            if (input && input.trim()) {
-                const clean = input.trim().toUpperCase();
-                if (clean.includes('-')) {
-                    item.parts = clean.split('-');
-                    item.word = item.parts.join('');
-                } else {
-                    item.word = clean;
-                    item.parts = [clean];
-                }
-                if (window.refreshPreview) window.refreshPreview();
-            }
-        } else if (item.type === 'trace') {
-            const input = window.prompt(`Editar letra #${idx + 1}:`, item.char);
-            if (input && input.trim()) {
-                item.char = input.trim().toUpperCase()[0];
-                if (window.refreshPreview) window.refreshPreview();
-            }
-        } else if (item.type === 'syllable') {
-            const input = window.prompt(`Editar sílaba #${idx + 1}:`, item.syllable);
-            if (input && input.trim()) {
-                item.syllable = input.trim().toUpperCase();
-                if (window.refreshPreview) window.refreshPreview();
-            }
+            };
         }
     }
 
@@ -303,7 +450,7 @@ const KumonGen = (function() {
             } else {
                 content.classList.add('exercise-editable');
                 content.title = 'Clique para editar este item diretamente no caderno';
-                content.addEventListener('click', () => promptInlineEdit(item, idx, pageNum));
+                content.addEventListener('click', () => promptInlineEdit(item, idx, pageNum, level));
             }
 
             switch (item.type) {

@@ -62,7 +62,41 @@
         <!-- ABA 1: WIZARD RÁPIDO PARA PAIS -->
         <div id="panel-wizard" class="space-y-4">
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase block mb-1.5">1. Foco em Phonics / Inglês</label>
+                <label class="text-[10px] font-black text-slate-400 uppercase block mb-1.5">1. Idade / Ano Escolar</label>
+                <div class="grid grid-cols-2 gap-1.5">
+                    <button type="button" class="wizard-age-btn active p-2 rounded-xl border border-red-600 bg-red-50 hover:border-red-700 text-left transition flex items-center gap-2" onclick="selectEngWizardAge('age_4_5', this)">
+                        <span class="text-base">👶</span>
+                        <div class="min-w-0">
+                            <div class="text-[11px] font-bold text-slate-800 leading-tight">4-5 anos</div>
+                            <div class="text-[9px] text-slate-500 leading-tight">Ed. Infantil</div>
+                        </div>
+                    </button>
+                    <button type="button" class="wizard-age-btn p-2 rounded-xl border border-slate-200 bg-white hover:border-slate-300 text-left transition flex items-center gap-2" onclick="selectEngWizardAge('age_6_7', this)">
+                        <span class="text-base">🎒</span>
+                        <div class="min-w-0">
+                            <div class="text-[11px] font-bold text-slate-800 leading-tight">6-7 anos</div>
+                            <div class="text-[9px] text-slate-500 leading-tight">1º Fundamental</div>
+                        </div>
+                    </button>
+                    <button type="button" class="wizard-age-btn p-2 rounded-xl border border-slate-200 bg-white hover:border-slate-300 text-left transition flex items-center gap-2" onclick="selectEngWizardAge('age_8_9', this)">
+                        <span class="text-base">📘</span>
+                        <div class="min-w-0">
+                            <div class="text-[11px] font-bold text-slate-800 leading-tight">8-9 anos</div>
+                            <div class="text-[9px] text-slate-500 leading-tight">2º / 3º Ano</div>
+                        </div>
+                    </button>
+                    <button type="button" class="wizard-age-btn p-2 rounded-xl border border-slate-200 bg-white hover:border-slate-300 text-left transition flex items-center gap-2" onclick="selectEngWizardAge('age_10_plus', this)">
+                        <span class="text-base">🚀</span>
+                        <div class="min-w-0">
+                            <div class="text-[11px] font-bold text-slate-800 leading-tight">10+ anos</div>
+                            <div class="text-[9px] text-slate-500 leading-tight">Avançado</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase block mb-1.5">2. Foco em Phonics / Inglês</label>
                 <div class="space-y-1.5">
                     <div class="kumon-wizard-card active" onclick="selectEngWizardGoal('i1', this)">
                         <div class="w-7 h-7 rounded-lg bg-red-100 text-red-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
@@ -117,7 +151,7 @@
             </div>
 
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase block mb-1.5">2. Ritmo da Rotina Diária</label>
+                <label class="text-[10px] font-black text-slate-400 uppercase block mb-1.5">3. Ritmo da Rotina Diária</label>
                 <div class="grid grid-cols-3 gap-1.5 text-center">
                     <button type="button" class="wizard-pace-btn active p-2 rounded-xl border border-red-600 bg-red-50 text-red-800 text-[10px] font-bold" onclick="selectEngWizardPace(2, 8, this)">
                         <span class="block text-xs font-black">1 Folha</span>

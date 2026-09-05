@@ -445,6 +445,27 @@
         }
     }
 
+    function selectWizardAge(ageKey, btn) {
+        document.querySelectorAll('.wizard-age-btn').forEach(b => {
+            b.classList.remove('active', 'border-blue-600', 'bg-blue-50');
+            b.classList.add('border-slate-200', 'bg-white');
+        });
+        if (btn) {
+            btn.classList.add('active', 'border-blue-600', 'bg-blue-50');
+            btn.classList.remove('border-slate-200', 'bg-white');
+        }
+
+        const map = {
+            'age_4_5': 'm1',
+            'age_6_7': 'm2',
+            'age_8_9': 'm6',
+            'age_10_plus': 'm8'
+        };
+        const targetLevel = map[ageKey] || 'm2';
+        const targetCard = document.querySelector(`#panel-wizard .kumon-wizard-card[onclick*="'${targetLevel}'"]`);
+        selectWizardGoal(targetLevel, targetCard);
+    }
+
     function selectWizardGoal(levelId, el) {
         currentLevelId = levelId;
         document.querySelectorAll('#panel-wizard .kumon-wizard-card').forEach(card => card.classList.remove('active'));
@@ -513,6 +534,7 @@
 
     window.adjustZoom = KumonGen.adjustZoom;
     window.switchMatTab = switchMatTab;
+    window.selectWizardAge = selectWizardAge;
     window.selectWizardGoal = selectWizardGoal;
     window.selectWizardPace = selectWizardPace;
     

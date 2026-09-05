@@ -1,5 +1,5 @@
 // KumonGen Service Worker
-const CACHE_NAME = 'kumongen-v3.6';
+const CACHE_NAME = 'kumongen-v3.7';
 
 const APP_SHELL = [
   './index.html',
@@ -16,7 +16,15 @@ const APP_SHELL = [
   './portugues.js',
   './ingles.js',
   './favicon.svg',
-  './offline.html'
+  './offline.html',
+  './assets/mascotes/jaguar.png',
+  './assets/mascotes/jaguar_avatar.png',
+  './assets/mascotes/capivara.png',
+  './assets/mascotes/capivara_avatar.png',
+  './assets/mascotes/calango.png',
+  './assets/mascotes/calango_avatar.png',
+  './assets/mascotes/golfinho.png',
+  './assets/mascotes/golfinho_avatar.png'
 ];
 
 // CDN patterns — stale-while-revalidate

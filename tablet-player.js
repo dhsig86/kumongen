@@ -550,6 +550,279 @@
     }
 
     // ============================================================
+    // 5.5. CATÁLOGO & MOTOR DE COMPANHEIROS MASCOTES
+    // ============================================================
+    const MASCOTS = {
+        jaguar: {
+            id: 'jaguar',
+            name: 'Juju',
+            fullName: 'Juju a Jaguatirica',
+            icon: '🐾',
+            avatar: 'assets/mascotes/jaguar_avatar.png',
+            fullImg: 'assets/mascotes/jaguar.png',
+            ringGradient: 'from-amber-400 to-yellow-300',
+            textColor: 'text-amber-400',
+            borderColor: 'border-amber-400',
+            badgeBg: 'bg-amber-500',
+            desc: 'Ágil e curiosa! Adora desafios rápidos e celebrar cada vitória.',
+            cheerSuccess: [
+                'Incrível! Você acertou!',
+                'Na mosca! Que rapidez!',
+                'Sensacional! Você é demais!',
+                'Muito bem! Mandou super bem!',
+                'Boa! Continue nesse ritmo!'
+            ],
+            cheerStreak: [
+                'Uau, que sequência feroz!',
+                'Velocidade de jaguar! Imparável!',
+                'Que foco impressionante!'
+            ],
+            cheerWrong: [
+                'Quase lá! Tente mais uma vez!',
+                'Respira fundo, você consegue!',
+                'Vamos juntos, confio em você!',
+                'Não desista, a prática faz o mestre!'
+            ],
+            cheerFinish: 'Parabéns campeão(ã)! Treino concluído com garra!'
+        },
+        capivara: {
+            id: 'capivara',
+            name: 'Capi',
+            fullName: 'Capi a Capivara',
+            icon: '🧢',
+            avatar: 'assets/mascotes/capivara_avatar.png',
+            fullImg: 'assets/mascotes/capivara.png',
+            ringGradient: 'from-orange-500 to-amber-400',
+            textColor: 'text-orange-400',
+            borderColor: 'border-orange-400',
+            badgeBg: 'bg-orange-500',
+            desc: 'Focado e sereno com seu boné da sorte! Passo a passo até a perfeição.',
+            cheerSuccess: [
+                'Excelente foco!',
+                'Muito bom! Constância é tudo!',
+                'Passo a passo com calma!',
+                'Perfeito! Grande acerto!',
+                'Você pensou certinho!'
+            ],
+            cheerStreak: [
+                'Que tranquilidade genial!',
+                'Concentração de mestre!',
+                'Super focado, que orgulho!'
+            ],
+            cheerWrong: [
+                'Calma e tranquilidade!',
+                'Respira e tenta de novo.',
+                'Tudo bem errar, assim a gente aprende!'
+            ],
+            cheerFinish: 'Treino finalizado com muita paz e dedicação!'
+        },
+        calango: {
+            id: 'calango',
+            name: 'Lango',
+            fullName: 'Lango o Calango',
+            icon: '🦎',
+            avatar: 'assets/mascotes/calango_avatar.png',
+            fullImg: 'assets/mascotes/calango.png',
+            ringGradient: 'from-emerald-500 to-teal-400',
+            textColor: 'text-emerald-400',
+            borderColor: 'border-emerald-400',
+            badgeBg: 'bg-emerald-500',
+            desc: 'Esperto e veloz! Olhos atentos e raciocínio afiado para matemática.',
+            cheerSuccess: [
+                'Boa! Reflexos rápidos!',
+                'Você é esperto demais!',
+                'Cálculo afiado!',
+                'Show! Mais um acerto na conta!',
+                'Mandou ver!'
+            ],
+            cheerStreak: [
+                'Velocidade máxima ativada!',
+                'Ninguém te segura hoje!',
+                'Que raciocínio relâmpago!'
+            ],
+            cheerWrong: [
+                'Ops! Tenta outra vez!',
+                'Chegou pertinho, recalcula aí!',
+                'Bora lá, você pega de primeira agora!'
+            ],
+            cheerFinish: 'Treino épico! Você foi muito veloz!'
+        },
+        golfinho: {
+            id: 'golfinho',
+            name: 'Finho',
+            fullName: 'Finho o Golfinho',
+            icon: '🐬',
+            avatar: 'assets/mascotes/golfinho_avatar.png',
+            fullImg: 'assets/mascotes/golfinho.png',
+            ringGradient: 'from-blue-500 to-cyan-400',
+            textColor: 'text-blue-400',
+            borderColor: 'border-blue-400',
+            badgeBg: 'bg-blue-500',
+            desc: 'Alegre e saltitante! Torce com sorrisos em cada resposta certa.',
+            cheerSuccess: [
+                'Salto perfeito! Acertou!',
+                'Uhul! Que resposta linda!',
+                'Sensacional! Pura alegria!',
+                'Nota 10! Mergulhou fundo!',
+                'Parabéns, você é fera!'
+            ],
+            cheerStreak: [
+                'Onda gigante de acertos!',
+                'Show aquático de inteligência!',
+                'Espetacular! Você brilha!'
+            ],
+            cheerWrong: [
+                'Não desanima, mergulha de novo!',
+                'Tenta outra vez, você vai achar!',
+                'Estou torcendo por você!'
+            ],
+            cheerFinish: 'Festa no mar! Treino maravilhoso!'
+        }
+    };
+
+    const MascotEngine = {
+        currentId: localStorage.getItem('kumongen_active_mascot') || 'jaguar',
+
+        getCurrent() {
+            return MASCOTS[this.currentId] || MASCOTS.jaguar;
+        },
+
+        set(id) {
+            if (!MASCOTS[id]) return;
+            this.currentId = id;
+            localStorage.setItem('kumongen_active_mascot', id);
+            this.updateUI();
+            this.speak(`Oi! Eu sou ${this.getCurrent().name}! Vamos treinar juntos!`);
+        },
+
+        updateUI() {
+            const m = this.getCurrent();
+
+            // Atualiza componente principal ao lado do card
+            const avatarImg = document.getElementById('mascotAvatarImg');
+            if (avatarImg) avatarImg.src = m.avatar;
+
+            const nameBadge = document.getElementById('mascotNameBadge');
+            if (nameBadge) {
+                nameBadge.innerHTML = `${m.name} ${m.icon}`;
+                nameBadge.className = `mt-1 text-[10px] md:text-xs font-black ${m.textColor} uppercase tracking-wider bg-slate-900/90 px-2.5 py-0.5 rounded-full border border-slate-700 shadow`;
+            }
+
+            const ring = document.getElementById('mascotAvatarRing');
+            if (ring) {
+                ring.className = `w-14 h-14 md:w-20 md:h-20 rounded-full p-1 bg-gradient-to-tr ${m.ringGradient} shadow-xl transition-all duration-300 group-hover:scale-105 group-active:scale-95`;
+            }
+
+            // Atualiza botão do header
+            const headerImg = document.getElementById('headerMascotImg');
+            if (headerImg) {
+                headerImg.src = m.avatar;
+                headerImg.className = `w-6 h-6 rounded-full object-cover border-2 ${m.borderColor}`;
+            }
+            const headerName = document.getElementById('headerMascotName');
+            if (headerName) {
+                headerName.innerText = m.name;
+                headerName.className = `hidden md:inline text-xs font-bold ${m.textColor}`;
+            }
+        },
+
+        speak(text, duration = 3200) {
+            const bubble = document.getElementById('mascotSpeechBubble');
+            const speechText = document.getElementById('mascotSpeechText');
+            if (!bubble || !speechText) return;
+
+            speechText.innerText = text;
+            bubble.style.opacity = '1';
+            bubble.style.transform = 'scale(1)';
+
+            if (this._speakTimer) clearTimeout(this._speakTimer);
+            this._speakTimer = setTimeout(() => {
+                speechText.innerText = 'Sua vez! ✏️';
+            }, duration);
+        },
+
+        onCorrect(streak = 1) {
+            const m = this.getCurrent();
+            let msg = '';
+            if (streak >= 3 && Math.random() > 0.3) {
+                msg = m.cheerStreak[Math.floor(Math.random() * m.cheerStreak.length)];
+            } else {
+                msg = m.cheerSuccess[Math.floor(Math.random() * m.cheerSuccess.length)];
+            }
+
+            // Pulinho do avatar
+            const ring = document.getElementById('mascotAvatarRing');
+            if (ring) {
+                ring.classList.add('-translate-y-2');
+                setTimeout(() => ring.classList.remove('-translate-y-2'), 350);
+            }
+
+            this.speak(msg, 2600);
+        },
+
+        onWrong() {
+            const m = this.getCurrent();
+            const msg = m.cheerWrong[Math.floor(Math.random() * m.cheerWrong.length)];
+            this.speak(msg, 2800);
+        },
+
+        showPickerModal() {
+            const modal = document.getElementById('mascotPickerModal');
+            if (!modal) return;
+
+            modal.innerHTML = `
+                <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border-4 border-amber-400 text-center relative max-h-[90vh] overflow-y-auto">
+                    <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto text-2xl mb-3 shadow-inner">
+                        <i class="fas fa-paw"></i>
+                    </div>
+                    <span class="inline-block bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full mb-1">Amigos do KumonGen</span>
+                    <h3 class="text-xl font-black text-slate-900">Escolha seu Companheiro:</h3>
+                    <p class="text-xs text-slate-500 mt-1 mb-4">Quem vai te acompanhar nos treinos hoje?</p>
+
+                    <div id="mascotOptionsGrid" class="grid grid-cols-2 gap-3 mb-5">
+                        ${Object.values(MASCOTS).map(m => {
+                            const isSelected = m.id === this.currentId;
+                            return `
+                                <button type="button" class="mascot-pick-card p-3 rounded-2xl border-2 transition-all text-left flex flex-col items-center text-center cursor-pointer ${isSelected ? 'border-amber-400 bg-amber-50/90 shadow-md ring-2 ring-amber-300' : 'border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300'}" data-mascot-id="${m.id}">
+                                    <div class="w-16 h-16 rounded-full p-1 bg-gradient-to-tr ${m.ringGradient} shadow-md mb-2">
+                                        <img src="${m.avatar}" alt="${m.name}" class="w-full h-full rounded-full object-cover border-2 border-white">
+                                    </div>
+                                    <div class="font-black text-slate-800 text-sm flex items-center gap-1">
+                                        ${m.name} <span>${m.icon}</span>
+                                    </div>
+                                    <div class="text-[10px] text-slate-500 line-clamp-2 mt-1">${m.desc}</div>
+                                    ${isSelected ? '<span class="mt-2 text-[9px] font-black uppercase text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">Selecionado</span>' : ''}
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+
+                    <button id="closeMascotPickerBtn" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition-colors">
+                        Continuar com ${this.getCurrent().name}
+                    </button>
+                </div>
+            `;
+
+            modal.style.display = 'flex';
+
+            modal.querySelectorAll('.mascot-pick-card').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    sound.init();
+                    sound.playSuccess();
+                    const mid = btn.getAttribute('data-mascot-id');
+                    this.set(mid);
+                    modal.style.display = 'none';
+                });
+            });
+
+            const closeBtn = document.getElementById('closeMascotPickerBtn');
+            if (closeBtn) {
+                closeBtn.onclick = () => { modal.style.display = 'none'; };
+            }
+        }
+    };
+
+    // ============================================================
     // 6. MOTOR DO JOGO E CONTROLE DE TELAS
     // ============================================================
     const TabletPlayer = {
@@ -563,6 +836,7 @@
             document.addEventListener('touchstart', unlockAudio, { passive: true });
             document.addEventListener('click', unlockAudio, { passive: true });
 
+            MascotEngine.updateUI();
             this.bindTopNav();
             this.bindKeypad();
             this.loadInitialState();
@@ -570,6 +844,16 @@
         },
 
         bindTopNav() {
+            // Seletor de Mascote Companheiro
+            const mascotBtn = document.getElementById('mascotAvatarBtn');
+            if (mascotBtn) {
+                mascotBtn.addEventListener('click', () => MascotEngine.showPickerModal());
+            }
+            const headerMascotBtn = document.getElementById('headerMascotBtn');
+            if (headerMascotBtn) {
+                headerMascotBtn.addEventListener('click', () => MascotEngine.showPickerModal());
+            }
+
             // Seletor de matéria
             const subSelect = document.getElementById('subjectSelect');
             if (subSelect) {
@@ -895,12 +1179,16 @@
 
             modal.innerHTML = `
                 <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl text-center border-4 border-blue-400 relative animate-bounce-subtle">
-                    <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto text-2xl mb-3 shadow-inner">
-                        <i class="fas fa-lightbulb"></i>
+                    <div class="flex items-center justify-center gap-3 mb-3">
+                        <div class="w-14 h-14 rounded-full p-1 bg-gradient-to-tr ${MascotEngine.getCurrent().ringGradient} shadow-md flex-shrink-0">
+                            <img src="${MascotEngine.getCurrent().avatar}" alt="${MascotEngine.getCurrent().name}" class="w-full h-full rounded-full object-cover border-2 border-white shadow-inner">
+                        </div>
+                        <div class="text-left">
+                            <span class="inline-block bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full mb-0.5">Exemplo Guiado</span>
+                            <h3 class="text-lg font-black text-slate-900">${MascotEngine.getCurrent().name} te ensina:</h3>
+                        </div>
                     </div>
-                    <span class="inline-block bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full mb-2">Exemplo Kumon Guiado</span>
-                    <h3 class="text-xl font-black text-slate-900">Como Resolver:</h3>
-                    <p class="text-xs text-slate-500 mt-1">${level ? level.instruction : 'Observe o modelo resolvido:'}</p>
+                    <p class="text-xs text-slate-500 mt-1">${level ? level.instruction : 'Observe o modelo resolvido com calma:'}</p>
                     
                     ${exampleHtml}
 
@@ -1445,6 +1733,9 @@
                 Gamification.registerCorrect();
             }
 
+            const currentStreak = (Gamification.get && Gamification.get().streak) || 1;
+            MascotEngine.onCorrect(currentStreak);
+
             this.updateGamificationHeader();
 
             setTimeout(() => {
@@ -1463,6 +1754,7 @@
             Gamification.resetStreak();
             this.updateGamificationHeader();
             this.shakeCard();
+            MascotEngine.onWrong();
 
             const msg = document.getElementById('cardFeedbackMsg');
             if (msg) {
@@ -1584,12 +1876,20 @@
 
             modal.innerHTML = `
                 <div class="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl text-center border-4 border-emerald-400 relative animate-bounce-subtle max-h-[90vh] overflow-y-auto">
-                    <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-4xl mb-3 shadow-inner">
-                        <i class="fas fa-trophy text-amber-500"></i>
+                    <div class="flex items-center justify-center gap-3 mb-3">
+                        <div class="w-16 h-16 rounded-full p-1 bg-gradient-to-tr ${MascotEngine.getCurrent().ringGradient} shadow-md flex-shrink-0">
+                            <img src="${MascotEngine.getCurrent().avatar}" alt="${MascotEngine.getCurrent().name}" class="w-full h-full rounded-full object-cover border-2 border-white shadow-inner">
+                        </div>
+                        <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-3xl shadow-inner flex-shrink-0">
+                            <i class="fas fa-trophy text-amber-500"></i>
+                        </div>
                     </div>
                     <span class="inline-block bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full mb-1">Rodada Concluída!</span>
                     <h3 class="text-2xl font-black text-slate-900">Parabéns, ${Session.studentName}!</h3>
-                    <p class="text-xs text-slate-500 mt-1">${level ? level.title : ''} · ${sub ? sub.title : ''}</p>
+                    <p class="text-xs text-slate-500 mt-0.5">${level ? level.title : ''} · ${sub ? sub.title : ''}</p>
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5 text-xs font-bold text-emerald-800 my-2.5">
+                        "${MascotEngine.getCurrent().cheerFinish}"
+                    </div>
 
                     <!-- Painel de Métricas -->
                     <div class="grid grid-cols-3 gap-3 my-5">
