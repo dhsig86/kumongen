@@ -260,7 +260,7 @@
         }
 
         if (!jsPDFClass) {
-            alert('Não foi possível carregar o módulo de PDF no momento. Verifique sua conexão.');
+            alert('Não foi possível carregar o módulo de PDF no momento. Verifique sua conexão com a internet.');
             return;
         }
 
@@ -270,139 +270,230 @@
             format: 'a4'
         });
 
-        const pageWidth = 297;
-        const pageHeight = 210;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
 
-        // Fundo elegante off-white / marfim
-        doc.setFillColor(254, 254, 250);
+        // 1. Fundo Nobre Marfim Suave
+        doc.setFillColor(255, 255, 253);
         doc.rect(0, 0, pageWidth, pageHeight, 'F');
 
-        // Borda dupla dourada e azul marinho
-        doc.setDrawColor(212, 175, 55); // Dourado
-        doc.setLineWidth(2.5);
-        doc.rect(12, 12, pageWidth - 24, pageHeight - 24);
+        // 2. Borda Externa Dourada Nobre (respeita margens seguras da impressora)
+        doc.setDrawColor(205, 162, 40); // Ouro clássico
+        doc.setLineWidth(2.2);
+        doc.rect(13, 13, pageWidth - 26, pageHeight - 26);
 
-        doc.setDrawColor(15, 23, 42); // Slate-900
-        doc.setLineWidth(0.8);
-        doc.rect(15, 15, pageWidth - 30, pageHeight - 30);
+        // 3. Moldura Interna Fina Azul Marinho
+        doc.setDrawColor(30, 41, 59); // Slate-800
+        doc.setLineWidth(0.6);
+        doc.rect(16.5, 16.5, pageWidth - 33, pageHeight - 33);
 
-        // Ornatos nos 4 cantos
-        const corners = [
-            [15, 15], [pageWidth - 15, 15],
-            [15, pageHeight - 15], [pageWidth - 15, pageHeight - 15]
-        ];
-        doc.setFillColor(212, 175, 55);
-        corners.forEach(([cx, cy]) => {
-            doc.circle(cx, cy, 3, 'F');
-        });
+        // 4. Cantoneiras e Detalhes Decorativos nos 4 Cantos
+        const cornerOffset = 16.5;
+        const cornerSize = 7;
+        doc.setDrawColor(205, 162, 40);
+        doc.setLineWidth(1.2);
 
-        // Cabeçalho Institucional
+        // Cantoneiras nos 4 cantos
+        doc.line(cornerOffset, cornerOffset + cornerSize, cornerOffset, cornerOffset);
+        doc.line(cornerOffset, cornerOffset, cornerOffset + cornerSize, cornerOffset);
+
+        doc.line(pageWidth - cornerOffset, cornerOffset + cornerSize, pageWidth - cornerOffset, cornerOffset);
+        doc.line(pageWidth - cornerOffset, cornerOffset, pageWidth - cornerOffset - cornerSize, cornerOffset);
+
+        doc.line(cornerOffset, pageHeight - cornerOffset - cornerSize, cornerOffset, pageHeight - cornerOffset);
+        doc.line(cornerOffset, pageHeight - cornerOffset, cornerOffset + cornerSize, pageHeight - cornerOffset);
+
+        doc.line(pageWidth - cornerOffset, pageHeight - cornerOffset - cornerSize, pageWidth - cornerOffset, pageHeight - cornerOffset);
+        doc.line(pageWidth - cornerOffset, pageHeight - cornerOffset, pageWidth - cornerOffset - cornerSize, pageHeight - cornerOffset);
+
+        // Pontos Dourados de Enfeite nos Cantos
+        doc.setFillColor(205, 162, 40);
+        doc.circle(cornerOffset + 2.5, cornerOffset + 2.5, 1.2, 'F');
+        doc.circle(pageWidth - cornerOffset - 2.5, cornerOffset + 2.5, 1.2, 'F');
+        doc.circle(cornerOffset + 2.5, pageHeight - cornerOffset - 2.5, 1.2, 'F');
+        doc.circle(pageWidth - cornerOffset - 2.5, pageHeight - cornerOffset - 2.5, 1.2, 'F');
+
+        // 5. Cabeçalho Institucional
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(30, 64, 175); // Blue-700
-        doc.setFontSize(13);
-        doc.text('KUMONGEN 3.0 · PROGRAMA DE AUTONOMIA & EXCELÊNCIA', pageWidth / 2, 28, { align: 'center' });
+        doc.setTextColor(37, 99, 235); // Blue-600
+        doc.setFontSize(11);
+        doc.text('KUMONGEN 3.0 · PROGRAMA DE AUTONOMIA & EXCELÊNCIA PEDAGÓGICA', pageWidth / 2, 26, { align: 'center' });
 
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(100, 116, 139);
-        doc.text('RECONHECIMENTO DE DISCIPLINA, CONCENTRAÇÃO E PROGRESSO DIÁRIO', pageWidth / 2, 33, { align: 'center' });
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139); // Slate-500
+        doc.text('MÉTODO DE ESTUDO DIÁRIO AUTOINSTRUTIVO · DESENVOLVIMENTO DE POTENCIAL MÁXIMO', pageWidth / 2, 31, { align: 'center' });
 
-        // Título Principal
+        // 6. Título do Certificado
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(26);
-        doc.setTextColor(15, 23, 42);
-        doc.text('CERTIFICADO DE CONQUISTA', pageWidth / 2, 48, { align: 'center' });
+        doc.setTextColor(15, 23, 42); // Slate-900
+        doc.text('CERTIFICADO DE MÉRITO', pageWidth / 2, 45, { align: 'center' });
 
-        // Linha divisória de ouro
-        doc.setDrawColor(212, 175, 55);
-        doc.setLineWidth(1.2);
-        doc.line(pageWidth / 2 - 45, 52, pageWidth / 2 + 45, 52);
+        // Linha dourada central sob o título
+        doc.setDrawColor(205, 162, 40);
+        doc.setLineWidth(1.0);
+        doc.line(pageWidth / 2 - 35, 49, pageWidth / 2 + 35, 49);
+        doc.circle(pageWidth / 2, 49, 1.2, 'F');
 
-        // Texto do Certificado
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(13);
-        doc.setTextColor(51, 65, 85);
-        doc.text('Certificamos com muito orgulho e louvor que o(a) aluno(a)', pageWidth / 2, 66, { align: 'center' });
-
-        // Nome do Aluno em Destaque
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(24);
-        doc.setTextColor(30, 58, 138); // Deep Navy
-        const studentName = (certData.studentName || 'SUPER ALUNO').toUpperCase();
-        doc.text(studentName, pageWidth / 2, 80, { align: 'center' });
-
-        const nameWidth = doc.getTextWidth(studentName);
-        doc.setDrawColor(203, 213, 225);
-        doc.setLineWidth(0.6);
-        doc.line(pageWidth / 2 - (nameWidth / 2) - 8, 83, pageWidth / 2 + (nameWidth / 2) + 8, 83);
-
-        // Texto de Conclusão do Nível
+        // 7. Texto introdutório
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(12);
-        doc.setTextColor(51, 65, 85);
-        doc.text('concluiu com êxito a bateria de desafios de fluência interativa no módulo:', pageWidth / 2, 95, { align: 'center' });
+        doc.setTextColor(71, 85, 105); // Slate-600
+        doc.text('Certificamos com louvor e reconhecimento que o(a) aluno(a)', pageWidth / 2, 60, { align: 'center' });
 
+        // 8. Nome do Aluno (com auto-redimensionamento inteligente se for longo)
+        const studentName = (certData.studentName || 'SUPER ALUNO').toUpperCase().trim();
+        let nameFontSize = 24;
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(17);
-        doc.setTextColor(15, 23, 42);
+        doc.setFontSize(nameFontSize);
+        let nameW = doc.getTextWidth(studentName);
+        while (nameW > 180 && nameFontSize > 13) {
+            nameFontSize -= 1;
+            doc.setFontSize(nameFontSize);
+            nameW = doc.getTextWidth(studentName);
+        }
+        doc.setTextColor(30, 58, 138); // Deep Blue
+        doc.text(studentName, pageWidth / 2, 73, { align: 'center' });
+
+        // Linha sob o nome proporcional e contida (máximo 140mm)
+        const underlineW = Math.min(140, Math.max(70, nameW + 16));
+        doc.setDrawColor(203, 213, 225); // Slate-300
+        doc.setLineWidth(0.6);
+        doc.line(pageWidth / 2 - underlineW / 2, 76, pageWidth / 2 + underlineW / 2, 76);
+
+        // 9. Conquista do Nível
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(11);
+        doc.setTextColor(71, 85, 105);
+        doc.text('concluiu com êxito os desafios de fluência e autonomia no módulo:', pageWidth / 2, 86, { align: 'center' });
+
+        // Título do nível com ajuste de tamanho se for longo
         const levelText = `${certData.levelTitle} · ${certData.subjectTitle}`;
-        doc.text(levelText, pageWidth / 2, 105, { align: 'center' });
-
-        // Caixa de Métricas de Desempenho
-        const boxW = 170;
-        const boxH = 20;
-        const boxX = (pageWidth - boxW) / 2;
-        const boxY = 116;
-        doc.setFillColor(241, 245, 249);
-        doc.roundedRect(boxX, boxY, boxW, boxH, 4, 4, 'F');
-        doc.setDrawColor(203, 213, 225);
-        doc.setLineWidth(0.5);
-        doc.roundedRect(boxX, boxY, boxW, boxH, 4, 4, 'D');
-
+        let levelFontSize = 16;
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10.5);
-        doc.setTextColor(30, 64, 175);
-        const metricsStr = `Acurácia: ${certData.accuracy}%    |    Tempo: ${certData.timeFormatted} (Meta: ${certData.targetFormatted})    |    Estrelas: +${certData.starsEarned} ★`;
-        doc.text(metricsStr, pageWidth / 2, boxY + 12.5, { align: 'center' });
+        doc.setFontSize(levelFontSize);
+        let levelW = doc.getTextWidth(levelText);
+        while (levelW > 190 && levelFontSize > 11) {
+            levelFontSize -= 1;
+            doc.setFontSize(levelFontSize);
+            levelW = doc.getTextWidth(levelText);
+        }
+        doc.setTextColor(15, 23, 42);
+        doc.text(levelText, pageWidth / 2, 94, { align: 'center' });
 
-        // Selo Dourado de Honra
+        // 10. Três Cartões de Métricas (Grid Modular Clean - NUNCA rompe a borda direita!)
+        const cardW = 60;
+        const cardH = 20;
+        const cardGap = 8;
+        const totalGridW = (cardW * 3) + (cardGap * 2); // 180 + 16 = 196mm
+        const gridStartX = (pageWidth - totalGridW) / 2;
+        const gridY = 103;
+
+        const metricsData = [
+            { label: 'PRECISÃO', val: `${certData.accuracy}%`, sub: 'Acertos na 1ª tentativa', color: [16, 185, 129] },
+            { label: 'TEMPO SCT', val: certData.timeFormatted, sub: `Meta: ${certData.targetFormatted}`, color: [59, 130, 246] },
+            { label: 'ESTRELAS', val: `+${certData.starsEarned}`, sub: 'Conquistadas na sessão', color: [245, 158, 11] }
+        ];
+
+        metricsData.forEach((m, i) => {
+            const cX = gridStartX + i * (cardW + cardGap);
+            // Fundo suave do cartão
+            doc.setFillColor(248, 250, 252);
+            doc.roundedRect(cX, gridY, cardW, cardH, 3, 3, 'F');
+            // Borda sutil
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.4);
+            doc.roundedRect(cX, gridY, cardW, cardH, 3, 3, 'D');
+
+            // Valor em destaque
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(13);
+            doc.setTextColor(m.color[0], m.color[1], m.color[2]);
+            doc.text(m.val, cX + cardW / 2, gridY + 8, { align: 'center' });
+
+            // Rótulo principal
+            doc.setFontSize(7.5);
+            doc.setTextColor(30, 41, 59);
+            doc.text(m.label, cX + cardW / 2, gridY + 13, { align: 'center' });
+
+            // Subtítulo
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(6.5);
+            doc.setTextColor(100, 116, 139);
+            doc.text(m.sub, cX + cardW / 2, gridY + 17, { align: 'center' });
+        });
+
+        // 11. Selo de Honra com Fitas (Gráfico Vetorial Elegante)
         const sealX = pageWidth / 2;
-        const sealY = 154;
-        doc.setFillColor(212, 175, 55);
-        doc.circle(sealX, sealY, 13, 'F');
-        doc.setFillColor(254, 240, 138);
-        doc.circle(sealX, sealY, 11, 'F');
+        const sealY = 142;
+
+        // Fitas da medalha
+        doc.setFillColor(37, 99, 235); // Blue-600
+        doc.triangle(sealX - 8, sealY + 8, sealX - 3, sealY + 20, sealX - 12, sealY + 22, 'F');
+        doc.triangle(sealX + 8, sealY + 8, sealX + 3, sealY + 20, sealX + 12, sealY + 22, 'F');
+
+        // Círculo Ouro Externo
+        doc.setFillColor(205, 162, 40);
+        doc.circle(sealX, sealY, 12.5, 'F');
+        // Círculo Interno Marfim
+        doc.setFillColor(254, 249, 195);
+        doc.circle(sealX, sealY, 10.5, 'F');
+
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.setTextColor(133, 77, 14);
-        doc.text('NOTA 10', sealX, sealY - 1, { align: 'center' });
-        doc.setFontSize(6.5);
+        doc.setFontSize(8.5);
+        doc.setTextColor(146, 64, 14);
+        doc.text('NOTA 10', sealX, sealY - 0.5, { align: 'center' });
+        doc.setFontSize(5.5);
+        doc.setTextColor(180, 83, 9);
         doc.text('KUMONGEN', sealX, sealY + 4, { align: 'center' });
 
-        // Assinaturas
-        const sigY = 173;
-        doc.setDrawColor(148, 163, 184);
+        // 12. Linhas de Assinatura Balanceadas
+        const sigY = 168;
+        const sigLineW = 65;
+        const sigLeftX = 40;
+        const sigRightX = pageWidth - 40 - sigLineW;
+
+        doc.setDrawColor(148, 163, 184); // Slate-400
         doc.setLineWidth(0.5);
 
-        // Assinatura Responsável
-        doc.line(40, sigY, 110, sigY);
+        // Linha esquerda: Pais/Responsáveis
+        doc.line(sigLeftX, sigY, sigLeftX + sigLineW, sigY);
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.5);
+        doc.setFontSize(8);
         doc.setTextColor(100, 116, 139);
-        doc.text('Responsável / Orientador(a)', 75, sigY + 5, { align: 'center' });
+        doc.text('Responsável / Orientador(a)', sigLeftX + sigLineW / 2, sigY + 4.5, { align: 'center' });
 
-        // Assinatura KumonGen
-        doc.line(pageWidth - 110, sigY, pageWidth - 40, sigY);
-        doc.text('KumonGen 3.0 · Validação Digital', pageWidth - 75, sigY + 5, { align: 'center' });
+        // Linha direita: Sistema KumonGen
+        doc.line(sigRightX, sigY, sigRightX + sigLineW, sigY);
+        doc.text('KumonGen 3.0 · Certificação Digital', sigRightX + sigLineW / 2, sigY + 4.5, { align: 'center' });
 
-        // Rodapé com data e ID
+        // 13. Rodapé Oficial perfeitamente enquadrado dentro da moldura
         const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-        doc.setFontSize(7.5);
+        doc.setFontSize(7);
         doc.setTextColor(148, 163, 184);
-        doc.text(`Emitido com dedicação em ${today} · Registro de Conclusão: KM-${Date.now().toString(36).toUpperCase()}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
+        doc.text(`Emitido com dedicação em ${today} · Registro Oficial: KM-${Date.now().toString(36).toUpperCase()}`, pageWidth / 2, pageHeight - 20, { align: 'center' });
 
         const safeName = (certData.studentName || 'Aluno').replace(/[^a-zA-Z0-9]/g, '_');
-        doc.save(`Certificado_Kumon_${safeName}.pdf`);
+        const pdfFileName = `Certificado_Kumon_${safeName}.pdf`;
+
+        // Método de download resiliente para iOS, iPad e Android
+        try {
+            doc.save(pdfFileName);
+        } catch (saveErr) {
+            console.warn('doc.save falhou, tentando fallback via Blob:', saveErr);
+            const blob = doc.output('blob');
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = pdfFileName;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(blobUrl);
+            }, 1000);
+        }
     }
 
     // ============================================================
@@ -463,6 +554,15 @@
     // ============================================================
     const TabletPlayer = {
         init() {
+            // Desbloqueia Web Audio no primeiro toque do usuário (iPad / iOS / Android)
+            const unlockAudio = () => {
+                sound.init();
+                document.removeEventListener('touchstart', unlockAudio);
+                document.removeEventListener('click', unlockAudio);
+            };
+            document.addEventListener('touchstart', unlockAudio, { passive: true });
+            document.addEventListener('click', unlockAudio, { passive: true });
+
             this.bindTopNav();
             this.bindKeypad();
             this.loadInitialState();
@@ -521,10 +621,15 @@
             // Teclado físico do computador também funciona para conveniência
             window.addEventListener('keydown', (e) => {
                 if (e.key >= '0' && e.key <= '9') {
+                    sound.init();
+                    sound.playClick();
                     this.handleKeypadPress(e.key);
                 } else if (e.key === 'Backspace') {
+                    sound.init();
+                    sound.playClick();
                     this.handleKeypadPress('backspace');
                 } else if (e.key === 'Enter') {
+                    sound.init();
                     this.handleKeypadPress('enter');
                 }
             });
@@ -827,7 +932,7 @@
                         <span class="text-blue-600 font-bold">${item.operator}</span>
                         <span class="text-slate-900">${item.operand2}</span>
                         <span class="text-slate-400">=</span>
-                        <div id="activeAnswerBox" class="w-24 md:w-32 h-20 md:h-24 bg-blue-50 border-4 border-blue-400 rounded-2xl flex items-center justify-center text-blue-700 font-black shadow-inner text-4xl md:text-5xl">
+                        <div id="activeAnswerBox" class="w-24 md:w-32 h-20 md:h-24 bg-blue-50 border-4 border-blue-400 rounded-2xl flex items-center justify-center text-blue-700 font-black shadow-inner text-4xl md:text-5xl answer-box-focused">
                             <span class="text-blue-300 font-light text-2xl">?</span>
                         </div>
                     </div>
@@ -853,7 +958,7 @@
                     </div>
                     <div class="mt-4 flex items-center gap-3">
                         <span class="text-xl font-bold text-slate-600">Total:</span>
-                        <div id="activeAnswerBox" class="w-20 h-16 bg-blue-50 border-4 border-blue-400 rounded-2xl flex items-center justify-center text-blue-700 font-black shadow-inner text-3xl">
+                        <div id="activeAnswerBox" class="w-20 h-16 bg-blue-50 border-4 border-blue-400 rounded-2xl flex items-center justify-center text-blue-700 font-black shadow-inner text-3xl answer-box-focused">
                             <span class="text-blue-300 font-light text-xl">?</span>
                         </div>
                     </div>
@@ -913,7 +1018,7 @@
                     </div>
                     <div class="mt-4 flex items-center gap-3">
                         <span class="text-xl font-bold text-slate-700">Qual é o número?</span>
-                        <div id="activeAnswerBox" class="w-20 h-16 bg-blue-50 border-4 border-blue-400 rounded-2xl flex items-center justify-center text-blue-700 font-black shadow-inner text-3xl">
+                        <div id="activeAnswerBox" class="w-20 h-16 bg-blue-50 border-4 border-blue-400 rounded-2xl flex items-center justify-center text-blue-700 font-black shadow-inner text-3xl answer-box-focused">
                             <span class="text-blue-300 font-light text-xl">?</span>
                         </div>
                     </div>
@@ -932,7 +1037,7 @@
                         <div class="w-24 h-24 bg-slate-100 rounded-2xl flex items-center justify-center text-5xl font-black text-slate-800 shadow-md">
                             ${a}
                         </div>
-                        <div id="activeAnswerBox" class="w-20 h-20 bg-blue-50 border-4 border-dashed border-blue-400 rounded-2xl flex items-center justify-center text-4xl font-black text-blue-600 shadow-inner">
+                        <div id="activeAnswerBox" class="w-20 h-20 bg-blue-50 border-4 border-dashed border-blue-400 rounded-2xl flex items-center justify-center text-4xl font-black text-blue-600 shadow-inner answer-box-focused">
                             ?
                         </div>
                         <div class="w-24 h-24 bg-slate-100 rounded-2xl flex items-center justify-center text-5xl font-black text-slate-800 shadow-md">
@@ -970,7 +1075,7 @@
                 <div class="flex flex-col items-center justify-center py-4">
                     <div class="text-sm font-bold text-slate-500 mb-4">Quem é o vizinho que vem antes de ${center}?</div>
                     <div class="flex items-center justify-center gap-4 mb-4 select-none">
-                        <div id="activeAnswerBox" class="w-20 h-20 bg-blue-50 border-4 border-dashed border-blue-400 rounded-2xl flex items-center justify-center text-3xl font-black text-blue-600 shadow-inner">
+                        <div id="activeAnswerBox" class="w-20 h-20 bg-blue-50 border-4 border-dashed border-blue-400 rounded-2xl flex items-center justify-center text-3xl font-black text-blue-600 shadow-inner answer-box-focused">
                             ?
                         </div>
                         <i class="fas fa-arrow-right text-slate-300"></i>
