@@ -774,9 +774,13 @@
         generate: generateItemsForLevel
     };
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
+    // No tablet.html, pula init() — só o registro em KumonSubjects importa
+    const _isTabletPage = !!document.getElementById('focusCardContainer');
+    if (!_isTabletPage) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
     }
 })();
