@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>KumonGen 3.0 · Modo Tablet Interativo</title>
+    
+    <link rel="stylesheet" href="tailwind.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="KumonTablet">
+    <link rel="stylesheet" href="kumon.css">
+
+    <style>
+        /* Otimizações táteis para iPad e tablets */
+        * {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            touch-action: manipulation;
+        }
+
+        /* Efeito de shake suave em caso de erro */
+        @keyframes shakeSoft {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .animate-shake {
+            animation: shakeSoft 0.45s ease-in-out;
+        }
+
+        /* Botões do teclado virtual touch */
+        .keypad-btn {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+            background-color: #1e293b;
+            color: #f8fafc;
+            border: 1px solid #334155;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            transition: all 0.1s ease;
+        }
+
+        .keypad-btn:active {
+            transform: scale(0.94);
+            background-color: #3b82f6;
+            color: #ffffff;
+            border-color: #60a5fa;
+        }
+
+        @media (min-height: 700px) {
+            .keypad-btn {
+                height: 68px;
+                font-size: 1.75rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 flex flex-col h-full overflow-hidden font-sans antialiased select-none">
+
+    <!-- Canvas para Efeito de Confetes na Conclusão -->
+    <canvas id="confettiCanvas" class="fixed inset-0 pointer-events-none z-50 w-full h-full"></canvas>
+
+    <!-- BARRA SUPERIOR (HEADER INTERATIVO TABLET) -->
+    <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 px-3 md:px-6 py-2.5 flex items-center justify-between flex-shrink-0 z-30">
+        <!-- Lado Esquerdo: Voltar + Seletor de Matéria e Nível -->
+        <div class="flex items-center gap-2 md:gap-3">
+            <a href="index.html" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors" title="Voltar ao início">
+                <i class="fas fa-arrow-left text-sm"></i>
+            </a>
+
+            <div class="flex items-center gap-1.5">
+                <span class="hidden md:inline-flex text-xs font-black text-blue-400 uppercase tracking-widest mr-1">
+                    <i class="fas fa-tablet-alt mr-1"></i> TABLET
+                </span>
+
+                <!-- Seletor de Matéria -->
+                <select id="subjectSelect" class="bg-slate-800 border border-slate-700 text-white text-xs md:text-sm font-bold rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-blue-500">
+                    <option value="matematica">Matemática</option>
+                    <option value="portugues">Português</option>
+                    <option value="ingles">Inglês</option>
+                </select>
+
+                <!-- Seletor de Nível -->
+                <select id="levelSelect" class="bg-slate-800 border border-slate-700 text-white text-xs md:text-sm font-bold rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-blue-500 max-w-[140px] md:max-w-xs truncate">
+                    <!-- Preenchido dinamicamente via JS -->
+                </select>
+            </div>
+        </div>
+
+        <!-- Centro: Aluno & Cronômetro SCT -->
+        <div class="flex items-center gap-2 md:gap-4">
+            <!-- Nome do Aluno (editável com toque) -->
+            <button id="studentNameBtn" class="bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors" title="Clique para alterar nome">
+                <i class="fas fa-user-circle text-blue-400 text-sm"></i>
+                <span id="studentNameDisplay" class="max-w-[80px] md:max-w-[120px] truncate">Super Aluno</span>
+                <i class="fas fa-pen text-[9px] text-slate-500"></i>
+            </button>
+
+            <!-- Cronômetro SCT Kumon -->
+            <div id="sctTimerDisplay" class="bg-slate-900 border border-slate-800 px-3 py-1 rounded-xl text-xs md:text-sm font-mono font-bold flex items-center gap-1.5">
+                <i class="fas fa-stopwatch text-blue-400"></i>
+                <span>00:00</span>
+            </div>
+        </div>
+
+        <!-- Lado Direito: Gamificação & Controles -->
+        <div class="flex items-center gap-2 md:gap-3">
+            <!-- Contador de Estrelas -->
+            <div class="bg-amber-500/10 border border-amber-500/30 text-amber-400 px-2.5 py-1 rounded-xl text-xs md:text-sm font-black flex items-center gap-1">
+                <i class="fas fa-star text-amber-400"></i>
+                <span id="headerStarsCount">0</span>
+            </div>
+
+            <!-- Streak Atual -->
+            <div class="bg-orange-500/10 border border-orange-500/30 text-orange-400 px-2.5 py-1 rounded-xl text-xs md:text-sm font-black flex items-center gap-1" title="Sequência de acertos seguidos">
+                <i class="fas fa-fire text-orange-500"></i>
+                <span id="headerStreakCount">0</span>
+            </div>
+
+            <!-- Botão de Troféus / Conquistas -->
+            <button id="trophyBtn" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 transition-colors" title="Ver Conquistas e Troféus">
+                <i class="fas fa-trophy text-sm"></i>
+            </button>
+
+            <!-- Botão de Som Mudo / Ativo -->
+            <button id="soundToggleBtn" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors" title="Alternar som">
+                <i class="fas fa-volume-up text-sm"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- BARRA DE PROGRESSO DA RODADA -->
+    <div class="w-full bg-slate-900 h-1.5 md:h-2 overflow-hidden flex-shrink-0">
+        <div id="roundProgressBar" class="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 transition-all duration-400 w-0"></div>
+    </div>
+
+    <!-- ÁREA PRINCIPAL DO PLAYER DE EXERCÍCIOS -->
+    <main class="flex-1 flex flex-col items-center justify-between p-3 md:p-6 overflow-y-auto max-w-4xl mx-auto w-full">
+        <!-- Cabeçalho do Card (Instrução e Questão Atual) -->
+        <div class="w-full flex items-center justify-between text-xs text-slate-400 font-bold mb-2 px-2 flex-shrink-0">
+            <span id="roundProgressText" class="bg-slate-800 px-2.5 py-1 rounded-lg text-blue-400 border border-slate-700">Questão 1 de 10</span>
+            <span id="exerciseInstruction" class="text-slate-300 text-right truncate max-w-xs md:max-w-md">Resolva com atenção</span>
+        </div>
+
+        <!-- CARD DE FOCO ÚNICO -->
+        <div class="w-full flex-1 flex items-center justify-center my-auto min-h-[180px]">
+            <div id="focusCard" class="w-full max-w-md bg-white rounded-3xl p-5 md:p-8 shadow-2xl border-4 border-slate-200 transition-all duration-200">
+                <div id="focusCardContainer">
+                    <!-- O conteúdo do exercício ativo é injetado dinamicamente aqui -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TECLADO VIRTUAL TOUCH (Evita teclado nativo do iPad/Android cobrir a tela) -->
+        <div id="keypadWrapper" class="w-full max-w-sm flex-shrink-0 mt-3 mb-1">
+            <div id="virtualKeypad" class="grid grid-cols-3 gap-2 md:gap-3">
+                <button class="keypad-btn" data-key="1">1</button>
+                <button class="keypad-btn" data-key="2">2</button>
+                <button class="keypad-btn" data-key="3">3</button>
+
+                <button class="keypad-btn" data-key="4">4</button>
+                <button class="keypad-btn" data-key="5">5</button>
+                <button class="keypad-btn" data-key="6">6</button>
+
+                <button class="keypad-btn" data-key="7">7</button>
+                <button class="keypad-btn" data-key="8">8</button>
+                <button class="keypad-btn" data-key="9">9</button>
+
+                <button class="keypad-btn text-rose-400 hover:text-rose-300 text-xl md:text-2xl" data-key="backspace" title="Apagar">
+                    <i class="fas fa-backspace"></i>
+                </button>
+                <button class="keypad-btn" data-key="0">0</button>
+                <button class="keypad-btn bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white text-xl md:text-2xl font-black" data-key="enter" title="Confirmar Resposta">
+                    <i class="fas fa-check"></i>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL: EXEMPLO GUIADO KUMON (Worked Example no início da rodada) -->
+    <div id="workedExampleModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+        <!-- Injetado dinamicamente via JS -->
+    </div>
+
+    <!-- MODAL: RODADA CONCLUÍDA & EMISSÃO DE CERTIFICADO -->
+    <div id="roundFinishedModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-40 hidden flex items-center justify-center p-4">
+        <!-- Injetado dinamicamente via JS -->
+    </div>
+
+    <!-- MODAL: CONQUISTAS E TROFÉUS -->
+    <div id="badgesModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+        <!-- Injetado dinamicamente via JS -->
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="gerador.js"></script>
+    <script src="content-pool.js"></script>
+    <script src="matematica.js"></script>
+    <script src="portugues.js"></script>
+    <script src="ingles.js"></script>
+    <script src="tablet-player.js"></script>
+
+    <!-- Service Worker para funcionamento 100% offline -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('[KumonGen Tablet] SW registrado:', reg.scope))
+                    .catch(err => console.error('[KumonGen Tablet] SW falhou:', err));
+            });
+        }
+    </script>
+</body>
+</html>

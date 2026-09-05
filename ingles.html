@@ -23,7 +23,7 @@
 <aside class="no-print w-full md:w-80 bg-white shadow-2xl flex flex-col z-20 text-slate-800 overflow-y-auto">
     <div class="p-6 bg-gradient-to-br from-red-600 to-blue-600 text-white">
         <h1 class="text-xl font-black flex items-center gap-2">
-            <i class="fas fa-language"></i> KUMON·ENG <span class="text-red-200 text-xs ml-1">v1</span>
+            <i class="fas fa-language"></i> KUMON·ENG <span class="text-red-200 text-xs ml-1">v3</span>
         </h1>
         <p class="text-[10px] uppercase tracking-widest font-bold opacity-80">inglês personalizável</p>
     </div>
@@ -40,51 +40,152 @@
             <a href="matematica.html" class="flex-1 text-center text-[10px] font-bold py-1 rounded bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-700 transition-colors">MAT</a>
             <a href="portugues.html" class="flex-1 text-center text-[10px] font-bold py-1 rounded bg-slate-100 text-slate-500 hover:bg-green-100 hover:text-green-700 transition-colors">POR</a>
             <span class="flex-1 text-center text-[10px] font-black py-1 rounded bg-red-100 text-red-700">ENG</span>
+            <a href="tablet.html?subject=ingles" class="flex-1 text-center text-[10px] font-black py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 transition-colors" title="Modo Tablet Interativo">📱 TABLET</a>
         </div>
 
         <!-- Scoreboard Widget -->
         <div id="scoreboardWidget"></div>
 
-        <div>
-            <label class="text-[10px] font-black text-slate-400 uppercase block mb-3">nível</label>
-            <div id="levelList" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+        <!-- Tabs KumonGen 3.0 -->
+        <div class="kumon-tabs">
+            <button id="tab-btn-wizard" class="kumon-tab-btn active" onclick="switchEngTab('wizard')">
+                <i class="fas fa-magic"></i> Wizard
+            </button>
+            <button id="tab-btn-personalizar" class="kumon-tab-btn" onclick="switchEngTab('personalizar')">
+                <i class="fas fa-sliders-h"></i> Personalizar
+            </button>
+            <button id="tab-btn-pedagogia" class="kumon-tab-btn" onclick="switchEngTab('pedagogia')">
+                <i class="fas fa-graduation-cap"></i> Kumon
+            </button>
         </div>
 
-        <div>
-            <label class="text-[10px] font-black text-slate-400 uppercase block mb-3">visual</label>
-            <div class="bg-slate-50 p-3 rounded-xl space-y-3">
-                <div class="flex items-center justify-between">
-                    <label for="linesPerPage" class="text-xs">linhas/página</label>
-                    <select id="linesPerPage" class="border rounded px-2 py-1 text-xs">
-                        <option value="6">6</option>
-                        <option value="8" selected>8</option>
-                        <option value="10">10</option>
-                        <option value="12">12</option>
-                    </select>
-                </div>
-                <div class="flex items-center justify-between">
-                    <label for="pagesPerBook" class="text-xs">páginas/caderno</label>
-                    <select id="pagesPerBook" class="border rounded px-2 py-1 text-xs">
-                        <option value="2" selected>2 págs (1 folha)</option>
-                        <option value="4">4 págs (2 folhas)</option>
-                        <option value="6">6 págs (3 folhas)</option>
-                        <option value="8">8 págs (4 folhas)</option>
-                    </select>
-                </div>
-                <div class="flex items-center justify-between">
-                    <span class="text-xs">zoom</span>
-                    <div class="flex items-center gap-2">
-                        <button onclick="adjustZoom(-0.1)" class="bg-white border w-6 h-6 rounded" aria-label="Diminuir zoom"><i class="fas fa-minus"></i></button>
-                        <span id="zoomValue" class="text-xs font-mono w-12 text-center">70%</span>
-                        <button onclick="adjustZoom(0.1)" class="bg-white border w-6 h-6 rounded" aria-label="Aumentar zoom"><i class="fas fa-plus"></i></button>
+        <!-- ABA 1: WIZARD RÁPIDO PARA PAIS -->
+        <div id="panel-wizard" class="space-y-4">
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase block mb-1.5">1. Foco em Phonics / Inglês</label>
+                <div class="space-y-1.5">
+                    <div class="kumon-wizard-card active" onclick="selectEngWizardGoal('i1', this)">
+                        <div class="w-7 h-7 rounded-lg bg-red-100 text-red-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                            <i class="fas fa-font"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-xs text-slate-800">Alphabet & Phonics</div>
+                            <div class="text-[10px] text-slate-500">Letter tracing e fixação de som das letras.</div>
+                        </div>
                     </div>
+
+                    <div class="kumon-wizard-card" onclick="selectEngWizardGoal('i2', this)">
+                        <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                            <i class="fas fa-cat"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-xs text-slate-800">CVC Words (3 Letras)</div>
+                            <div class="text-[10px] text-slate-500">Palavras curtas essenciais (CAT, DOG, PIG, SUN).</div>
+                        </div>
+                    </div>
+
+                    <div class="kumon-wizard-card" onclick="selectEngWizardGoal('i3', this)">
+                        <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-xs text-slate-800">Easy Words (4-5 Letras)</div>
+                            <div class="text-[10px] text-slate-500">Encontros consonantais e vocabulário cotidiano.</div>
+                        </div>
+                    </div>
+
+                    <div class="kumon-wizard-card" onclick="selectEngWizardGoal('i4', this)">
+                        <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-xs text-slate-800">Snap Words (Sight Words)</div>
+                            <div class="text-[10px] text-slate-500">Palavras de alta frequência visual (THE, AND, YOU).</div>
+                        </div>
+                    </div>
+
+                    <div class="kumon-wizard-card" onclick="selectEngWizardGoal('i5', this)">
+                        <div class="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                            <i class="fas fa-wand-magic-sparkles"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-xs text-slate-800">CVCe (Magic E)</div>
+                            <div class="text-[10px] text-slate-500">Regra do E mudo que alonga a vogal (CAKE, BIKE).</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase block mb-1.5">2. Ritmo da Rotina Diária</label>
+                <div class="grid grid-cols-3 gap-1.5 text-center">
+                    <button type="button" class="wizard-pace-btn active p-2 rounded-xl border border-red-600 bg-red-50 text-red-800 text-[10px] font-bold" onclick="selectEngWizardPace(2, 8, this)">
+                        <span class="block text-xs font-black">1 Folha</span>
+                        10 min (Kumon)
+                    </button>
+                    <button type="button" class="wizard-pace-btn p-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-[10px] font-bold" onclick="selectEngWizardPace(4, 8, this)">
+                        <span class="block text-xs font-black">2 Folhas</span>
+                        Treino duplo
+                    </button>
+                    <button type="button" class="wizard-pace-btn p-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-[10px] font-bold" onclick="selectEngWizardPace(8, 8, this)">
+                        <span class="block text-xs font-black">4 Folhas</span>
+                        Semanal
+                    </button>
                 </div>
             </div>
         </div>
 
-        <div>
-            <label class="text-[10px] font-black text-slate-400 uppercase block mb-3">parâmetros</label>
-            <div id="paramPanel" class="bg-slate-50 p-3 rounded-xl min-h-[100px] text-xs"></div>
+        <!-- ABA 2: PERSONALIZAÇÃO AVANÇADA -->
+        <div id="panel-personalizar" class="space-y-4 hidden">
+            <!-- Níveis -->
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase block mb-2">nível</label>
+                <div id="levelList" class="space-y-2 max-h-56 overflow-y-auto pr-1"></div>
+            </div>
+
+            <!-- Visual / repetição -->
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase block mb-2">visual</label>
+                <div class="bg-slate-50 p-3 rounded-xl space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <label for="linesPerPage" class="text-xs">linhas/página</label>
+                        <select id="linesPerPage" class="border rounded px-2 py-1 text-xs">
+                            <option value="6">6</option>
+                            <option value="8" selected>8</option>
+                            <option value="10">10</option>
+                            <option value="12">12</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label for="pagesPerBook" class="text-xs">páginas/caderno</label>
+                        <select id="pagesPerBook" class="border rounded px-2 py-1 text-xs">
+                            <option value="2" selected>2 págs (1 folha)</option>
+                            <option value="4">4 págs (2 folhas)</option>
+                            <option value="6">6 págs (3 folhas)</option>
+                            <option value="8">8 págs (4 folhas)</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs">zoom</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="adjustZoom(-0.1)" class="bg-white border w-6 h-6 rounded" aria-label="Diminuir zoom"><i class="fas fa-minus"></i></button>
+                            <span id="zoomValue" class="text-xs font-mono w-12 text-center">70%</span>
+                            <button onclick="adjustZoom(0.1)" class="bg-white border w-6 h-6 rounded" aria-label="Aumentar zoom"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Parâmetros dinâmicos -->
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase block mb-2">parâmetros avançados</label>
+                <div id="paramPanel" class="bg-slate-50 p-3 rounded-xl min-h-[100px] text-xs"></div>
+            </div>
+        </div>
+
+        <!-- ABA 3: PEDAGOGIA KUMON -->
+        <div id="panel-pedagogia" class="space-y-4 hidden">
+            <div id="pedagogicalPanelContainer"></div>
         </div>
 
         <div class="border-t border-slate-100 pt-4 space-y-2">
@@ -94,6 +195,9 @@
             <button onclick="generatePDF()" class="w-full flex items-center justify-center gap-2 bg-blue-600 text-white p-4 rounded-xl hover:bg-blue-700 shadow-lg font-black text-sm">
                 <i class="fas fa-file-pdf"></i> GERAR PDF
             </button>
+            <a href="tablet.html?subject=ingles" class="w-full flex items-center justify-center gap-2 bg-rose-50 border-2 border-rose-200 text-rose-700 p-3 rounded-xl hover:bg-rose-100 font-bold text-xs shadow-sm transition-colors">
+                <i class="fas fa-tablet-alt text-rose-500"></i> Praticar este nível no Tablet
+            </a>
         </div>
         <div class="text-center text-[8px] text-slate-400 pt-4 border-t border-slate-100">
             By Dr. Dario Hart — Free Use 2026

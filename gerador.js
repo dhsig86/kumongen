@@ -26,6 +26,165 @@ const KumonGen = (function() {
         return div.innerHTML;
     }
 
+    // ===== CONFIGURAÇÃO PEDAGÓGICA KUMON 3.0 =====
+    let pedagogicalConfig = {
+        workedExample: true,   // Exemplo resolvido na questão 1 (Worked Example Effect)
+        sctEnabled: true,      // Tempo alvo sugerido no cabeçalho (Standard Completion Time)
+        answerKey: false       // Gerar folha de gabarito no PDF
+    };
+
+    function loadPedagogicalConfig() {
+        try {
+            const saved = localStorage.getItem('kumongen_pedagogical_config');
+            if (saved) {
+                pedagogicalConfig = { ...pedagogicalConfig, ...JSON.parse(saved) };
+            }
+        } catch(e) {}
+    }
+
+    function savePedagogicalConfig() {
+        try {
+            localStorage.setItem('kumongen_pedagogical_config', JSON.stringify(pedagogicalConfig));
+        } catch(e) {}
+    }
+
+    loadPedagogicalConfig();
+
+    // Calcula a resposta correta de um item (para gabarito e worked example)
+    function solveItem(item) {
+        if (!item) return '';
+        switch (item.type) {
+            case 'math':
+                if (item.operator === '+') return item.operand1 + item.operand2;
+                if (item.operator === '-') return item.operand1 - item.operand2;
+                if (item.operator === '×' || item.operator === '*') return item.operand1 * item.operand2;
+                return '';
+            case 'quantity':
+                return item.value;
+            case 'sequence':
+                if (Array.isArray(item.sequence)) {
+                    const holes = [];
+                    for (let i = 0; i < item.sequence.length; i++) {
+                        if (item.sequence[i] === '__') {
+                            let val = null;
+                            if (i > 0 && typeof item.sequence[i-1] === 'number') {
+                                let step = 1;
+                                if (i > 1 && typeof item.sequence[i-2] === 'number') {
+                                    step = item.sequence[i-1] - item.sequence[i-2];
+                                } else if (i < item.sequence.length - 1 && typeof item.sequence[i+1] === 'number') {
+                                    step = (item.sequence[i+1] - item.sequence[i-1]) / 2;
+                                }
+                                val = item.sequence[i-1] + step;
+                            } else if (i < item.sequence.length - 1 && typeof item.sequence[i+1] === 'number') {
+                                val = item.sequence[i+1] - 1;
+                            }
+                            holes.push(val !== null ? Math.round(val) : '?');
+                        }
+                    }
+                    return holes.join(', ');
+                }
+                return '';
+            case 'tens':
+                return item.number;
+            case 'compare':
+                if (Array.isArray(item.pair)) {
+                    const [a, b] = item.pair;
+                    if (a > b) return `${a} > ${b}`;
+                    if (a < b) return `${a} < ${b}`;
+                    return `${a} = ${b}`;
+                }
+                return '';
+            case 'neighbors':
+                return `${item.center - 1} e ${item.center + 1}`;
+            case 'trace':
+                return item.char;
+            case 'syllable':
+                return item.syllable;
+            case 'word':
+                return item.word || (item.parts ? item.parts.join('') : '');
+            default:
+                return '';
+        }
+    }
+
+    // Edição inline amigável para pais (WYSIWYG ao clicar na folha)
+    function promptInlineEdit(item, idx, pageNum) {
+        if (!item) return;
+        if (item.type === 'math') {
+            const currentStr = `${item.operand1} ${item.operator} ${item.operand2}`;
+            const input = window.prompt(`Editar conta #${idx + 1} da pág. ${pageNum} (ex: 4 + 2):`, currentStr);
+            if (input && input.trim()) {
+                const parts = input.trim().split(/\s+/);
+                if (parts.length === 3) {
+                    const op1 = parseInt(parts[0], 10);
+                    const op = parts[1];
+                    const op2 = parseInt(parts[2], 10);
+                    if (!isNaN(op1) && !isNaN(op2)) {
+                        item.operand1 = op1;
+                        item.operator = op;
+                        item.operand2 = op2;
+                        if (window.refreshPreview) window.refreshPreview();
+                    }
+                }
+            }
+        } else if (item.type === 'quantity') {
+            const input = window.prompt(`Editar quantidade #${idx + 1} (1 a 10):`, item.value);
+            if (input && !isNaN(parseInt(input, 10))) {
+                item.value = Math.max(1, Math.min(20, parseInt(input, 10)));
+                if (window.refreshPreview) window.refreshPreview();
+            }
+        } else if (item.type === 'sequence') {
+            const currentStr = item.sequence.join(' ');
+            const input = window.prompt(`Editar sequência #${idx + 1} (separe por espaços, '__' para lacuna):`, currentStr);
+            if (input && input.trim()) {
+                item.sequence = input.trim().split(/\s+/).map(v => v === '__' ? '__' : (isNaN(Number(v)) ? v : Number(v)));
+                if (window.refreshPreview) window.refreshPreview();
+            }
+        } else if (item.type === 'compare') {
+            const currentStr = `${item.pair[0]} ${item.pair[1]}`;
+            const input = window.prompt(`Editar par de números #${idx + 1} (ex: 7 4):`, currentStr);
+            if (input && input.trim()) {
+                const parts = input.trim().split(/\s+/).map(Number);
+                if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                    item.pair = parts;
+                    if (window.refreshPreview) window.refreshPreview();
+                }
+            }
+        } else if (item.type === 'neighbors') {
+            const input = window.prompt(`Editar número central #${idx + 1}:`, item.center);
+            if (input && !isNaN(parseInt(input, 10))) {
+                item.center = parseInt(input, 10);
+                if (window.refreshPreview) window.refreshPreview();
+            }
+        } else if (item.type === 'word') {
+            const currentParts = item.parts ? item.parts.join('-') : (item.word || '');
+            const input = window.prompt(`Editar palavra #${idx + 1} (separe sílabas por hífen, ex: BO-LA):`, currentParts);
+            if (input && input.trim()) {
+                const clean = input.trim().toUpperCase();
+                if (clean.includes('-')) {
+                    item.parts = clean.split('-');
+                    item.word = item.parts.join('');
+                } else {
+                    item.word = clean;
+                    item.parts = [clean];
+                }
+                if (window.refreshPreview) window.refreshPreview();
+            }
+        } else if (item.type === 'trace') {
+            const input = window.prompt(`Editar letra #${idx + 1}:`, item.char);
+            if (input && input.trim()) {
+                item.char = input.trim().toUpperCase()[0];
+                if (window.refreshPreview) window.refreshPreview();
+            }
+        } else if (item.type === 'syllable') {
+            const input = window.prompt(`Editar sílaba #${idx + 1}:`, item.syllable);
+            if (input && input.trim()) {
+                item.syllable = input.trim().toUpperCase();
+                if (window.refreshPreview) window.refreshPreview();
+            }
+        }
+    }
+
     // Inicializa referências (deve ser chamado após o carregamento da página)
     function initRefs() {
         zoomContainer = document.getElementById('zoomContainer');
@@ -84,7 +243,16 @@ const KumonGen = (function() {
 
     // Constrói uma página (esquerda ou direita)
     function buildPage(container, level, pageNum, items) {
+        if (!container) return;
         container.innerHTML = '';
+
+        // Calcula tempo alvo (SCT - Standard Completion Time)
+        const totalRows = (items && items.length) ? items.length : 8;
+        const minSct = Math.max(2, Math.round(totalRows * 0.4));
+        const maxSct = Math.round(totalRows * 0.75);
+        const sctText = pedagogicalConfig.sctEnabled
+            ? `<span class="text-blue-600 font-bold">META: ${minSct}–${maxSct} min</span> · `
+            : '';
 
         // Cabeçalho
         const header = document.createElement('div');
@@ -95,7 +263,7 @@ const KumonGen = (function() {
                 <p>${level?.instruction || ''}</p>
             </div>
             <div class="text-right">
-                <div class="text-[0.5rem] font-bold text-slate-400">DATA: ___/___/___ TEMPO: ___ min</div>
+                <div class="text-[0.55rem] font-bold text-slate-500">${sctText}DATA: ___/___/___ TEMPO: ___ min</div>
                 <div class="border border-slate-900 px-2 py-0.5 mt-1 min-w-[120px]">
                     <span class="text-[0.5rem] font-bold">NOME:</span>
                     <span class="ml-2 text-[0.5rem]">____________________</span>
@@ -128,18 +296,43 @@ const KumonGen = (function() {
             const content = document.createElement('div');
             content.className = 'exercise-content';
 
+            // Verifica se é o exercício modelo (Worked Example na 1ª questão da 1ª folha)
+            const isWorkedExample = (pageNum === 1 && idx === 0 && pedagogicalConfig.workedExample);
+            if (isWorkedExample) {
+                row.classList.add('exercise-example');
+            } else {
+                content.classList.add('exercise-editable');
+                content.title = 'Clique para editar este item diretamente no caderno';
+                content.addEventListener('click', () => promptInlineEdit(item, idx, pageNum));
+            }
+
             switch (item.type) {
                 case 'quantity':
                     let circles = '';
                     for (let i = 0; i < item.value; i++) circles += '<span class="circle-placeholder"></span>';
-                    content.innerHTML = `<span class="text-2xl font-black w-6">${item.value}</span> ${circles} <span class="answer-line"></span>`;
+                    if (isWorkedExample) {
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-2xl font-black w-6">${item.value}</span> ${circles} <span class="example-answer">${item.value}</span>`;
+                    } else {
+                        content.innerHTML = `<span class="text-2xl font-black w-6">${item.value}</span> ${circles} <span class="answer-line"></span>`;
+                    }
                     break;
                 case 'math':
-                    content.innerHTML = `<span class="text-base font-light italic">${item.operand1} ${item.operator} ${item.operand2} =</span> <span class="answer-line"></span>`;
+                    if (isWorkedExample) {
+                        const solved = solveItem(item);
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-base font-light italic">${item.operand1} ${item.operator} ${item.operand2} =</span> <span class="example-answer">${solved}</span>`;
+                    } else {
+                        content.innerHTML = `<span class="text-base font-light italic">${item.operand1} ${item.operator} ${item.operand2} =</span> <span class="answer-line"></span>`;
+                    }
                     break;
                 case 'sequence':
-                    const seq = item.sequence.map(v => v === '__' ? '___' : v).join(' · ');
-                    content.innerHTML = `<span class="text-sm bg-slate-50 px-1">${seq}</span> <span class="answer-line"></span>`;
+                    if (isWorkedExample) {
+                        const solvedHole = solveItem(item);
+                        const seqEx = item.sequence.map(v => v === '__' ? `<span class="example-answer">${solvedHole}</span>` : v).join(' · ');
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-sm bg-slate-50 px-1">${seqEx}</span>`;
+                    } else {
+                        const seq = item.sequence.map(v => v === '__' ? '___' : v).join(' · ');
+                        content.innerHTML = `<span class="text-sm bg-slate-50 px-1">${seq}</span> <span class="answer-line"></span>`;
+                    }
                     break;
                 case 'tens':
                     const numVal = item.number;
@@ -149,23 +342,50 @@ const KumonGen = (function() {
                     for (let i = 0; i < tens; i++) blocks += '<span class="tens-block blue"></span>';
                     if (tens > 0 && units > 0) blocks += '<span class="mx-0.5">+</span>';
                     for (let i = 0; i < units; i++) blocks += '<span class="tens-block yellow"></span>';
-                    content.innerHTML = blocks + '<span class="answer-line ml-1"></span>';
+                    if (isWorkedExample) {
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> ${blocks} <span class="example-answer ml-1">${numVal}</span>`;
+                    } else {
+                        content.innerHTML = blocks + '<span class="answer-line ml-1"></span>';
+                    }
                     break;
                 case 'compare':
-                    content.innerHTML = `<span class="text-sm bg-slate-50 px-1">${item.pair[0]} _ ${item.pair[1]}</span> <span class="answer-line"></span>`;
+                    if (isWorkedExample) {
+                        const solvedCmp = solveItem(item);
+                        const symbol = solvedCmp.includes('>') ? '>' : solvedCmp.includes('<') ? '<' : '=';
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-sm bg-slate-50 px-1">${item.pair[0]} <span class="example-answer font-bold text-blue-600">${symbol}</span> ${item.pair[1]}</span>`;
+                    } else {
+                        content.innerHTML = `<span class="text-sm bg-slate-50 px-1">${item.pair[0]} _ ${item.pair[1]}</span> <span class="answer-line"></span>`;
+                    }
                     break;
                 case 'neighbors':
-                    content.innerHTML = `<span class="text-sm">____ , ${item.center} , ____</span> <span class="answer-line"></span>`;
+                    if (isWorkedExample) {
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-sm"><span class="example-answer">${item.center - 1}</span> , ${item.center} , <span class="example-answer">${item.center + 1}</span></span>`;
+                    } else {
+                        content.innerHTML = `<span class="text-sm">____ , ${item.center} , ____</span> <span class="answer-line"></span>`;
+                    }
                     break;
                 case 'trace':
-                    content.innerHTML = `<span class="text-3xl font-black text-slate-300 border-2 border-dashed border-slate-300 px-1">${item.char}</span> <span class="flex-1 border-b-2 border-dotted border-slate-300 mx-1"></span> <span class="trace-cell"></span>`;
+                    if (isWorkedExample) {
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-3xl font-black text-slate-400 border-2 border-dashed border-slate-300 px-1">${item.char}</span> <span class="flex-1 border-b-2 border-dotted border-slate-300 mx-1"></span> <span class="trace-cell flex items-center justify-center font-black text-slate-600 text-sm">${item.char}</span>`;
+                    } else {
+                        content.innerHTML = `<span class="text-3xl font-black text-slate-300 border-2 border-dashed border-slate-300 px-1">${item.char}</span> <span class="flex-1 border-b-2 border-dotted border-slate-300 mx-1"></span> <span class="trace-cell"></span>`;
+                    }
                     break;
                 case 'syllable':
-                    content.innerHTML = `<span class="text-xl font-bold text-slate-500 border-r pr-1 mr-1">${item.syllable}</span> <span class="answer-line w-6"></span> <span class="answer-line w-6"></span>`;
+                    if (isWorkedExample) {
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-xl font-bold text-slate-600 border-r pr-1 mr-1">${item.syllable}</span> <span class="example-answer">${item.syllable}</span>`;
+                    } else {
+                        content.innerHTML = `<span class="text-xl font-bold text-slate-500 border-r pr-1 mr-1">${item.syllable}</span> <span class="answer-line w-6"></span> <span class="answer-line w-6"></span>`;
+                    }
                     break;
                 case 'word':
                     const partsHtml = item.parts.map(p => `<span class="bg-slate-100 border px-1 text-sm">${p}</span>`).join('<span class="mx-0.5">+</span>');
-                    content.innerHTML = `<div class="flex items-center gap-0.5">${partsHtml}</div> <span class="w-16 border-b-4 border-double border-slate-400 ml-2"></span>`;
+                    if (isWorkedExample) {
+                        const wordAns = item.word || (item.parts ? item.parts.join('') : '');
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <div class="flex items-center gap-0.5">${partsHtml}</div> <span class="example-answer ml-2">${wordAns}</span>`;
+                    } else {
+                        content.innerHTML = `<div class="flex items-center gap-0.5">${partsHtml}</div> <span class="w-16 border-b-4 border-double border-slate-400 ml-2"></span>`;
+                    }
                     break;
                 default:
                     content.innerHTML = `<span class="text-slate-300">?</span>`;
@@ -324,6 +544,84 @@ const KumonGen = (function() {
                 pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
             }
 
+            // Se o gabarito estiver ativado, anexa folha de respostas ao final do PDF
+            if (pedagogicalConfig.answerKey) {
+                document.getElementById('pdf-progress').innerText = 'Gerando folha de gabarito para os pais...';
+
+                const akSheet = document.createElement('div');
+                akSheet.id = 'temp-answer-key-sheet';
+                akSheet.className = 'answer-key-sheet';
+                akSheet.style.position = 'fixed';
+                akSheet.style.left = '-9999px';
+                akSheet.style.top = '0';
+                akSheet.style.width = '1123px';
+                akSheet.style.height = '794px';
+                akSheet.style.background = '#ffffff';
+                akSheet.style.boxSizing = 'border-box';
+                akSheet.style.padding = '32px';
+
+                let cardsHtml = '';
+                const cols = Math.min(4, Math.max(2, numPages));
+                for (let p = 0; p < numPages; p++) {
+                    const pageItems = allItems.slice(p * linesPerPage, (p + 1) * linesPerPage);
+                    let itemsListHtml = '';
+                    pageItems.forEach((it, idx) => {
+                        const ans = solveItem(it);
+                        itemsListHtml += `
+                            <div style="display:flex; justify-content:space-between; border-bottom:1px dotted #e2e8f0; padding:2px 0; font-size:11px;">
+                                <span style="font-weight:bold; color:#64748b;">${idx + 1}.</span>
+                                <span style="font-weight:900; color:#0f172a;">${sanitizeText(ans)}</span>
+                            </div>
+                        `;
+                    });
+                    cardsHtml += `
+                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; display:flex; flex-direction:column;">
+                            <div style="font-weight:900; font-size:12px; color:#2563eb; border-bottom:1px solid #cbd5e1; padding-bottom:4px; margin-bottom:6px;">
+                                PÁGINA ${p + 1}
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:2px;">${itemsListHtml}</div>
+                        </div>
+                    `;
+                }
+
+                akSheet.innerHTML = `
+                    <div style="border-bottom:2px solid #0f172a; padding-bottom:8px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <h2 style="font-size:18px; font-weight:900; text-transform:uppercase; color:#0f172a; margin:0;">
+                                GABARITO DE RESPOSTAS · ${sanitizeText(subjectTitle.toUpperCase())}
+                            </h2>
+                            <p style="font-size:11px; color:#64748b; margin:2px 0 0 0; font-weight:600;">
+                                Nível: ${sanitizeText(levelTitle)} · Conferência rápida para os pais (1 minuto)
+                            </p>
+                        </div>
+                        <div style="text-align:right; font-size:11px; color:#64748b;">
+                            <strong>${numPages} PÁGINAS</strong> | DATA: ___/___/___
+                        </div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(${cols}, 1fr); gap:14px; flex:1;">
+                        ${cardsHtml}
+                    </div>
+                `;
+
+                document.body.appendChild(akSheet);
+                await new Promise(res => setTimeout(res, 200));
+
+                const pdfScale = window.innerWidth <= 768 ? 2 : 3;
+                const akCanvas = await html2canvas(akSheet, {
+                    scale: pdfScale,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    useCORS: true,
+                    windowWidth: 1123,
+                    windowHeight: 794
+                });
+
+                pdf.addPage();
+                const akImgData = akCanvas.toDataURL('image/png');
+                pdf.addImage(akImgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
+                document.body.removeChild(akSheet);
+            }
+
             pdf.save(`kumon_${subjectTitle.toLowerCase()}_${new Date().toISOString().slice(0,10)}.pdf`);
 
             // Toast de sucesso
@@ -364,7 +662,7 @@ const KumonGen = (function() {
     }
 
     // ---------- SISTEMA DE LOCAL STORAGE, SCOREBOARD E HISTÓRICO ----------
-    function saveHistory(subject, levelTitle, pages) {
+    function saveHistory(subject, levelTitle, pages, completed = false) {
         let history;
         try { history = JSON.parse(localStorage.getItem('kumongen_history') || '[]'); }
         catch (e) { history = []; }
@@ -374,13 +672,15 @@ const KumonGen = (function() {
             subject: subject,
             levelTitle: levelTitle,
             pages: pages,
-            completed: false
+            completed: !!completed
         };
         history.unshift(entry);
         localStorage.setItem('kumongen_history', JSON.stringify(history.slice(0, 30))); // guarda os últimos 30
 
         // Atualiza widget
         renderScoreboardWidget();
+        window.dispatchEvent(new Event('storage'));
+        return entry;
     }
 
     function getHistory() {
@@ -411,13 +711,22 @@ const KumonGen = (function() {
         const createdCount = history.length;
         const completedCount = history.filter(t => t.completed).length;
 
+        // Unifica com estrelas e pontos conquistados no Modo Tablet
+        let tabletStars = 0;
+        try {
+            const tabData = JSON.parse(localStorage.getItem('kumongen_gamification_v3') || '{}');
+            tabletStars = tabData.stars || 0;
+        } catch (e) {}
+
         // Cada tarefa gerada = 10 pts. Concluída = +50 pts adicionais e +1 estrela
-        const points = (createdCount * 10) + (completedCount * 50);
-        const stars = completedCount;
+        // Cada estrela conquistada no tablet = +10 pts
+        const points = (createdCount * 10) + (completedCount * 50) + (tabletStars * 10);
+        const stars = completedCount + tabletStars;
 
         return {
             points,
             stars,
+            tabletStars,
             completions: completedCount,
             total: createdCount
         };
@@ -465,18 +774,21 @@ const KumonGen = (function() {
                 
                 const checkIcon = task.completed ? 'fa-check' : 'fa-plus';
                 const decoration = task.completed ? 'line-through text-slate-400 font-normal' : 'text-slate-700 font-bold';
-                const badgeColor = task.subject === 'Matemática' 
-                    ? 'bg-blue-50 text-blue-600' 
-                    : task.subject === 'Português' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600';
+                const isTablet = task.pages && String(task.pages).includes('exer');
+                const badgeColor = isTablet
+                    ? 'bg-purple-100 text-purple-700'
+                    : (task.subject && task.subject.includes('Matemática') 
+                        ? 'bg-blue-50 text-blue-600' 
+                        : (task.subject && task.subject.includes('Português')) ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600');
                 
                 historyHtml += `
                     <div class="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-xl border border-slate-100 text-xs mb-2">
                         <div class="truncate mr-2 text-left flex-1 min-w-0">
                             <div class="flex items-center gap-1.5 mb-0.5">
-                                <span class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full ${badgeColor}">${sanitizeText(task.subject)}</span>
+                                <span class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full ${badgeColor}">${isTablet ? '📱 ' : ''}${sanitizeText(task.subject)}</span>
                                 <span class="${decoration} text-xs truncate block">${sanitizeText(task.levelTitle)}</span>
                             </div>
-                            <span class="text-[10px] text-slate-400 block">${sanitizeText(task.date)} · ${sanitizeText(task.pages)} pág.</span>
+                            <span class="text-[10px] text-slate-400 block">${sanitizeText(task.date)} · ${isTablet ? 'Treino Tablet' : sanitizeText(task.pages) + ' pág.'}</span>
                         </div>
                         <button onclick="KumonGen_toggleTaskCompletionParental('${task.id}')" class="w-8 h-8 border-2 rounded-lg flex items-center justify-center transition-all ${checkedClass}">
                             <i class="fas ${checkIcon} text-[10px]"></i>
@@ -705,9 +1017,79 @@ const KumonGen = (function() {
         return shuffled;
     }
 
+    // Painel de controles pedagógicos rápidos para pais (Aba de Pedagogia)
+    function renderPedagogicalPanel(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="space-y-3 text-xs">
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3">
+                    <div>
+                        <div class="font-bold text-slate-800 text-xs">Exemplo Guiado (#1)</div>
+                        <div class="text-[10px] text-slate-500 leading-tight">Questão 1 resolvida em traço pontilhado para servir de modelo autodidata (Kumon Model).</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                        <input type="checkbox" id="toggle-worked-example" ${pedagogicalConfig.workedExample ? 'checked' : ''} class="sr-only peer">
+                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3">
+                    <div>
+                        <div class="font-bold text-slate-800 text-xs">Tempo Alvo (SCT)</div>
+                        <div class="text-[10px] text-slate-500 leading-tight">Meta de minutos no cabeçalho. Repetir o nível se passar de 1,5x o tempo sugerido.</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                        <input type="checkbox" id="toggle-sct" ${pedagogicalConfig.sctEnabled ? 'checked' : ''} class="sr-only peer">
+                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3">
+                    <div>
+                        <div class="font-bold text-slate-800 text-xs">Folha de Gabarito</div>
+                        <div class="text-[10px] text-slate-500 leading-tight">Gera folha final com respostas compactas para os pais conferirem tudo em 1 minuto.</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                        <input type="checkbox" id="toggle-answer-key" ${pedagogicalConfig.answerKey ? 'checked' : ''} class="sr-only peer">
+                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <div class="p-2.5 bg-blue-50/60 border border-blue-100 rounded-xl text-[10px] text-blue-800 leading-relaxed">
+                    <strong class="block mb-0.5"><i class="fas fa-lightbulb"></i> Dica Pedagógica Kumon:</strong>
+                    A rotina ideal é de <strong>1 folha por dia (10 a 15 min)</strong> todos os dias. O erro deve ser corrigido no mesmo dia para não consolidar dúvidas.
+                </div>
+            </div>
+        `;
+
+        document.getElementById('toggle-worked-example')?.addEventListener('change', (e) => {
+            pedagogicalConfig.workedExample = e.target.checked;
+            savePedagogicalConfig();
+            if (window.refreshPreview) window.refreshPreview();
+        });
+
+        document.getElementById('toggle-sct')?.addEventListener('change', (e) => {
+            pedagogicalConfig.sctEnabled = e.target.checked;
+            savePedagogicalConfig();
+            if (window.refreshPreview) window.refreshPreview();
+        });
+
+        document.getElementById('toggle-answer-key')?.addEventListener('change', (e) => {
+            pedagogicalConfig.answerKey = e.target.checked;
+            savePedagogicalConfig();
+        });
+    }
+
     // Expõe a função pública globalmente para que os botões do widget possam acessá-la
     window.KumonGen_toggleTaskCompletion = toggleTaskCompletion;
+    window.KumonGen_toggleTaskCompletionParental = (id) => {
+        toggleTaskCompletion(id);
+        showParentalControlModal();
+    };
     window.KumonGen_showTutorialModal = showTutorialModal;
+    window.KumonGen_showParentalControlModal = showParentalControlModal;
 
     return {
         initRefs,
@@ -716,10 +1098,17 @@ const KumonGen = (function() {
         generatePDF,
         adjustPreviewScale,
         getHistory,
+        saveHistory,
+        renderScoreboardWidget,
+        showParentalControlModal,
         getScore,
         showTutorialModal,
         shuffleAndDecluster,
         toggleTaskCompletion,
+        solveItem,
+        promptInlineEdit,
+        renderPedagogicalPanel,
+        getPedagogicalConfig: () => ({ ...pedagogicalConfig }),
         scheduleRefresh: function() {
             clearTimeout(refreshTimer);
             refreshTimer = setTimeout(() => {

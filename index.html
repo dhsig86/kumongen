@@ -32,28 +32,79 @@
 </head>
 <body class="min-h-screen flex items-center justify-center p-4 py-12">
     <div class="max-w-4xl w-full text-center">
-        <h1 class="text-5xl font-black text-white mb-2">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-400/20 text-indigo-300 text-xs font-bold mb-4">
+            <span>✨ Versão 3.0</span>
+            <span class="w-1 h-1 rounded-full bg-indigo-400"></span>
+            <span>Edição Wizard · Worked Examples · Gabarito</span>
+        </div>
+
+        <h1 class="text-5xl font-black text-white mb-2 tracking-tight">
             Kumon<span class="text-indigo-400">Gen</span>
         </h1>
-        <p class="text-xl text-slate-300 mb-8">Gerador de cadernos personalizados</p>
+        <p class="text-lg text-slate-300 mb-8 font-medium">Cadernos inteligentes com base no Método Kumon autêntico</p>
 
-        <!-- Welcome Card -->
-        <div class="max-w-2xl mx-auto mb-10">
-            <div class="bg-white/5 backdrop-blur-sm rounded-2xl p-5 border border-white/10 text-left">
-                <div class="flex items-start gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-indigo-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <i class="fas fa-graduation-cap text-indigo-400 text-sm"></i>
+        <!-- Welcome Card 3.0 -->
+        <div class="max-w-3xl mx-auto mb-10 text-left">
+            <div class="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 shadow-2xl">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i class="fas fa-magic text-blue-400 text-xs"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-black text-white uppercase tracking-wider">Wizard para Pais</h2>
+                            <p class="text-[11px] text-slate-400 leading-relaxed mt-1">
+                                Crie cadernos em 3 cliques por objetivo pedagógico ou edite direto na folha.
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h2 class="text-sm font-bold text-white mb-1">Bem-vindo ao KumonGen</h2>
-                        <p class="text-xs text-slate-400 leading-relaxed">
-                            Exercícios progressivos inspirados no método Kumon — do simples ao complexo,
-                            com repetição espaçada para fixação. Escolha a matéria, personalize o nível
-                            e imprima cadernos prontos em A4. <span class="text-slate-500">Gratuito e sem cadastro.</span>
-                        </p>
+
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i class="fas fa-graduation-cap text-emerald-400 text-xs"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-black text-white uppercase tracking-wider">Método Kumon Real</h2>
+                            <p class="text-[11px] text-slate-400 leading-relaxed mt-1">
+                                Exemplo guiado na questão 1, tempo alvo de fluência (SCT) e gabarito rápido.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i class="fas fa-clock text-amber-400 text-xs"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-black text-white uppercase tracking-wider">Rotina de 10 min</h2>
+                            <p class="text-[11px] text-slate-400 leading-relaxed mt-1">
+                                1 folha diária para automatizar o raciocínio sem cansaço ou sobrecarga.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- BANNER MODO TABLET INTERATIVO (KUMON 3.0 FASE 2) -->
+        <div class="mb-8 bg-gradient-to-r from-indigo-950/80 via-purple-950/60 to-slate-900 border-2 border-indigo-500/40 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-2xl shadow-lg flex-shrink-0">
+                    <i class="fas fa-tablet-alt"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-indigo-500 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">Novo na v3.0</span>
+                        <h2 class="text-lg md:text-xl font-black text-white">Modo Tablet Interativo & Gamificado</h2>
+                    </div>
+                    <p class="text-xs text-slate-300 mt-1 max-w-xl">
+                        Resolva na tela do iPad ou tablet sem gastar papel! Com áudio sintetizado, teclado touch inteligente, estrelas, streaks e emissão de Certificado Oficial em PDF.
+                    </p>
+                </div>
+            </div>
+            <a href="tablet.html" class="flex-shrink-0 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-black text-sm px-6 py-3.5 rounded-2xl shadow-xl transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2">
+                <i class="fas fa-play"></i> Abrir no Tablet
+            </a>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">

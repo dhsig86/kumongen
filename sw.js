@@ -1,11 +1,13 @@
 // KumonGen Service Worker
-const CACHE_NAME = 'kumongen-v3';
+const CACHE_NAME = 'kumongen-v3.2';
 
 const APP_SHELL = [
   './index.html',
   './matematica.html',
   './portugues.html',
   './ingles.html',
+  './tablet.html',
+  './tablet-player.js',
   './kumon.css',
   './gerador.js',
   './matematica.js',

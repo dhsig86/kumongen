@@ -164,6 +164,174 @@
 .tens-block.blue { background-color: #bfdbfe; }
 .tens-block.yellow { background-color: #fef08a; }
 
+/* ===== KUMON 3.0: WORKED EXAMPLE (EXEMPLO RESOLVIDO) ===== */
+.exercise-example {
+    background-color: #f8fafc;
+    border-radius: 4px;
+    padding-left: 4px;
+    position: relative;
+}
+
+.example-badge {
+    font-size: 0.55rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    background: #0f172a;
+    color: #ffffff;
+    padding: 1px 4px;
+    border-radius: 3px;
+    margin-right: 4px;
+    display: inline-block;
+    vertical-align: middle;
+    letter-spacing: 0.5px;
+}
+
+.example-answer {
+    font-weight: 700;
+    color: #64748b;
+    border-bottom: 2px dashed #94a3b8 !important;
+    padding: 0 4px;
+    font-style: normal;
+    display: inline-block;
+}
+
+/* ===== KUMON 3.0: WYSIWYG INLINE EDIT ===== */
+.exercise-editable {
+    cursor: pointer;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+    border-radius: 4px;
+    padding: 0 2px;
+}
+
+.exercise-editable:hover {
+    background-color: #f1f5f9;
+    box-shadow: 0 0 0 1px #94a3b8;
+}
+
+.inline-edit-input {
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+    background: #ffffff;
+    border: 2px solid #2563eb;
+    border-radius: 4px;
+    padding: 1px 4px;
+    width: 60px;
+    outline: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* ===== KUMON 3.0: FOLHA DE GABARITO (ANSWER KEY) ===== */
+.answer-key-sheet {
+    background: white;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    width: 1123px;
+    height: 794px;
+    padding: 24px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+.answer-key-header {
+    border-bottom: 2px solid #0f172a;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.answer-key-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    flex: 1;
+}
+
+.answer-key-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 0.75rem;
+}
+
+.answer-key-list {
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.answer-key-item {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px dotted #cbd5e1;
+    padding-bottom: 2px;
+}
+
+/* ===== KUMON 3.0: ABAS DA SIDEBAR ===== */
+.kumon-tabs {
+    display: flex;
+    background: #f1f5f9;
+    border-radius: 10px;
+    padding: 3px;
+    gap: 3px;
+    margin-bottom: 14px;
+}
+
+.kumon-tab-btn {
+    flex: 1;
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 7px 4px;
+    border-radius: 8px;
+    color: #64748b;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.kumon-tab-btn:hover {
+    color: #0f172a;
+}
+
+.kumon-tab-btn.active {
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.kumon-wizard-card {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.kumon-wizard-card:hover {
+    border-color: #3b82f6;
+    background: #f8fafc;
+    transform: translateY(-1px);
+}
+
+.kumon-wizard-card.active {
+    border-color: #2563eb;
+    background: #eff6ff;
+    box-shadow: 0 0 0 1px #2563eb;
+}
+
+
 /* ===== SIDEBAR: CONTROLES E PARÂMETROS ===== */
 .param-control {
     display: flex;

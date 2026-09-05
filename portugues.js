@@ -628,6 +628,7 @@
     };
 
     function refreshPreview() {
+        if (!pageLeft || !pageRight) return;
         const level = LevelLibrary.portugues.find(l => l.id === currentLevelId);
         if (!level) return;
 
@@ -637,6 +638,72 @@
 
         KumonGen.buildPage(pageLeft, level, 1, leftItems);
         KumonGen.buildPage(pageRight, level, 2, rightItems);
+    }
+
+    // ===== CONTROLES DE ABAS & WIZARD (KUMON 3.0) =====
+    function switchPorTab(tab) {
+        const panels = {
+            wizard: document.getElementById('panel-wizard'),
+            personalizar: document.getElementById('panel-personalizar'),
+            pedagogia: document.getElementById('panel-pedagogia')
+        };
+        const buttons = {
+            wizard: document.getElementById('tab-btn-wizard'),
+            personalizar: document.getElementById('tab-btn-personalizar'),
+            pedagogia: document.getElementById('tab-btn-pedagogia')
+        };
+
+        Object.keys(panels).forEach(key => {
+            if (panels[key]) {
+                if (key === tab) {
+                    panels[key].classList.remove('hidden');
+                } else {
+                    panels[key].classList.add('hidden');
+                }
+            }
+            if (buttons[key]) {
+                if (key === tab) {
+                    buttons[key].classList.add('active');
+                } else {
+                    buttons[key].classList.remove('active');
+                }
+            }
+        });
+
+        if (tab === 'pedagogia') {
+            KumonGen.renderPedagogicalPanel('pedagogicalPanelContainer');
+        }
+    }
+
+    function selectPorWizardGoal(levelId, el) {
+        currentLevelId = levelId;
+        document.querySelectorAll('#panel-wizard .kumon-wizard-card').forEach(card => card.classList.remove('active'));
+        if (el) el.classList.add('active');
+
+        saveState();
+        renderLevelList();
+        updateParamPanel();
+        refreshPreview();
+    }
+
+    function selectPorWizardPace(pages, lines, btn) {
+        document.querySelectorAll('.wizard-pace-btn').forEach(b => {
+            b.classList.remove('active', 'border-emerald-600', 'bg-emerald-50', 'text-emerald-800');
+            b.classList.add('border-slate-200', 'bg-white', 'text-slate-600');
+        });
+        if (btn) {
+            btn.classList.add('active', 'border-emerald-600', 'bg-emerald-50', 'text-emerald-800');
+            btn.classList.remove('border-slate-200', 'bg-white', 'text-slate-600');
+        }
+
+        const pagesSelect = document.getElementById('pagesPerBook');
+        const linesSelect = document.getElementById('linesPerPage');
+        if (pagesSelect) pagesSelect.value = String(pages);
+        if (linesSelect) {
+            linesSelect.value = String(lines);
+            itemsPerPage = lines;
+        }
+        refreshPreview();
     }
 
     function init() {
@@ -670,12 +737,18 @@
         if (zoomSpan) zoomSpan.innerText = Math.round(currentZoom * 100) + '%';
         if (zoomContainer) zoomContainer.style.transform = `scale(${currentZoom})`;
 
+        // Inicializa painel pedagógico na aba correspondente
+        KumonGen.renderPedagogicalPanel('pedagogicalPanelContainer');
+
         window.addEventListener('storage', () => {
             KumonGen.initRefs();
         });
     }
 
     window.adjustZoom = KumonGen.adjustZoom;
+    window.switchPorTab = switchPorTab;
+    window.selectPorWizardGoal = selectPorWizardGoal;
+    window.selectPorWizardPace = selectPorWizardPace;
     
     window.generatePDF = () => {
         const level = LevelLibrary.portugues.find(l => l.id === currentLevelId);
@@ -690,6 +763,16 @@
     };
 
     window.refreshPreview = refreshPreview;
+
+    // Registra módulo para uso no tablet player (Fase 2)
+    window.KumonSubjects = window.KumonSubjects || {};
+    window.KumonSubjects.portugues = {
+        title: 'Português',
+        icon: 'fa-font',
+        color: 'emerald',
+        levels: LevelLibrary.portugues,
+        generate: generateItemsForLevel
+    };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);

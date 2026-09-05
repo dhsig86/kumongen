@@ -398,6 +398,7 @@
     };
 
     function refreshPreview() {
+        if (!pageLeft || !pageRight) return;
         const level = LevelLibrary.matematica.find(l => l.id === currentLevelId);
         if (!level) return;
 
@@ -407,6 +408,72 @@
 
         KumonGen.buildPage(pageLeft, level, 1, leftItems);
         KumonGen.buildPage(pageRight, level, 2, rightItems);
+    }
+
+    // ===== CONTROLES DE ABAS & WIZARD (KUMON 3.0) =====
+    function switchMatTab(tab) {
+        const panels = {
+            wizard: document.getElementById('panel-wizard'),
+            personalizar: document.getElementById('panel-personalizar'),
+            pedagogia: document.getElementById('panel-pedagogia')
+        };
+        const buttons = {
+            wizard: document.getElementById('tab-btn-wizard'),
+            personalizar: document.getElementById('tab-btn-personalizar'),
+            pedagogia: document.getElementById('tab-btn-pedagogia')
+        };
+
+        Object.keys(panels).forEach(key => {
+            if (panels[key]) {
+                if (key === tab) {
+                    panels[key].classList.remove('hidden');
+                } else {
+                    panels[key].classList.add('hidden');
+                }
+            }
+            if (buttons[key]) {
+                if (key === tab) {
+                    buttons[key].classList.add('active');
+                } else {
+                    buttons[key].classList.remove('active');
+                }
+            }
+        });
+
+        if (tab === 'pedagogia') {
+            KumonGen.renderPedagogicalPanel('pedagogicalPanelContainer');
+        }
+    }
+
+    function selectWizardGoal(levelId, el) {
+        currentLevelId = levelId;
+        document.querySelectorAll('#panel-wizard .kumon-wizard-card').forEach(card => card.classList.remove('active'));
+        if (el) el.classList.add('active');
+
+        saveState();
+        renderLevelList();
+        updateParamPanel();
+        refreshPreview();
+    }
+
+    function selectWizardPace(pages, lines, btn) {
+        document.querySelectorAll('.wizard-pace-btn').forEach(b => {
+            b.classList.remove('active', 'border-blue-600', 'bg-blue-50', 'text-blue-800');
+            b.classList.add('border-slate-200', 'bg-white', 'text-slate-600');
+        });
+        if (btn) {
+            btn.classList.add('active', 'border-blue-600', 'bg-blue-50', 'text-blue-800');
+            btn.classList.remove('border-slate-200', 'bg-white', 'text-slate-600');
+        }
+
+        const pagesSelect = document.getElementById('pagesPerBook');
+        const linesSelect = document.getElementById('linesPerPage');
+        if (pagesSelect) pagesSelect.value = String(pages);
+        if (linesSelect) {
+            linesSelect.value = String(lines);
+            itemsPerPage = lines;
+        }
+        refreshPreview();
     }
 
     function init() {
@@ -436,12 +503,18 @@
         if (zoomSpan) zoomSpan.innerText = Math.round(currentZoom * 100) + '%';
         if (zoomContainer) zoomContainer.style.transform = `scale(${currentZoom})`;
 
+        // Inicializa painel pedagógico na aba correspondente
+        KumonGen.renderPedagogicalPanel('pedagogicalPanelContainer');
+
         window.addEventListener('storage', () => {
             KumonGen.initRefs();
         });
     }
 
     window.adjustZoom = KumonGen.adjustZoom;
+    window.switchMatTab = switchMatTab;
+    window.selectWizardGoal = selectWizardGoal;
+    window.selectWizardPace = selectWizardPace;
     
     window.generatePDF = () => {
         const level = LevelLibrary.matematica.find(l => l.id === currentLevelId);
@@ -456,6 +529,16 @@
     };
 
     window.refreshPreview = refreshPreview;
+
+    // Registra módulo para uso no tablet player (Fase 2)
+    window.KumonSubjects = window.KumonSubjects || {};
+    window.KumonSubjects.matematica = {
+        title: 'Matemática',
+        icon: 'fa-calculator',
+        color: 'blue',
+        levels: LevelLibrary.matematica,
+        generate: generateItemsForLevel
+    };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
