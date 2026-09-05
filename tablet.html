@@ -16,6 +16,26 @@
     <link rel="stylesheet" href="kumon.css">
 
     <style>
+        /* ===========================================
+           CLASSES TAILWIND FALTANTES NO BUILD COMPILADO
+           (tailwind.min.css é um build mínimo pré-compilado
+            que não inclui todas as utilities)
+           =========================================== */
+        .hidden { display: none !important; }
+        .z-40 { z-index: 40; }
+        .pointer-events-none { pointer-events: none; }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        @keyframes bounceSoft {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+        .animate-bounce-subtle { animation: bounceSoft 2s ease-in-out infinite; }
+        .opacity-30 { opacity: 0.3; }
+
         /* Otimizações táteis para iPad e tablets */
         * {
             -webkit-tap-highlight-color: transparent;

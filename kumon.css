@@ -1,5 +1,29 @@
 /* kumon.css — Estilos compartilhados do KumonGen (A4, exercícios, sidebar, responsivo) */
 
+/* ===========================================
+   CLASSES TAILWIND FALTANTES NO BUILD COMPILADO
+   (tailwind.min.css é um build mínimo pré-compilado)
+   =========================================== */
+.hidden { display: none !important; }
+.z-40 { z-index: 40; }
+.z-50 { z-index: 50; }
+.pointer-events-none { pointer-events: none; }
+.animate-pulse {
+    animation: kumon-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes kumon-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .5; }
+}
+@keyframes kumon-bounce-subtle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+.animate-bounce-subtle {
+    animation: kumon-bounce-subtle 2s ease-in-out infinite;
+}
+.opacity-30 { opacity: 0.3; }
+
 /* ===== PREVIEW A4 LANDSCAPE ===== */
 #a4-sheet {
     background: white;
