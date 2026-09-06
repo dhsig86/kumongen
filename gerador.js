@@ -7,20 +7,34 @@ const KumonGen = (function() {
     let refreshTimer = null;
     let resizeTimer = null;
 
-    // Lazy-load de scripts externos (html2canvas, jsPDF)
-    function loadScript(src) {
+    // Dicionário canônico de hashes SRI para scripts externos
+    const SRI_HASHES = {
+        'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js': 'sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==',
+        'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js': 'sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA=='
+    };
+
+    // Lazy-load de scripts externos (html2canvas, jsPDF) com suporte a SRI
+    function loadScript(src, integrity = null) {
         return new Promise((resolve, reject) => {
             if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
             const s = document.createElement('script');
             s.src = src;
+            const hash = integrity || SRI_HASHES[src];
+            if (hash) {
+                s.integrity = hash;
+                s.crossOrigin = 'anonymous';
+            }
             s.onload = resolve;
-            s.onerror = () => reject(new Error('Falha ao carregar: ' + src));
+            s.onerror = () => reject(new Error('Falha ao carregar script protegido: ' + src));
             document.head.appendChild(s);
         });
     }
 
     // Sanitiza texto para uso seguro em innerHTML
     function sanitizeText(text) {
+        if (typeof window !== 'undefined' && typeof window.escapeHtml === 'function') {
+            return window.escapeHtml(text);
+        }
         const div = document.createElement('div');
         div.textContent = String(text);
         return div.innerHTML;
@@ -35,7 +49,9 @@ const KumonGen = (function() {
 
     function loadPedagogicalConfig() {
         try {
-            const saved = localStorage.getItem('kumongen_pedagogical_config');
+            const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
+            if (!storage) return;
+            const saved = storage.getItem('kumongen_pedagogical_config');
             if (saved) {
                 pedagogicalConfig = { ...pedagogicalConfig, ...JSON.parse(saved) };
             }
@@ -44,7 +60,9 @@ const KumonGen = (function() {
 
     function savePedagogicalConfig() {
         try {
-            localStorage.setItem('kumongen_pedagogical_config', JSON.stringify(pedagogicalConfig));
+            const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
+            if (!storage) return;
+            storage.setItem('kumongen_pedagogical_config', JSON.stringify(pedagogicalConfig));
         } catch(e) {}
     }
 
@@ -413,10 +431,11 @@ const KumonGen = (function() {
         renderScoreboardWidget();
 
         // Abre tutorial automaticamente na primeira visita
-        if (!localStorage.getItem('kumongen_tutorial_seen')) {
+        const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
+        if (storage && !storage.getItem('kumongen_tutorial_seen')) {
             setTimeout(() => {
                 showTutorialModal();
-                localStorage.setItem('kumongen_tutorial_seen', 'true');
+                try { storage.setItem('kumongen_tutorial_seen', 'true'); } catch (e) {}
             }, 500);
         }
     }
@@ -1131,8 +1150,9 @@ const KumonGen = (function() {
 
     // ---------- SISTEMA DE LOCAL STORAGE, SCOREBOARD E HISTÓRICO ----------
     function saveHistory(subject, levelTitle, pages, completed = false) {
+        const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
         let history;
-        try { history = JSON.parse(localStorage.getItem('kumongen_history') || '[]'); }
+        try { history = JSON.parse((storage ? storage.getItem('kumongen_history') : null) || '[]'); }
         catch (e) { history = []; }
         const entry = {
             id: Date.now().toString(),
@@ -1143,7 +1163,9 @@ const KumonGen = (function() {
             completed: !!completed
         };
         history.unshift(entry);
-        localStorage.setItem('kumongen_history', JSON.stringify(history.slice(0, 30))); // guarda os últimos 30
+        if (storage) {
+            try { storage.setItem('kumongen_history', JSON.stringify(history.slice(0, 30))); } catch (e) {}
+        }
 
         if (window.StudentProfileEngine) {
             window.StudentProfileEngine.addActiveHistoryItem(entry);
@@ -1161,7 +1183,8 @@ const KumonGen = (function() {
             const act = window.StudentProfileEngine.getActive();
             if (act && Array.isArray(act.history)) return act.history;
         }
-        try { return JSON.parse(localStorage.getItem('kumongen_history') || '[]'); }
+        const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
+        try { return JSON.parse((storage ? storage.getItem('kumongen_history') : null) || '[]'); }
         catch (e) { return []; }
     }
 
@@ -1171,14 +1194,18 @@ const KumonGen = (function() {
             const act = window.StudentProfileEngine.getActive();
             history = (act && Array.isArray(act.history)) ? act.history : [];
         } else {
-            try { history = JSON.parse(localStorage.getItem('kumongen_history') || '[]'); }
+            const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
+            try { history = JSON.parse((storage ? storage.getItem('kumongen_history') : null) || '[]'); }
             catch (e) { history = []; }
         }
 
         const task = history.find(t => t.id === id);
         if (task) {
             task.completed = !task.completed;
-            localStorage.setItem('kumongen_history', JSON.stringify(history));
+            const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
+            if (storage) {
+                try { storage.setItem('kumongen_history', JSON.stringify(history)); } catch (e) {}
+            }
             if (window.StudentProfileEngine) {
                 const act = window.StudentProfileEngine.getActive();
                 if (act) {
@@ -1206,8 +1233,9 @@ const KumonGen = (function() {
                 tabletStars = act.gamification.stars || 0;
             }
         } else {
+            const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
             try {
-                const tabData = JSON.parse(localStorage.getItem('kumongen_gamification_v3') || '{}');
+                const tabData = JSON.parse((storage ? storage.getItem('kumongen_gamification_v3') : null) || '{}');
                 tabletStars = tabData.stars || 0;
             } catch (e) {}
         }

@@ -21,7 +21,7 @@
     class SoundEngine {
         constructor() {
             this.ctx = null;
-            this.muted = localStorage.getItem('kumongen_tablet_muted') === 'true';
+            this.muted = (window.SafeStorage ? window.SafeStorage.getItem('kumongen_tablet_muted') : (typeof localStorage !== 'undefined' ? localStorage.getItem('kumongen_tablet_muted') : null)) === 'true';
         }
 
         init() {
@@ -44,7 +44,7 @@
                 } catch (e) {}
             }
             try {
-                localStorage.setItem('kumongen_tablet_muted', this.muted ? 'true' : 'false');
+                (window.SafeStorage || localStorage).setItem('kumongen_tablet_muted', this.muted ? 'true' : 'false');
             } catch (e) {}
             return this.muted;
         }
@@ -199,7 +199,7 @@
                     return active.gamification;
                 }
             }
-            const raw = localStorage.getItem(this.STORAGE_KEY);
+            const raw = (window.SafeStorage ? window.SafeStorage.getItem(this.STORAGE_KEY) : (typeof localStorage !== 'undefined' ? localStorage.getItem(this.STORAGE_KEY) : null));
             if (!raw) {
                 return {
                     stars: 0,
@@ -222,7 +222,7 @@
             if (window.StudentProfileEngine) {
                 window.StudentProfileEngine.updateActiveGamification(() => data);
             }
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+            (window.SafeStorage || localStorage).setItem(this.STORAGE_KEY, JSON.stringify(data));
         },
 
         addStars(count) {
@@ -297,7 +297,7 @@
     const Session = {
         subjectKey: 'matematica',
         levelId: 'm2',
-        studentName: (window.StudentProfileEngine && window.StudentProfileEngine.getActive()) ? window.StudentProfileEngine.getActive().name : (localStorage.getItem('kumongen_student_name') || 'Super Aluno'),
+        studentName: (window.StudentProfileEngine && window.StudentProfileEngine.getActive()) ? window.StudentProfileEngine.getActive().name : ((window.SafeStorage ? window.SafeStorage.getItem('kumongen_student_name') : (typeof localStorage !== 'undefined' ? localStorage.getItem('kumongen_student_name') : null)) || 'Super Aluno'),
         items: [],
         currentIndex: 0,
         currentInput: '',
@@ -1016,8 +1016,8 @@
                     } else {
                         const newName = prompt('Qual é o nome do(a) aluno(a)?', Session.studentName);
                         if (newName && newName.trim()) {
-                            Session.studentName = newName.trim();
-                            localStorage.setItem('kumongen_student_name', Session.studentName);
+                            Session.studentName = (window.escapeHtml ? window.escapeHtml(newName.trim()) : newName.trim());
+                            (window.SafeStorage || localStorage).setItem('kumongen_student_name', Session.studentName);
                             const nameEl = document.getElementById('studentNameDisplay');
                             if (nameEl) nameEl.innerText = Session.studentName;
                         }
@@ -2749,7 +2749,7 @@
                     <span class="inline-block ${res.isGauntletMastered ? 'bg-amber-500' : 'bg-emerald-600'} text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full mb-1">
                         ${headerBadgeText}
                     </span>
-                    <h3 class="text-2xl font-black text-slate-900">Parabéns, ${Session.studentName}!</h3>
+                    <h3 class="text-2xl font-black text-slate-900">Parabéns, ${(window.escapeHtml ? window.escapeHtml(Session.studentName) : Session.studentName)}!</h3>
                     <p class="text-xs text-slate-500 mt-0.5">${level ? level.title : ''} · ${sub ? sub.title : ''}</p>
                     <div class="${res.isGauntletMastered ? 'bg-amber-50 border border-amber-200 text-amber-900' : 'bg-emerald-50 border border-emerald-200 text-emerald-800'} rounded-xl px-3 py-1.5 text-xs font-bold my-2.5">
                         "${res.isGauntletMastered ? 'Sua persistência valeu ouro! Você dominou todas as questões!' : MascotEngine.getCurrent().cheerFinish}"
@@ -2849,7 +2849,7 @@
                             </div>
                             <div>
                                 <h3 class="font-black text-slate-900 text-lg">Suas Conquistas</h3>
-                                <p class="text-xs text-slate-500">Aluno(a): <strong>${Session.studentName}</strong></p>
+                                <p class="text-xs text-slate-500">Aluno(a): <strong>${(window.escapeHtml ? window.escapeHtml(Session.studentName) : Session.studentName)}</strong></p>
                             </div>
                         </div>
                         <button id="closeBadgesBtn" class="text-slate-400 hover:text-slate-600 text-lg p-2">

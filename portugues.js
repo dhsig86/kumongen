@@ -155,12 +155,14 @@
 
     // ---------- PERSISTÊNCIA (LOCAL STORAGE) ----------
     function loadSavedState() {
-        const savedLevelId = localStorage.getItem('kumongen_por_level');
+        const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
+        if (!storage) return;
+        const savedLevelId = storage.getItem('kumongen_por_level');
         if (savedLevelId) {
             currentLevelId = savedLevelId;
         }
 
-        const savedParams = localStorage.getItem('kumongen_por_params');
+        const savedParams = storage.getItem('kumongen_por_params');
         if (savedParams) {
             try {
                 const parsed = JSON.parse(savedParams);
@@ -172,8 +174,12 @@
     }
 
     function saveState() {
-        localStorage.setItem('kumongen_por_level', currentLevelId);
-        localStorage.setItem('kumongen_por_params', JSON.stringify(customParams));
+        const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
+        if (!storage) return;
+        try {
+            storage.setItem('kumongen_por_level', currentLevelId);
+            storage.setItem('kumongen_por_params', JSON.stringify(customParams));
+        } catch (e) {}
     }
 
     const DEFAULT_WORDS_P3 = [

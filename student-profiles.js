@@ -6,44 +6,78 @@
     const STORAGE_STUDENTS = 'kumongen_students';
     const STORAGE_ACTIVE_ID = 'kumongen_active_student_id';
 
-    // SafeStorage: Fallback em memória transparente caso o navegador restrinja o localStorage
+    // Sanitizador universal rápido de entidades HTML (Defesa contra DOM XSS)
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+    if (typeof window !== 'undefined') {
+        window.escapeHtml = escapeHtml;
+    }
+
+    // SafeStorage: Fallback em memória transparente caso o navegador restrinja o localStorage ou lance QuotaExceededError
     const SafeStorage = {
         _mem: {},
         getItem(key) {
             try {
                 if (typeof window !== 'undefined' && window.localStorage) {
-                    return window.localStorage.getItem(key);
+                    const val = window.localStorage.getItem(key);
+                    if (val !== null) return val;
                 } else if (typeof localStorage !== 'undefined') {
-                    return localStorage.getItem(key);
+                    const val = localStorage.getItem(key);
+                    if (val !== null) return val;
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.warn('[SafeStorage] Leitura bloqueada pelo navegador, usando fallback em memória para:', key, e);
+            }
             return Object.prototype.hasOwnProperty.call(this._mem, key) ? this._mem[key] : null;
         },
         setItem(key, value) {
+            const strVal = String(value);
             try {
                 if (typeof window !== 'undefined' && window.localStorage) {
-                    window.localStorage.setItem(key, String(value));
-                    return;
+                    window.localStorage.setItem(key, strVal);
+                    return true;
                 } else if (typeof localStorage !== 'undefined') {
-                    localStorage.setItem(key, String(value));
-                    return;
+                    localStorage.setItem(key, strVal);
+                    return true;
                 }
-            } catch (e) {}
-            this._mem[key] = String(value);
+            } catch (e) {
+                console.warn('[SafeStorage] QuotaExceededError ou restrição de gravação. Fallback em memória ativado para:', key, e);
+            }
+            this._mem[key] = strVal;
+            return false;
         },
         removeItem(key) {
             try {
                 if (typeof window !== 'undefined' && window.localStorage) {
                     window.localStorage.removeItem(key);
-                    return;
                 } else if (typeof localStorage !== 'undefined') {
                     localStorage.removeItem(key);
-                    return;
                 }
             } catch (e) {}
             delete this._mem[key];
+        },
+        clear() {
+            try {
+                if (typeof window !== 'undefined' && window.localStorage) {
+                    window.localStorage.clear();
+                } else if (typeof localStorage !== 'undefined') {
+                    localStorage.clear();
+                }
+            } catch (e) {}
+            this._mem = {};
         }
     };
+
+    if (typeof window !== 'undefined') {
+        window.SafeStorage = SafeStorage;
+    }
 
     // Presets de mascotes disponíveis para a criança
     const MASCOT_PRESETS = {
@@ -199,13 +233,20 @@
         AGE_TIERS: AGE_TIERS,
 
         getAll() {
+            let raw = null;
             try {
-                const raw = SafeStorage.getItem(STORAGE_STUDENTS);
+                raw = SafeStorage.getItem(STORAGE_STUDENTS);
                 if (!raw) return _migrateLegacyData();
                 const list = JSON.parse(raw);
                 if (!Array.isArray(list) || list.length === 0) return _migrateLegacyData();
                 return list;
             } catch (e) {
+                console.error('[StudentProfileEngine] Falha de integridade em STORAGE_STUDENTS! Isolando em quarentena:', e);
+                try {
+                    if (raw) {
+                        SafeStorage.setItem(`kumongen_students_corrupted_bak_${Date.now()}`, raw);
+                    }
+                } catch (bakErr) {}
                 return _migrateLegacyData();
             }
         },
@@ -355,6 +396,56 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+        },
+
+        // Importação e Restauração Segura de Backup JSON com Validação Estrita de Schema
+        importBackup(jsonString) {
+            try {
+                if (!jsonString || typeof jsonString !== 'string') {
+                    return { success: false, error: 'Arquivo inválido ou vazio.' };
+                }
+                const data = JSON.parse(jsonString);
+                if (!data || typeof data !== 'object') {
+                    return { success: false, error: 'Estrutura JSON inválida.' };
+                }
+                if (!Array.isArray(data.students) || data.students.length === 0) {
+                    return { success: false, error: 'Nenhum estudante válido localizado no arquivo de backup.' };
+                }
+
+                // Validação, sanitização e normalização estrita de cada perfil
+                const validatedStudents = data.students.map(s => {
+                    const cleanName = escapeHtml(String(s.name || 'Aluno').slice(0, 25).trim());
+                    return {
+                        id: (typeof s.id === 'string' && s.id.startsWith('std_')) ? s.id : _generateId(),
+                        name: cleanName || 'Aluno',
+                        ageTier: (s.ageTier in AGE_TIERS) ? s.ageTier : 'age_6_7',
+                        mascot: (s.mascot in MASCOT_PRESETS) ? s.mascot : 'jaguar',
+                        createdAt: typeof s.createdAt === 'string' ? s.createdAt : new Date().toISOString(),
+                        gamification: (s.gamification && typeof s.gamification === 'object') ? {
+                            stars: Number.isInteger(s.gamification.stars) ? Math.max(0, s.gamification.stars) : 0,
+                            streak: Number.isInteger(s.gamification.streak) ? Math.max(0, s.gamification.streak) : 0,
+                            bestStreak: Number.isInteger(s.gamification.bestStreak) ? Math.max(0, s.gamification.bestStreak) : 0,
+                            totalRounds: Number.isInteger(s.gamification.totalRounds) ? Math.max(0, s.gamification.totalRounds) : 0,
+                            totalCorrect: Number.isInteger(s.gamification.totalCorrect) ? Math.max(0, s.gamification.totalCorrect) : 0,
+                            badges: Array.isArray(s.gamification.badges) ? s.gamification.badges.slice(0, 50) : [],
+                            lastPlayed: typeof s.gamification.lastPlayed === 'string' ? s.gamification.lastPlayed : null
+                        } : { stars: 0, streak: 0, bestStreak: 0, totalRounds: 0, totalCorrect: 0, badges: [], lastPlayed: null },
+                        history: Array.isArray(s.history) ? s.history.slice(0, 50) : [],
+                        mastery: (s.mastery && typeof s.mastery === 'object') ? s.mastery : {}
+                    };
+                });
+
+                SafeStorage.setItem(STORAGE_STUDENTS, JSON.stringify(validatedStudents));
+                if (data.activeStudentId && validatedStudents.some(s => s.id === data.activeStudentId)) {
+                    this.setActive(data.activeStudentId);
+                } else {
+                    this.setActive(validatedStudents[0].id);
+                }
+
+                return { success: true, count: validatedStudents.length };
+            } catch (err) {
+                return { success: false, error: 'Erro no processamento do backup: ' + err.message };
+            }
         },
 
         // Registra maestria de um nível curricular (Gauntlet Kumon 100%)
@@ -747,7 +838,7 @@
                                 </div>
                                 <div style="min-width:0;flex:1;">
                                     <div style="display:flex;align-items:center;gap:6px;">
-                                        <h4 style="font-weight:900;font-size:14px;color:#0f172a;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.name}</h4>
+                                        <h4 style="font-weight:900;font-size:14px;color:#0f172a;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.name)}</h4>
                                         ${isSelected ? '<span style="font-size:9px;font-weight:900;text-transform:uppercase;color:#b45309;background:#fef3c7;padding:2px 8px;border-radius:999px;">Ativo</span>' : ''}
                                     </div>
                                     <div style="font-size:10px;color:#64748b;font-weight:600;display:flex;align-items:center;gap:6px;margin-top:2px;">
@@ -966,7 +1057,7 @@
                             <form id="studentProfileForm" style="display:flex;flex-direction:column;gap:14px;">
                                 <div>
                                     <label style="font-size:10px;font-weight:900;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px;">Nome da Criança <span style="color:#ef4444;">*</span></label>
-                                    <input type="text" id="inputStudentName" required maxlength="25" placeholder="Ex: Theo, Alice, Lucas..." value="${currentName}" style="width:100%;padding:10px 14px;font-size:15px;font-weight:bold;background:#f8fafc;border:2px solid #cbd5e1;border-radius:14px;outline:none;box-sizing:border-box;transition:all 0.2s;">
+                                    <input type="text" id="inputStudentName" required maxlength="25" placeholder="Ex: Theo, Alice, Lucas..." value="${escapeHtml(currentName)}" style="width:100%;padding:10px 14px;font-size:15px;font-weight:bold;background:#f8fafc;border:2px solid #cbd5e1;border-radius:14px;outline:none;box-sizing:border-box;transition:all 0.2s;">
                                 </div>
 
                                 <div>
