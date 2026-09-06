@@ -56,6 +56,88 @@
             </button>
         `;
 
+        if (activePage === 'tablet') {
+            dock.className = 'no-print select-none transition-all duration-300 ease-out nav-dock-tablet-mode';
+            dock.style.cssText = 'position: fixed; bottom: max(16px, env(safe-area-inset-bottom, 16px)); left: max(16px, env(safe-area-inset-left, 16px)); z-index: 45;';
+
+            dock.innerHTML = `
+                <div class="relative">
+                    <div id="navDockTabletFlyout" class="hidden absolute bottom-12 left-0 rounded-2xl p-2.5 shadow-2xl flex flex-col gap-1 min-w-[190px] mb-2 z-50" style="background: #0f172a; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.8); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
+                        <div class="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-800 flex items-center justify-between mb-1">
+                            <span>Navegação</span>
+                            <i class="fas fa-compass text-amber-400"></i>
+                        </div>
+                        <a href="index.html" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-300 hover:bg-slate-800 transition-colors" style="text-decoration: none;">
+                            <i class="fas fa-home w-4 text-amber-400"></i> <span>Início</span>
+                        </a>
+                        <a href="matematica.html" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-blue-300 hover:bg-slate-800 transition-colors" style="text-decoration: none;">
+                            <i class="fas fa-calculator w-4 text-blue-400"></i> <span>Matemática</span>
+                        </a>
+                        <a href="portugues.html" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-emerald-300 hover:bg-slate-800 transition-colors" style="text-decoration: none;">
+                            <i class="fas fa-font w-4 text-emerald-400"></i> <span>Português</span>
+                        </a>
+                        <a href="ingles.html" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-red-300 hover:bg-slate-800 transition-colors" style="text-decoration: none;">
+                            <i class="fas fa-language w-4 text-red-400"></i> <span>Inglês</span>
+                        </a>
+                        <div class="h-[1px] bg-slate-800 my-1"></div>
+                        <button type="button" id="navDockTabletProfileBtn" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-400 hover:bg-slate-800 transition-colors text-left w-full cursor-pointer">
+                            <i class="fas fa-users w-4 text-amber-400"></i> <span>Trocar Aluno</span>
+                        </button>
+                    </div>
+                    <button type="button" id="navDockTabletTrigger" class="cursor-pointer transition-all active:scale-95 flex items-center gap-2" style="background: #0f172a; border: 1px solid #334155; color: #f8fafc; border-radius: 9999px; box-shadow: 0 4px 14px rgba(0,0,0,0.5); padding: 0.5rem 0.85rem;" title="Menu rápido de navegação">
+                        <i class="fas fa-compass text-amber-400 text-sm"></i>
+                        <span class="text-xs font-black tracking-wide">Menu</span>
+                        <i class="fas fa-chevron-up text-[9px] text-slate-400 transition-transform" id="navDockTabletTriggerIcon"></i>
+                    </button>
+                </div>
+            `;
+
+            document.body.appendChild(dock);
+
+            const trigger = document.getElementById('navDockTabletTrigger');
+            const flyout = document.getElementById('navDockTabletFlyout');
+            const triggerIcon = document.getElementById('navDockTabletTriggerIcon');
+
+            if (trigger && flyout) {
+                trigger.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isOpen = !flyout.classList.contains('hidden');
+                    if (isOpen) {
+                        flyout.classList.add('hidden');
+                        if (triggerIcon) triggerIcon.className = 'fas fa-chevron-up text-[9px] text-slate-400 transition-transform';
+                    } else {
+                        flyout.classList.remove('hidden');
+                        if (triggerIcon) triggerIcon.className = 'fas fa-chevron-down text-[9px] text-amber-400 transition-transform';
+                    }
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!dock.contains(e.target)) {
+                        flyout.classList.add('hidden');
+                        if (triggerIcon) triggerIcon.className = 'fas fa-chevron-up text-[9px] text-slate-400 transition-transform';
+                    }
+                });
+            }
+
+            const tabletProfBtn = document.getElementById('navDockTabletProfileBtn');
+            if (tabletProfBtn) {
+                tabletProfBtn.addEventListener('click', () => {
+                    flyout.classList.add('hidden');
+                    if (window.StudentProfileEngine) {
+                        window.StudentProfileEngine.showProfileModal({
+                            onSelect: (student) => {
+                                if (window.TabletPlayer && window.TabletPlayer.onStudentChanged) {
+                                    window.TabletPlayer.onStudentChanged(student);
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+
+            return;
+        }
+
         dock.innerHTML = `
             <div id="navDockInner" class="flex items-center gap-1 sm:gap-1.5 p-1.5 rounded-3xl shadow-2xl transition-all" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(51, 65, 85, 0.8);">
                 ${itemsHtml}
@@ -93,13 +175,7 @@
         // Toggle para minimizar/expandir o dock
         const toggleBtn = document.getElementById('navDockToggleBtn');
         const toggleIcon = document.getElementById('navDockToggleIcon');
-        const dockInner = document.getElementById('navDockInner');
         let isCollapsed = false;
-
-        // No tablet, se estiver em tela cheia com teclado, começa sutilmente minimizado
-        if (activePage === 'tablet') {
-            dock.classList.add('nav-dock-tablet-mode');
-        }
 
         if (toggleBtn) {
             toggleBtn.addEventListener('click', () => {

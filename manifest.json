@@ -1,19 +1,71 @@
 {
-  "name": "KumonGen — Cadernos de Exercícios",
+  "id": "/?source=pwa",
+  "name": "KumonGen — Cadernos & Tablet Interativo",
   "short_name": "KumonGen",
-  "description": "Gerador gratuito de cadernos de exercícios personalizados de Matemática, Português e Inglês.",
-  "start_url": "./index.html",
+  "description": "Gerador gratuito e player interativo de exercícios de Matemática, Português e Inglês no método Kumon autêntico.",
+  "start_url": "./index.html?source=pwa",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "any",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
+  "lang": "pt-BR",
+  "categories": ["education", "kids", "games"],
   "icons": [
+    {
+      "src": "icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
     {
       "src": "favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Modo Tablet Interativo",
+      "short_name": "Tablet",
+      "description": "Treinar exercícios interativos no tablet com mascotes",
+      "url": "./tablet.html?source=shortcut",
+      "icons": [{ "src": "icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Caderno de Matemática",
+      "short_name": "Matemática",
+      "description": "Gerar folhas e cadernos de Matemática (M1–M10)",
+      "url": "./matematica.html?source=shortcut",
+      "icons": [{ "src": "icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Caderno de Português",
+      "short_name": "Português",
+      "description": "Gerar folhas e cadernos de Português (P1–P8)",
+      "url": "./portugues.html?source=shortcut",
+      "icons": [{ "src": "icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Caderno de Inglês",
+      "short_name": "Inglês",
+      "description": "Gerar folhas e cadernos de Inglês (I1–I7)",
+      "url": "./ingles.html?source=shortcut",
+      "icons": [{ "src": "icon-192x192.png", "sizes": "192x192" }]
     }
   ]
 }

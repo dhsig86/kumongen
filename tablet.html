@@ -9,6 +9,7 @@
     <!-- Font Awesome 6.5.1 com SRI -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
     <meta name="mobile-web-app-capable" content="yes">
@@ -49,6 +50,13 @@
             touch-action: manipulation;
         }
 
+        /* Safe Area Padding para iPads, tablets Android e smartphones */
+        .tablet-main-safe {
+            padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 1.5rem)) !important;
+            padding-left: max(1rem, env(safe-area-inset-left, 1rem)) !important;
+            padding-right: max(1rem, env(safe-area-inset-right, 1rem)) !important;
+        }
+
         /* Efeito de shake suave em caso de erro */
         @keyframes shakeSoft {
             0%, 100% { transform: translateX(0); }
@@ -61,7 +69,7 @@
 
         /* Botões do teclado virtual touch ergonômico */
         .keypad-btn {
-            height: 60px;
+            height: 56px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -98,10 +106,100 @@
             animation: focusHalo 2.5s ease-in-out infinite;
         }
 
-        @media (min-height: 700px) {
+        /* ── MODO PAISAGEM (LANDSCAPE) ERGONÔMICO PARA TABLETS ── */
+        @media (orientation: landscape) and (min-width: 680px) {
+            #playerWorkspace {
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: space-evenly !important;
+                gap: 2rem !important;
+                max-width: 1000px !important;
+                width: 100% !important;
+            }
+
+            #exerciseArea {
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                max-width: 480px !important;
+                flex: 1 1 0% !important;
+            }
+
+            #focusCard {
+                max-width: 100% !important;
+                padding: 1.5rem !important;
+            }
+
+            #mascotCompanionWrapper {
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 0.75rem !important;
+                margin-top: 0.5rem !important;
+            }
+
+            #mascotSpeechBubble {
+                max-width: 280px !important;
+            }
+
+            #keypadWrapper {
+                flex: 0 0 340px !important;
+                max-width: 360px !important;
+                margin-top: 0 !important;
+                margin-bottom: 0 !important;
+            }
+
             .keypad-btn {
-                height: 68px;
-                font-size: 1.75rem;
+                height: 58px !important;
+                font-size: 1.5rem !important;
+            }
+        }
+
+        /* Ajustes específicos para Retrato (iPad 1024px+, 1180px+) */
+        @media (orientation: portrait) and (min-height: 800px) {
+            #focusCard {
+                padding: 2.25rem 2rem !important;
+            }
+            .keypad-btn {
+                height: 64px !important;
+                font-size: 1.65rem !important;
+            }
+            #keypadWrapper {
+                margin-bottom: 1.75rem !important;
+            }
+        }
+
+        /* Telas ultra-baixas (celular na horizontal, altura < 480px) */
+        @media (orientation: landscape) and (max-height: 480px) {
+            header {
+                padding-top: 0.25rem !important;
+                padding-bottom: 0.25rem !important;
+            }
+            #playerWorkspace {
+                flex-direction: row !important;
+                gap: 0.75rem !important;
+            }
+            #exerciseArea {
+                flex-direction: row !important;
+                gap: 0.5rem !important;
+                max-width: none !important;
+            }
+            #focusCard {
+                padding: 0.5rem 0.75rem !important;
+                border-width: 2px !important;
+            }
+            #mascotCompanionWrapper {
+                display: none !important;
+            }
+            #keypadWrapper {
+                flex: 0 0 240px !important;
+                max-width: 250px !important;
+                margin: 0 !important;
+            }
+            .keypad-btn {
+                height: 40px !important;
+                font-size: 1.2rem !important;
+                border-radius: 0.6rem !important;
             }
         }
     </style>
@@ -254,6 +352,12 @@
                 <span id="headerMascotName" class="hidden md:inline text-xs font-bold text-amber-400">Jade</span>
             </button>
 
+            <!-- Botão PWA: Instalar Aplicativo -->
+            <button id="headerPwaInstallBtn" class="pwa-install-btn hidden bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-400/50 text-indigo-300 text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 transition-all shadow-sm cursor-pointer" title="Instalar aplicativo no iPad/Tablet">
+                <i class="fas fa-download text-[10px] text-indigo-300"></i>
+                <span class="hidden sm:inline font-black">Instalar App</span>
+            </button>
+
             <!-- Botão de Som Mudo / Ativo -->
             <button id="soundToggleBtn" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors" title="Alternar som">
                 <i class="fas fa-volume-up text-sm"></i>
@@ -267,64 +371,67 @@
     </div>
 
     <!-- ÁREA PRINCIPAL DO PLAYER DE EXERCÍCIOS -->
-    <main class="flex-1 flex flex-col items-center justify-between p-3 md:p-6 overflow-y-auto max-w-4xl mx-auto w-full">
+    <main class="flex-1 flex flex-col items-center justify-between p-3 md:p-6 overflow-y-auto max-w-5xl mx-auto w-full tablet-main-safe">
         <!-- Cabeçalho do Card (Instrução e Questão Atual) -->
         <div class="w-full flex items-center justify-between text-xs text-slate-400 font-bold mb-2 px-2 flex-shrink-0">
             <span id="roundProgressText" class="bg-slate-800 px-2.5 py-1 rounded-lg text-blue-400 border border-slate-700">Questão 1 de 10</span>
             <span id="exerciseInstruction" class="text-slate-300 text-right truncate max-w-xs md:max-w-md">Resolva com atenção</span>
         </div>
 
-        <!-- CARD DE FOCO ÚNICO & COMPANHEIRO MASCOTE -->
-        <div class="w-full flex-1 flex flex-col md:flex-row items-center justify-center gap-3 md:gap-6 my-auto min-h-[180px] relative">
-            <div id="focusCard" class="w-full max-w-md bg-white rounded-3xl p-5 md:p-8 shadow-2xl border-4 border-slate-200 transition-all duration-200">
-                <div id="focusCardContainer">
-                    <!-- O conteúdo do exercício ativo é injetado dinamicamente aqui -->
-                </div>
-            </div>
-
-            <!-- COMPANHEIRO MASCOTE VIVO -->
-            <div id="mascotCompanionWrapper" class="flex flex-row md:flex-col items-center justify-center gap-2 md:gap-3 select-none flex-shrink-0">
-                <!-- Balão de Fala do Mascote -->
-                <div id="mascotSpeechBubble" class="relative bg-white text-slate-800 text-xs md:text-sm font-bold px-3.5 py-2 md:py-2.5 rounded-2xl shadow-xl border-2 border-slate-200 max-w-[200px] md:max-w-[220px] text-center transition-all duration-300 transform scale-100">
-                    <span id="mascotSpeechText">Vamos começar! Estou com você!</span>
-                    <!-- Setinha do balão -->
-                    <div class="hidden md:block absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[10px] border-t-white"></div>
-                </div>
-
-                <!-- Avatar e Nome do Mascote -->
-                <button id="mascotAvatarBtn" class="group relative flex flex-col items-center focus:outline-none cursor-pointer" title="Toque para trocar de amigo mascote!">
-                    <div id="mascotAvatarRing" class="w-14 h-14 md:w-20 md:h-20 rounded-full p-1 bg-gradient-to-tr from-amber-400 to-yellow-300 shadow-xl transition-all duration-300 group-hover:scale-105 group-active:scale-95 animate-bounce-subtle">
-                        <img id="mascotAvatarImg" src="assets/mascotes/jaguar_avatar.png" alt="Mascote" class="w-full h-full rounded-full object-cover border-2 border-white shadow-inner">
+        <!-- ESPAÇO DE TRABALHO RESPONSIVO (RETRATO: VERTICAL | PAISAGEM: 2 COLUNAS) -->
+        <div id="playerWorkspace" class="w-full flex-1 flex flex-col items-center justify-center gap-3 md:gap-6 my-auto min-h-0">
+            <!-- COLUNA DO EXERCÍCIO & MASCOTE -->
+            <div id="exerciseArea" class="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-6 w-full max-w-md">
+                <div id="focusCard" class="w-full max-w-md bg-white rounded-3xl p-5 md:p-8 shadow-2xl border-4 border-slate-200 transition-all duration-200">
+                    <div id="focusCardContainer">
+                        <!-- O conteúdo do exercício ativo é injetado dinamicamente aqui -->
                     </div>
-                    <span id="mascotNameBadge" class="mt-1 text-[10px] md:text-xs font-black text-amber-400 uppercase tracking-wider bg-slate-900/90 px-2 py-0.5 rounded-full border border-slate-700 shadow">
-                        Jade 🐾
-                    </span>
-                </button>
+                </div>
+
+                <!-- COMPANHEIRO MASCOTE VIVO -->
+                <div id="mascotCompanionWrapper" class="flex flex-row md:flex-col items-center justify-center gap-2 md:gap-3 select-none flex-shrink-0">
+                    <!-- Balão de Fala do Mascote -->
+                    <div id="mascotSpeechBubble" class="relative bg-white text-slate-800 text-xs md:text-sm font-bold px-3.5 py-2 md:py-2.5 rounded-2xl shadow-xl border-2 border-slate-200 max-w-[200px] md:max-w-[220px] text-center transition-all duration-300 transform scale-100">
+                        <span id="mascotSpeechText">Vamos começar! Estou com você!</span>
+                        <!-- Setinha do balão -->
+                        <div class="hidden md:block absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[10px] border-t-white"></div>
+                    </div>
+
+                    <!-- Avatar e Nome do Mascote -->
+                    <button id="mascotAvatarBtn" class="group relative flex flex-col items-center focus:outline-none cursor-pointer" title="Toque para trocar de amigo mascote!">
+                        <div id="mascotAvatarRing" class="w-14 h-14 md:w-20 md:h-20 rounded-full p-1 bg-gradient-to-tr from-amber-400 to-yellow-300 shadow-xl transition-all duration-300 group-hover:scale-105 group-active:scale-95 animate-bounce-subtle">
+                            <img id="mascotAvatarImg" src="assets/mascotes/jaguar_avatar.png" alt="Mascote" class="w-full h-full rounded-full object-cover border-2 border-white shadow-inner">
+                        </div>
+                        <span id="mascotNameBadge" class="mt-1 text-[10px] md:text-xs font-black text-amber-400 uppercase tracking-wider bg-slate-900/90 px-2 py-0.5 rounded-full border border-slate-700 shadow">
+                            Jade 🐾
+                        </span>
+                    </button>
+                </div>
             </div>
-        </div>
 
-        <!-- TECLADO VIRTUAL TOUCH (Evita teclado nativo do iPad/Android cobrir a tela) -->
-        <div id="keypadWrapper" class="w-full max-w-sm flex-shrink-0 mt-3 mb-1">
-            <div id="virtualKeypad" class="grid grid-cols-3 gap-2 md:gap-3">
-                <button class="keypad-btn" data-key="1">1</button>
-                <button class="keypad-btn" data-key="2">2</button>
-                <button class="keypad-btn" data-key="3">3</button>
+            <!-- TECLADO VIRTUAL TOUCH ERGONÔMICO (Blindado e Sem Sobreposição) -->
+            <div id="keypadWrapper" class="w-full max-w-sm flex-shrink-0 mt-2 mb-2">
+                <div id="virtualKeypad" class="grid grid-cols-3 gap-2 md:gap-3">
+                    <button class="keypad-btn" data-key="1">1</button>
+                    <button class="keypad-btn" data-key="2">2</button>
+                    <button class="keypad-btn" data-key="3">3</button>
 
-                <button class="keypad-btn" data-key="4">4</button>
-                <button class="keypad-btn" data-key="5">5</button>
-                <button class="keypad-btn" data-key="6">6</button>
+                    <button class="keypad-btn" data-key="4">4</button>
+                    <button class="keypad-btn" data-key="5">5</button>
+                    <button class="keypad-btn" data-key="6">6</button>
 
-                <button class="keypad-btn" data-key="7">7</button>
-                <button class="keypad-btn" data-key="8">8</button>
-                <button class="keypad-btn" data-key="9">9</button>
+                    <button class="keypad-btn" data-key="7">7</button>
+                    <button class="keypad-btn" data-key="8">8</button>
+                    <button class="keypad-btn" data-key="9">9</button>
 
-                <button class="keypad-btn text-rose-400 hover:text-rose-300 text-xl md:text-2xl" data-key="backspace" title="Apagar">
-                    <i class="fas fa-backspace"></i>
-                </button>
-                <button class="keypad-btn" data-key="0">0</button>
-                <button class="keypad-btn bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white text-xl md:text-2xl font-black" data-key="enter" title="Confirmar Resposta">
-                    <i class="fas fa-check"></i>
-                </button>
+                    <button class="keypad-btn text-rose-400 hover:text-rose-300 text-xl md:text-2xl" data-key="backspace" title="Apagar">
+                        <i class="fas fa-backspace"></i>
+                    </button>
+                    <button class="keypad-btn" data-key="0">0</button>
+                    <button class="keypad-btn bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white text-xl md:text-2xl font-black" data-key="enter" title="Confirmar Resposta">
+                        <i class="fas fa-check"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </main>
@@ -339,6 +446,7 @@
     <script src="ingles.js?v=3.9.0"></script>
     <script src="tablet-player.js?v=3.9.0"></script>
     <script src="nav-dock.js?v=3.9.0"></script>
+    <script src="pwa-manager.js?v=4.2.0"></script>
 
     <!-- Debug inteligente: ignora erros de extensões e só exibe banner visual se ?debug=1 estiver na URL -->
     <script>

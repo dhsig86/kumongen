@@ -1,5 +1,5 @@
 // KumonGen Service Worker
-const CACHE_NAME = 'kumongen-v4.1.0';
+const CACHE_NAME = 'kumongen-v4.2.0';
 
 const APP_SHELL = [
   './index.html',
@@ -11,6 +11,7 @@ const APP_SHELL = [
   './tablet-player.js',
   './student-profiles.js',
   './nav-dock.js',
+  './pwa-manager.js',
   './kumon.css',
   './tailwind.min.css',
   './gerador.js',
@@ -19,6 +20,11 @@ const APP_SHELL = [
   './portugues.js',
   './ingles.js',
   './favicon.svg',
+  './icon-192x192.png',
+  './icon-512x512.png',
+  './icon-maskable-512x512.png',
+  './apple-touch-icon.png',
+  './manifest.json',
   './offline.html',
   './assets/mascotes/jaguar.png',
   './assets/mascotes/jaguar_avatar.png',
