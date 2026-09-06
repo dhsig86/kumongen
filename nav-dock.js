@@ -14,7 +14,8 @@
 
         const dock = document.createElement('nav');
         dock.id = 'kumonGlobalNavDock';
-        dock.className = 'no-print fixed bottom-3 left-1/2 -translate-x-1/2 z-40 transition-all duration-300 ease-out select-none';
+        dock.className = 'no-print select-none transition-all duration-300 ease-out';
+        dock.style.cssText = 'position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 50;';
         dock.setAttribute('aria-label', 'Navegação principal');
 
         // Itens de navegação
@@ -56,7 +57,7 @@
         `;
 
         dock.innerHTML = `
-            <div id="navDockInner" class="flex items-center gap-1 sm:gap-1.5 p-1.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-3xl shadow-2xl transition-all">
+            <div id="navDockInner" class="flex items-center gap-1 sm:gap-1.5 p-1.5 rounded-3xl shadow-2xl transition-all" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(51, 65, 85, 0.8);">
                 ${itemsHtml}
                 <div class="w-[1px] h-6 bg-slate-700/80 mx-0.5"></div>
                 ${profileBtnHtml}

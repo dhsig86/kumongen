@@ -1,5 +1,5 @@
 // KumonGen Service Worker
-const CACHE_NAME = 'kumongen-v3.9.0';
+const CACHE_NAME = 'kumongen-v3.9.1';
 
 const APP_SHELL = [
   './index.html',
