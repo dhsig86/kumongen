@@ -136,6 +136,12 @@
         STORAGE_KEY: 'kumongen_gamification_v3',
 
         get() {
+            if (window.StudentProfileEngine) {
+                const active = window.StudentProfileEngine.getActive();
+                if (active && active.gamification) {
+                    return active.gamification;
+                }
+            }
             const raw = localStorage.getItem(this.STORAGE_KEY);
             if (!raw) {
                 return {
@@ -156,6 +162,9 @@
         },
 
         save(data) {
+            if (window.StudentProfileEngine) {
+                window.StudentProfileEngine.updateActiveGamification(() => data);
+            }
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
         },
 
@@ -231,7 +240,7 @@
     const Session = {
         subjectKey: 'matematica',
         levelId: 'm2',
-        studentName: localStorage.getItem('kumongen_student_name') || 'Super Aluno',
+        studentName: (window.StudentProfileEngine && window.StudentProfileEngine.getActive()) ? window.StudentProfileEngine.getActive().name : (localStorage.getItem('kumongen_student_name') || 'Super Aluno'),
         items: [],
         currentIndex: 0,
         currentInput: '',
@@ -873,18 +882,34 @@
                 });
             }
 
-            // Edição do nome da criança
+            // Seletor de Perfil do Aluno (Múltiplos Perfis)
             const nameBtn = document.getElementById('studentNameBtn');
             if (nameBtn) {
                 nameBtn.addEventListener('click', () => {
-                    const newName = prompt('Qual é o nome do(a) aluno(a)?', Session.studentName);
-                    if (newName && newName.trim()) {
-                        Session.studentName = newName.trim();
-                        localStorage.setItem('kumongen_student_name', Session.studentName);
-                        document.getElementById('studentNameDisplay').innerText = Session.studentName;
+                    if (window.StudentProfileEngine) {
+                        window.StudentProfileEngine.showProfileModal({
+                            onSelect: (student) => {
+                                this.onStudentChanged(student);
+                            }
+                        });
+                    } else {
+                        const newName = prompt('Qual é o nome do(a) aluno(a)?', Session.studentName);
+                        if (newName && newName.trim()) {
+                            Session.studentName = newName.trim();
+                            localStorage.setItem('kumongen_student_name', Session.studentName);
+                            const nameEl = document.getElementById('studentNameDisplay');
+                            if (nameEl) nameEl.innerText = Session.studentName;
+                        }
                     }
                 });
             }
+
+            // Escuta trocas de aluno originadas em qualquer parte da aplicação
+            window.addEventListener('kumongen:student_changed', (e) => {
+                if (e.detail && e.detail.student) {
+                    this.onStudentChanged(e.detail.student);
+                }
+            });
 
             // Som mudo / desmutado
             const soundBtn = document.getElementById('soundToggleBtn');
@@ -946,6 +971,25 @@
             });
         },
 
+        onStudentChanged(student) {
+            if (!student) return;
+            Session.studentName = student.name;
+            const nameEl = document.getElementById('studentNameDisplay');
+            if (nameEl) nameEl.innerText = student.name;
+
+            const mascotImg = document.getElementById('studentMascotAvatar');
+            if (mascotImg && window.StudentProfileEngine) {
+                const m = window.StudentProfileEngine.MASCOTS[student.mascot] || window.StudentProfileEngine.MASCOTS.jaguar;
+                mascotImg.src = m.avatar;
+            }
+
+            if (student.mascot && typeof MascotEngine !== 'undefined') {
+                MascotEngine.set(student.mascot);
+            }
+
+            this.updateGamificationHeader();
+        },
+
         loadInitialState() {
             // Permite carregar matéria e nível via Query Params: tablet.html?subject=portugues&level=p3
             const urlParams = new URLSearchParams(window.location.search);
@@ -959,8 +1003,15 @@
                 Session.levelId = qLvl;
             }
 
-            const nameEl = document.getElementById('studentNameDisplay');
-            if (nameEl) nameEl.innerText = Session.studentName;
+            if (window.StudentProfileEngine) {
+                const active = window.StudentProfileEngine.getActive();
+                if (active) {
+                    this.onStudentChanged(active);
+                }
+            } else {
+                const nameEl = document.getElementById('studentNameDisplay');
+                if (nameEl) nameEl.innerText = Session.studentName;
+            }
 
             this.populateSubjects();
             this.populateLevels();

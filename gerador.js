@@ -337,6 +337,7 @@ const KumonGen = (function() {
         zoomContainer = document.getElementById('zoomContainer');
         zoomSpan = document.getElementById('zoomValue');
         adjustPreviewScale();
+        renderStudentSelectorWidget();
         renderScoreboardWidget();
 
         // Abre tutorial automaticamente na primeira visita
@@ -402,6 +403,11 @@ const KumonGen = (function() {
             : '';
 
         // Cabeçalho
+        const activeStudent = window.StudentProfileEngine ? window.StudentProfileEngine.getActive() : null;
+        const studentNameDisplay = (activeStudent && activeStudent.name && activeStudent.name !== 'Super Aluno')
+            ? sanitizeText(activeStudent.name)
+            : '____________________';
+
         const header = document.createElement('div');
         header.className = 'page-header';
         header.innerHTML = `
@@ -413,7 +419,7 @@ const KumonGen = (function() {
                 <div class="text-[0.55rem] font-bold text-slate-500">${sctText}DATA: ___/___/___ TEMPO: ___ min</div>
                 <div class="border border-slate-900 px-2 py-0.5 mt-1 min-w-[120px]">
                     <span class="text-[0.5rem] font-bold">NOME:</span>
-                    <span class="ml-2 text-[0.5rem]">____________________</span>
+                    <span class="ml-2 text-[0.5rem] font-bold">${studentNameDisplay}</span>
                 </div>
             </div>
         `;
@@ -824,27 +830,48 @@ const KumonGen = (function() {
         history.unshift(entry);
         localStorage.setItem('kumongen_history', JSON.stringify(history.slice(0, 30))); // guarda os últimos 30
 
-        // Atualiza widget
+        if (window.StudentProfileEngine) {
+            window.StudentProfileEngine.addActiveHistoryItem(entry);
+        }
+
+        // Atualiza widgets
+        renderStudentSelectorWidget();
         renderScoreboardWidget();
         window.dispatchEvent(new Event('storage'));
         return entry;
     }
 
     function getHistory() {
+        if (window.StudentProfileEngine) {
+            const act = window.StudentProfileEngine.getActive();
+            if (act && Array.isArray(act.history)) return act.history;
+        }
         try { return JSON.parse(localStorage.getItem('kumongen_history') || '[]'); }
         catch (e) { return []; }
     }
 
     function toggleTaskCompletion(id) {
         let history;
-        try { history = JSON.parse(localStorage.getItem('kumongen_history') || '[]'); }
-        catch (e) { history = []; }
+        if (window.StudentProfileEngine) {
+            const act = window.StudentProfileEngine.getActive();
+            history = (act && Array.isArray(act.history)) ? act.history : [];
+        } else {
+            try { history = JSON.parse(localStorage.getItem('kumongen_history') || '[]'); }
+            catch (e) { history = []; }
+        }
+
         const task = history.find(t => t.id === id);
         if (task) {
             task.completed = !task.completed;
             localStorage.setItem('kumongen_history', JSON.stringify(history));
+            if (window.StudentProfileEngine) {
+                const act = window.StudentProfileEngine.getActive();
+                if (act) {
+                    act.history = history;
+                    window.StudentProfileEngine.update(act.id, { history });
+                }
+            }
             renderScoreboardWidget();
-            // Dispara evento para atualizar a index.html se estiver aberta
             window.dispatchEvent(new Event('storage'));
             return task.completed;
         }
@@ -852,18 +879,23 @@ const KumonGen = (function() {
     }
 
     function getScore() {
-        let history;
-        try { history = JSON.parse(localStorage.getItem('kumongen_history') || '[]'); }
-        catch (e) { history = []; }
+        const history = getHistory();
         const createdCount = history.length;
         const completedCount = history.filter(t => t.completed).length;
 
         // Unifica com estrelas e pontos conquistados no Modo Tablet
         let tabletStars = 0;
-        try {
-            const tabData = JSON.parse(localStorage.getItem('kumongen_gamification_v3') || '{}');
-            tabletStars = tabData.stars || 0;
-        } catch (e) {}
+        if (window.StudentProfileEngine) {
+            const act = window.StudentProfileEngine.getActive();
+            if (act && act.gamification) {
+                tabletStars = act.gamification.stars || 0;
+            }
+        } else {
+            try {
+                const tabData = JSON.parse(localStorage.getItem('kumongen_gamification_v3') || '{}');
+                tabletStars = tabData.stars || 0;
+            } catch (e) {}
+        }
 
         // Cada tarefa gerada = 10 pts. Concluída = +50 pts adicionais e +1 estrela
         // Cada estrela conquistada no tablet = +10 pts
@@ -877,6 +909,56 @@ const KumonGen = (function() {
             completions: completedCount,
             total: createdCount
         };
+    }
+
+    function onStudentSelected() {
+        renderStudentSelectorWidget();
+        renderScoreboardWidget();
+        if (window.refreshPreview) window.refreshPreview();
+
+        // Auto-ativa a faixa etária do aluno no Wizard
+        const active = window.StudentProfileEngine ? window.StudentProfileEngine.getActive() : null;
+        if (active && active.ageTier) {
+            if (typeof window.selectWizardAge === 'function') {
+                const btn = document.querySelector(`.wizard-age-btn[onclick*="'${active.ageTier}'"]`);
+                window.selectWizardAge(active.ageTier, btn);
+            } else if (typeof window.selectPorWizardAge === 'function') {
+                const btn = document.querySelector(`.wizard-age-btn[onclick*="'${active.ageTier}'"]`);
+                window.selectPorWizardAge(active.ageTier, btn);
+            } else if (typeof window.selectEngWizardAge === 'function') {
+                const btn = document.querySelector(`.wizard-age-btn[onclick*="'${active.ageTier}'"]`);
+                window.selectEngWizardAge(active.ageTier, btn);
+            }
+        }
+    }
+
+    function renderStudentSelectorWidget() {
+        const container = document.getElementById('studentSelectorWidget');
+        if (!container || !window.StudentProfileEngine) return;
+
+        const active = window.StudentProfileEngine.getActive();
+        if (!active) return;
+
+        const mascotInfo = window.StudentProfileEngine.MASCOTS[active.mascot] || window.StudentProfileEngine.MASCOTS.jaguar;
+        const ageInfo = window.StudentProfileEngine.AGE_TIERS[active.ageTier] || window.StudentProfileEngine.AGE_TIERS.age_6_7;
+
+        container.innerHTML = `
+            <button type="button" onclick="window.StudentProfileEngine.showProfileModal({ onSelect: () => window.KumonGen.onStudentSelected() })" class="w-full flex items-center justify-between bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl p-2 text-slate-800 transition-all font-bold text-xs shadow-sm hover:shadow group cursor-pointer mb-2">
+                <div class="flex items-center gap-2 min-w-0">
+                    <div class="w-7 h-7 rounded-full p-0.5 bg-gradient-to-tr ${mascotInfo.ring} shadow flex-shrink-0">
+                        <img src="${mascotInfo.avatar}" alt="${mascotInfo.name}" class="w-full h-full rounded-full object-cover">
+                    </div>
+                    <div class="text-left min-w-0">
+                        <div class="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">Aluno Ativo</div>
+                        <div class="font-black text-xs text-slate-900 truncate leading-tight">${sanitizeText(active.name)} <span class="text-[10px] font-normal text-slate-500">(${ageInfo.label})</span></div>
+                    </div>
+                </div>
+                <div class="text-slate-400 group-hover:text-slate-600 flex items-center gap-1 text-[10px] font-bold flex-shrink-0">
+                    <span>Trocar</span>
+                    <i class="fas fa-chevron-right text-[8px]"></i>
+                </div>
+            </button>
+        `;
     }
 
     function renderScoreboardWidget() {
@@ -1021,8 +1103,16 @@ const KumonGen = (function() {
                     </div>
                 </div>
                 <!-- Footer -->
-                <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end rounded-b-3xl">
-                    <button onclick="document.getElementById('parental-modal').remove()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-5 rounded-xl transition-all text-xs">
+                <div class="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between rounded-b-3xl">
+                    <div class="flex items-center gap-3 text-[11px] font-bold text-slate-500">
+                        <button type="button" onclick="if(window.StudentProfileEngine) window.StudentProfileEngine.exportBackup()" class="hover:text-amber-700 flex items-center gap-1 cursor-pointer">
+                            <i class="fas fa-download text-amber-500"></i> Backup
+                        </button>
+                        <button type="button" onclick="document.getElementById('parental-modal').remove(); if(window.StudentProfileEngine) window.StudentProfileEngine.showProfileModal({ onSelect: () => window.KumonGen.onStudentSelected() });" class="hover:text-blue-700 flex items-center gap-1 cursor-pointer">
+                            <i class="fas fa-users text-blue-500"></i> Perfis
+                        </button>
+                    </div>
+                    <button onclick="document.getElementById('parental-modal').remove()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-5 rounded-xl transition-all text-xs cursor-pointer">
                         Fechar Painel
                     </button>
                 </div>
@@ -1238,6 +1328,10 @@ const KumonGen = (function() {
     window.KumonGen_showTutorialModal = showTutorialModal;
     window.KumonGen_showParentalControlModal = showParentalControlModal;
 
+    window.addEventListener('kumongen:student_changed', () => {
+        onStudentSelected();
+    });
+
     return {
         initRefs,
         adjustZoom,
@@ -1247,6 +1341,8 @@ const KumonGen = (function() {
         getHistory,
         saveHistory,
         renderScoreboardWidget,
+        renderStudentSelectorWidget,
+        onStudentSelected,
         showParentalControlModal,
         getScore,
         showTutorialModal,

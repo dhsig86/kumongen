@@ -157,11 +157,13 @@
 
         <!-- Centro: Aluno & Cronômetro SCT -->
         <div class="flex items-center gap-2 md:gap-4">
-            <!-- Nome do Aluno (editável com toque) -->
-            <button id="studentNameBtn" class="bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors" title="Clique para alterar nome">
-                <i class="fas fa-user-circle text-blue-400 text-sm"></i>
-                <span id="studentNameDisplay" class="max-w-[80px] md:max-w-[120px] truncate">Super Aluno</span>
-                <i class="fas fa-pen text-[9px] text-slate-500"></i>
+            <!-- Pílula do Aluno Ativo com Troca Rápida -->
+            <button id="studentNameBtn" class="bg-slate-800/90 hover:bg-slate-700/90 border border-amber-500/40 hover:border-amber-400 text-slate-200 text-xs font-bold pl-1.5 pr-2.5 py-1 rounded-full flex items-center gap-1.5 transition-all shadow-sm cursor-pointer" title="Trocar ou gerenciar perfil do aluno">
+                <div class="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-400 to-yellow-500 p-0.5 shadow flex-shrink-0">
+                    <img id="studentMascotAvatar" src="assets/mascotes/jaguar_avatar.png" alt="Mascote" class="w-full h-full rounded-full object-cover">
+                </div>
+                <span id="studentNameDisplay" class="max-w-[80px] md:max-w-[120px] truncate font-black text-amber-300">Super Aluno</span>
+                <i class="fas fa-chevron-down text-[8px] text-slate-400"></i>
             </button>
 
             <!-- Cronômetro SCT Kumon -->
@@ -272,6 +274,7 @@
     </main>
     <!-- SCRIPTS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="student-profiles.js"></script>
     <script src="gerador.js"></script>
     <script src="content-pool.js"></script>
     <script src="matematica.js"></script>
