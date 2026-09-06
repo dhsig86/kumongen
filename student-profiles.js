@@ -1,5 +1,5 @@
 // KumonGen — Motor Canônico de Múltiplos Perfis de Alunos (100% LocalStorage / Zero Backend)
-// Resiliente a Tracking Prevention, InPrivate/Incognito, iframes e restrições de armazenamento
+// Resiliente a Tracking Prevention, InPrivate/Incognito, iframes e estilos inline à prova de corte de viewport
 (function(window) {
     'use strict';
 
@@ -16,29 +16,29 @@
                 } else if (typeof localStorage !== 'undefined') {
                     return localStorage.getItem(key);
                 }
-            } catch (e) {
-                // Tracking Prevention / InPrivate / restrição de terceiros
-            }
+            } catch (e) {}
             return Object.prototype.hasOwnProperty.call(this._mem, key) ? this._mem[key] : null;
         },
         setItem(key, value) {
             try {
                 if (typeof window !== 'undefined' && window.localStorage) {
                     window.localStorage.setItem(key, String(value));
+                    return;
                 } else if (typeof localStorage !== 'undefined') {
                     localStorage.setItem(key, String(value));
+                    return;
                 }
-            } catch (e) {
-                // Tracking Prevention / InPrivate / restrição de terceiros
-            }
+            } catch (e) {}
             this._mem[key] = String(value);
         },
         removeItem(key) {
             try {
                 if (typeof window !== 'undefined' && window.localStorage) {
                     window.localStorage.removeItem(key);
+                    return;
                 } else if (typeof localStorage !== 'undefined') {
                     localStorage.removeItem(key);
+                    return;
                 }
             } catch (e) {}
             delete this._mem[key];
@@ -291,7 +291,7 @@
         exportBackup() {
             const data = {
                 app: 'KumonGen',
-                version: '3.8.3',
+                version: '3.8.4',
                 exportedAt: new Date().toISOString(),
                 activeStudentId: SafeStorage.getItem(STORAGE_ACTIVE_ID),
                 students: this.getAll()
@@ -331,10 +331,10 @@
             const existing = document.getElementById('studentProfileManagerModal');
             if (existing) existing.remove();
 
+            // Modal backdrop com overflow-y: auto para nunca cortar em telas pequenas
             const modal = document.createElement('div');
             modal.id = 'studentProfileManagerModal';
-            modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn';
-            modal.style.touchAction = 'manipulation';
+            modal.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(2,6,23,0.85);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);overflow-y:auto;touch-action:manipulation;box-sizing:border-box;';
 
             const closeModal = () => {
                 document.removeEventListener('keydown', escListener);
@@ -348,13 +348,16 @@
             };
             document.addEventListener('keydown', escListener);
 
-            // Clique no backdrop escuro fecha o modal
+            // Clique no backdrop fecha o modal
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) closeModal();
             });
 
             const self = this;
 
+            // ==========================================
+            // VISTA 1: LISTA DE PERFIS (CARDS)
+            // ==========================================
             const renderCardsView = () => {
                 const students = self.getAll();
                 const active = self.getActive();
@@ -367,36 +370,36 @@
                     const rounds = (s.gamification && s.gamification.totalRounds) || 0;
 
                     return `
-                        <div class="relative group p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 ${isSelected ? 'border-amber-400 bg-amber-50/90 shadow-md ring-2 ring-amber-300' : 'border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300'}">
-                            <button type="button" class="btn-select-student flex items-center gap-3 flex-1 text-left cursor-pointer" data-student-id="${s.id}">
-                                <div class="w-12 h-12 rounded-full p-0.5 bg-gradient-to-tr ${mascotInfo.ring} shadow-md flex-shrink-0">
-                                    <img src="${mascotInfo.avatar}" alt="${mascotInfo.name}" class="w-full h-full rounded-full object-cover border-2 border-white">
+                        <div style="padding:12px;border-radius:16px;border:2px solid ${isSelected ? '#f59e0b' : '#e2e8f0'};background:${isSelected ? '#fffbeb' : '#f8fafc'};display:flex;align-items:center;justify-content:space-between;gap:12px;transition:all 0.15s ease;">
+                            <button type="button" class="btn-select-student" data-student-id="${s.id}" style="display:flex;align-items:center;gap:12px;flex:1;text-align:left;border:none;background:none;cursor:pointer;padding:0;">
+                                <div style="width:46px;height:46px;border-radius:50%;padding:2px;background:linear-gradient(to top right, #f59e0b, #eab308);flex-shrink:0;">
+                                    <img src="${mascotInfo.avatar}" alt="${mascotInfo.name}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid white;display:block;">
                                 </div>
-                                <div class="min-w-0 flex-1">
-                                    <div class="flex items-center gap-1.5">
-                                        <h4 class="font-black text-sm text-slate-800 truncate">${s.name}</h4>
-                                        ${isSelected ? '<span class="text-[9px] font-black uppercase text-amber-700 bg-amber-200 px-2 py-0.5 rounded-full">Ativo</span>' : ''}
+                                <div style="min-width:0;flex:1;">
+                                    <div style="display:flex;align-items:center;gap:6px;">
+                                        <h4 style="font-weight:900;font-size:14px;color:#0f172a;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.name}</h4>
+                                        ${isSelected ? '<span style="font-size:9px;font-weight:900;text-transform:uppercase;color:#b45309;background:#fef3c7;padding:2px 8px;border-radius:999px;">Ativo</span>' : ''}
                                     </div>
-                                    <div class="text-[10px] text-slate-500 font-medium flex items-center gap-1.5 mt-0.5">
+                                    <div style="font-size:10px;color:#64748b;font-weight:600;display:flex;align-items:center;gap:6px;margin-top:2px;">
                                         <span>${ageInfo.emoji} ${ageInfo.label}</span>
                                         <span>·</span>
                                         <span>${mascotInfo.name}</span>
                                     </div>
-                                    <div class="text-[10px] font-bold text-amber-600 flex items-center gap-1 mt-1">
-                                        <i class="fas fa-star text-amber-500"></i> ${stars} ★
-                                        <span class="text-slate-400">·</span>
-                                        <span class="text-slate-500 font-normal">${rounds} rodadas</span>
+                                    <div style="font-size:10px;font-weight:bold;color:#d97706;display:flex;align-items:center;gap:4px;margin-top:2px;">
+                                        <i class="fas fa-star" style="color:#f59e0b;"></i> ${stars} ★
+                                        <span style="color:#94a3b8;">·</span>
+                                        <span style="color:#64748b;font-weight:normal;">${rounds} rodadas</span>
                                     </div>
                                 </div>
                             </button>
 
-                            <div class="flex items-center gap-1 flex-shrink-0">
-                                <button type="button" class="btn-edit-student p-2 text-slate-400 hover:text-blue-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer" data-student-id="${s.id}" title="Editar Criança">
-                                    <i class="fas fa-pen text-xs"></i>
+                            <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+                                <button type="button" class="btn-edit-student" data-student-id="${s.id}" title="Editar Criança" style="padding:8px;border:none;background:none;color:#94a3b8;cursor:pointer;border-radius:8px;">
+                                    <i class="fas fa-pen" style="font-size:12px;"></i>
                                 </button>
                                 ${students.length > 1 ? `
-                                    <button type="button" class="btn-delete-student p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors cursor-pointer" data-student-id="${s.id}" title="Excluir Perfil">
-                                        <i class="fas fa-trash-alt text-xs"></i>
+                                    <button type="button" class="btn-delete-student" data-student-id="${s.id}" title="Excluir Perfil" style="padding:8px;border:none;background:none;color:#ef4444;cursor:pointer;border-radius:8px;">
+                                        <i class="fas fa-trash-alt" style="font-size:12px;"></i>
                                     </button>
                                 ` : ''}
                             </div>
@@ -405,45 +408,49 @@
                 }).join('');
 
                 modal.innerHTML = `
-                    <div class="bg-white rounded-3xl p-5 md:p-6 max-w-md w-full shadow-2xl border-4 border-amber-400 max-h-[90vh] overflow-y-auto text-slate-800 animate-fadeIn" onclick="event.stopPropagation()">
-                        <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-                            <div class="flex items-center gap-2.5">
-                                <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-lg shadow-inner">
+                    <div style="background:white;border-radius:24px;max-width:440px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);border:4px solid #f59e0b;overflow:hidden;margin:auto;box-sizing:border-box;" onclick="event.stopPropagation()">
+                        <!-- Header Fixo -->
+                        <div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:white;">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <div style="width:36px;height:36px;border-radius:12px;background:#fef3c7;color:#d97706;display:flex;align-items:center;justify-content:center;font-size:16px;">
                                     <i class="fas fa-users"></i>
                                 </div>
                                 <div>
-                                    <h3 class="font-black text-base text-slate-900 leading-tight">Quem vai treinar hoje?</h3>
-                                    <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Múltiplos Perfis KumonGen</span>
+                                    <h3 style="font-weight:900;font-size:15px;color:#0f172a;margin:0;line-height:1.2;">Quem vai treinar?</h3>
+                                    <span style="font-size:10px;color:#94a3b8;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;">Perfis KumonGen</span>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-1">
-                                <button type="button" id="btnHeaderAddStudent" class="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs rounded-xl shadow-sm transition-all flex items-center gap-1 cursor-pointer" title="Cadastrar nova criança">
-                                    <i class="fas fa-user-plus text-[10px]"></i> + Novo
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <button type="button" id="btnHeaderAddStudent" style="padding:6px 12px;background:#f59e0b;color:white;font-weight:900;font-size:11px;border:none;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                                    <i class="fas fa-user-plus" style="font-size:10px;"></i> + Novo
                                 </button>
-                                <button id="btnCloseProfileModal" class="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors">
-                                    <i class="fas fa-times text-base"></i>
+                                <button type="button" id="btnCloseProfileModal" style="padding:8px;border:none;background:none;color:#94a3b8;font-size:15px;cursor:pointer;border-radius:8px;">
+                                    <i class="fas fa-times"></i>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Botão de Destaque para Cadastrar Outra Criança -->
-                        <button type="button" id="btnShowAddStudentForm" class="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-xs rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer mb-3.5 border-2 border-amber-300">
-                            <i class="fas fa-user-plus text-sm"></i> + Cadastrar Outro Perfil / Criança
-                        </button>
+                        <!-- Corpo Rolar -->
+                        <div style="padding:16px 18px;overflow-y:auto;flex:1;min-height:0;">
+                            <!-- Botão Destacado Cadastrar Outra Criança -->
+                            <button type="button" id="btnShowAddStudentForm" style="width:100%;padding:12px;background:linear-gradient(to right, #f59e0b, #ea580c);color:white;font-weight:900;font-size:12px;border:2px solid #fde68a;border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);margin-bottom:14px;">
+                                <i class="fas fa-user-plus" style="font-size:14px;"></i> + Cadastrar Outro Perfil / Criança
+                            </button>
 
-                        <!-- Lista de Crianças -->
-                        <div class="space-y-2.5 mb-4">
-                            ${studentListHtml}
+                            <!-- Lista de Crianças -->
+                            <div style="display:flex;flex-direction:column;gap:10px;">
+                                ${studentListHtml}
+                            </div>
                         </div>
 
-                        <!-- Rodapé: Backup & Restauração -->
-                        <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                            <button type="button" id="btnExportProfiles" class="hover:text-amber-700 font-bold flex items-center gap-1 cursor-pointer">
-                                <i class="fas fa-download text-amber-500"></i> Fazer Backup
+                        <!-- Rodapé Fixo: Backup & Restauração -->
+                        <div style="padding:12px 18px;border-top:1px solid #f1f5f9;background:#f8fafc;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;font-size:11px;color:#64748b;">
+                            <button type="button" id="btnExportProfiles" style="border:none;background:none;color:#b45309;font-weight:bold;cursor:pointer;display:flex;align-items:center;gap:4px;padding:0;">
+                                <i class="fas fa-download" style="color:#f59e0b;"></i> Fazer Backup
                             </button>
-                            <label class="hover:text-blue-700 font-bold flex items-center gap-1 cursor-pointer">
-                                <i class="fas fa-upload text-blue-500"></i> Restaurar
-                                <input type="file" id="inputImportProfiles" accept=".json" class="hidden">
+                            <label style="color:#2563eb;font-weight:bold;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                                <i class="fas fa-upload" style="color:#3b82f6;"></i> Restaurar
+                                <input type="file" id="inputImportProfiles" accept=".json" style="display:none;">
                             </label>
                         </div>
                     </div>
@@ -486,7 +493,6 @@
                 });
 
                 modal.querySelector('#btnShowAddStudentForm').onclick = () => renderFormView(null);
-
                 modal.querySelector('#btnExportProfiles').onclick = () => self.exportBackup();
 
                 const importInput = modal.querySelector('#inputImportProfiles');
@@ -510,6 +516,9 @@
                 }
             };
 
+            // ==========================================
+            // VISTA 2: FORMULÁRIO DE CADASTRO / EDIÇÃO
+            // ==========================================
             const renderFormView = (studentToEdit) => {
                 const isEditing = !!studentToEdit;
                 const currentName = isEditing ? studentToEdit.name : '';
@@ -521,11 +530,11 @@
                     const isMSelected = m.id === currentMascot;
                     const subtitle = m.title ? (m.title.split(' ')[1] || m.title) : '';
                     return `
-                        <label class="relative flex flex-col items-center p-2 rounded-2xl border-2 cursor-pointer transition-all ${isMSelected ? 'border-amber-500 bg-amber-50 ring-2 ring-amber-300' : 'border-slate-200 bg-slate-50 hover:bg-white'}">
-                            <input type="radio" name="formMascot" value="${m.id}" class="sr-only" ${isMSelected ? 'checked' : ''}>
-                            <img src="${m.avatar}" alt="${m.name}" class="w-10 h-10 rounded-full object-cover border border-white shadow mb-1">
-                            <span class="text-[10px] font-black text-slate-800">${m.name}</span>
-                            <span class="text-[8px] text-slate-400 leading-tight">${subtitle}</span>
+                        <label class="form-mascot-label" style="display:flex;flex-direction:column;align-items:center;padding:8px 4px;border-radius:14px;border:2px solid ${isMSelected ? '#f59e0b' : '#e2e8f0'};background:${isMSelected ? '#fffbeb' : '#f8fafc'};cursor:pointer;transition:all 0.15s ease;text-align:center;box-sizing:border-box;">
+                            <input type="radio" name="formMascot" value="${m.id}" style="position:absolute;opacity:0;pointer-events:none;" ${isMSelected ? 'checked' : ''}>
+                            <img src="${m.avatar}" alt="${m.name}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:1px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:4px;display:block;">
+                            <span style="font-size:10px;font-weight:900;color:#0f172a;line-height:1.1;">${m.name}</span>
+                            <span style="font-size:8px;color:#94a3b8;line-height:1.1;">${subtitle}</span>
                         </label>
                     `;
                 }).join('');
@@ -534,60 +543,65 @@
                     const a = AGE_TIERS[key];
                     const isASelected = a.id === currentAge;
                     return `
-                        <label class="p-2 rounded-xl border-2 flex items-center gap-2 cursor-pointer transition-all ${isASelected ? 'border-amber-500 bg-amber-50 font-black text-amber-900' : 'border-slate-200 bg-white text-slate-600'}">
-                            <input type="radio" name="formAgeTier" value="${a.id}" class="sr-only" ${isASelected ? 'checked' : ''}>
-                            <span class="text-base">${a.emoji}</span>
-                            <div class="text-left">
-                                <div class="text-[11px] font-bold leading-tight">${a.label}</div>
-                                <div class="text-[9px] text-slate-400 leading-tight">${a.sub}</div>
+                        <label class="form-age-label" style="padding:8px 10px;border-radius:12px;border:2px solid ${isASelected ? '#f59e0b' : '#e2e8f0'};background:${isASelected ? '#fffbeb' : '#ffffff'};display:flex;align-items:center;gap:8px;cursor:pointer;transition:all 0.15s ease;box-sizing:border-box;">
+                            <input type="radio" name="formAgeTier" value="${a.id}" style="position:absolute;opacity:0;pointer-events:none;" ${isASelected ? 'checked' : ''}>
+                            <span style="font-size:18px;">${a.emoji}</span>
+                            <div style="text-align:left;">
+                                <div style="font-size:11px;font-weight:bold;color:#0f172a;line-height:1.2;">${a.label}</div>
+                                <div style="font-size:9px;color:#94a3b8;line-height:1.2;">${a.sub}</div>
                             </div>
                         </label>
                     `;
                 }).join('');
 
                 modal.innerHTML = `
-                    <div class="bg-white rounded-3xl p-5 md:p-6 max-w-md w-full shadow-2xl border-4 border-amber-400 max-h-[90vh] overflow-y-auto text-slate-800 animate-fadeIn" onclick="event.stopPropagation()">
-                        <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-                            <div class="flex items-center gap-2">
-                                <button type="button" id="btnBackToProfiles" class="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 cursor-pointer" title="Voltar à lista">
+                    <div style="background:white;border-radius:24px;max-width:440px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);border:4px solid #f59e0b;overflow:hidden;margin:auto;box-sizing:border-box;" onclick="event.stopPropagation()">
+                        <!-- Header Fixo -->
+                        <div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:white;">
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <button type="button" id="btnBackToProfiles" title="Voltar à lista" style="padding:6px 10px;border:none;background:#f1f5f9;color:#475569;border-radius:10px;cursor:pointer;font-size:13px;font-weight:bold;">
                                     <i class="fas fa-arrow-left"></i>
                                 </button>
-                                <h3 class="font-black text-base text-slate-900">${isEditing ? 'Editar Perfil' : 'Nova Criança'}</h3>
+                                <h3 style="font-weight:900;font-size:16px;color:#0f172a;margin:0;">${isEditing ? 'Editar Perfil' : 'Nova Criança'}</h3>
                             </div>
-                            <button id="btnCloseFormModal" class="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 cursor-pointer" title="Fechar">
+                            <button type="button" id="btnCloseFormModal" title="Fechar" style="padding:8px;border:none;background:none;color:#94a3b8;font-size:16px;cursor:pointer;border-radius:8px;">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
 
-                        <form id="studentProfileForm" class="space-y-4">
-                            <div>
-                                <label class="text-[10px] font-black text-slate-500 uppercase block mb-1">Nome da Criança <span class="text-rose-500">*</span></label>
-                                <input type="text" id="inputStudentName" required maxlength="25" placeholder="Ex: Theo, Alice..." value="${currentName}" class="w-full text-base font-bold bg-slate-50 border-2 border-slate-200 rounded-2xl p-3 focus:outline-none focus:border-amber-500 focus:bg-white transition-all">
-                            </div>
-
-                            <div>
-                                <label class="text-[10px] font-black text-slate-500 uppercase block mb-1.5">Faixa Etária / Ano Escolar</label>
-                                <div class="grid grid-cols-2 gap-1.5" id="ageOptionsGrid">
-                                    ${ageOptionsHtml}
+                        <!-- Corpo Rolar com Campos -->
+                        <div style="padding:16px 18px;overflow-y:auto;flex:1;min-height:0;">
+                            <form id="studentProfileForm" style="display:flex;flex-direction:column;gap:14px;">
+                                <div>
+                                    <label style="font-size:10px;font-weight:900;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px;">Nome da Criança <span style="color:#ef4444;">*</span></label>
+                                    <input type="text" id="inputStudentName" required maxlength="25" placeholder="Ex: Theo, Alice, Lucas..." value="${currentName}" style="width:100%;padding:10px 14px;font-size:15px;font-weight:bold;background:#f8fafc;border:2px solid #cbd5e1;border-radius:14px;outline:none;box-sizing:border-box;transition:all 0.2s;">
                                 </div>
-                            </div>
 
-                            <div>
-                                <label class="text-[10px] font-black text-slate-500 uppercase block mb-1.5">Escolha o Mascote Companheiro</label>
-                                <div class="grid grid-cols-4 gap-1.5" id="mascotOptionsGrid">
-                                    ${mascotOptionsHtml}
+                                <div>
+                                    <label style="font-size:10px;font-weight:900;color:#64748b;text-transform:uppercase;display:block;margin-bottom:6px;">Faixa Etária / Ano Escolar</label>
+                                    <div id="ageOptionsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                                        ${ageOptionsHtml}
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="grid grid-cols-2 gap-2 pt-2">
-                                <button type="button" id="btnCancelForm" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer">
-                                    Cancelar
-                                </button>
-                                <button type="submit" id="btnSubmitProfile" class="py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer">
-                                    <i class="fas fa-check"></i> ${isEditing ? 'Salvar' : 'Concluir'}
-                                </button>
-                            </div>
-                        </form>
+                                <div>
+                                    <label style="font-size:10px;font-weight:900;color:#64748b;text-transform:uppercase;display:block;margin-bottom:6px;">Escolha o Mascote Companheiro</label>
+                                    <div id="mascotOptionsGrid" style="display:grid;grid-template-columns:repeat(4, 1fr);gap:6px;">
+                                        ${mascotOptionsHtml}
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Rodapé Fixo: Botões Salvar / Cancelar (SEMPRE VISÍVEL) -->
+                        <div style="padding:12px 18px;border-top:1px solid #f1f5f9;background:#f8fafc;display:flex;gap:10px;flex-shrink:0;">
+                            <button type="button" id="btnCancelForm" style="flex:1;padding:12px;border-radius:14px;border:none;background:#f1f5f9;color:#334155;font-weight:bold;font-size:13px;cursor:pointer;transition:background 0.15s;">
+                                Cancelar
+                            </button>
+                            <button type="button" id="btnSubmitProfile" style="flex:1;padding:12px;border-radius:14px;border:none;background:linear-gradient(to right, #f59e0b, #ea580c);color:white;font-weight:900;font-size:13px;cursor:pointer;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);display:flex;align-items:center;justify-content:center;gap:6px;">
+                                <i class="fas fa-check"></i> ${isEditing ? 'Salvar' : 'Concluir'}
+                            </button>
+                        </div>
                     </div>
                 `;
 
@@ -596,22 +610,33 @@
                 modal.querySelector('#btnBackToProfiles').onclick = () => renderCardsView();
                 modal.querySelector('#btnCancelForm').onclick = () => renderCardsView();
 
-                // Destaque visual dos radios
+                // Destaque visual interativo dos rádios de Idade
                 modal.querySelectorAll('input[name="formAgeTier"]').forEach(radio => {
                     radio.addEventListener('change', () => {
-                        modal.querySelectorAll('#ageOptionsGrid label').forEach(lbl => {
-                            lbl.className = 'p-2 rounded-xl border-2 flex items-center gap-2 cursor-pointer transition-all border-slate-200 bg-white text-slate-600';
+                        modal.querySelectorAll('#ageOptionsGrid .form-age-label').forEach(lbl => {
+                            lbl.style.borderColor = '#e2e8f0';
+                            lbl.style.background = '#ffffff';
                         });
-                        radio.closest('label').className = 'p-2 rounded-xl border-2 flex items-center gap-2 cursor-pointer transition-all border-amber-500 bg-amber-50 font-black text-amber-900';
+                        const currentLbl = radio.closest('label');
+                        if (currentLbl) {
+                            currentLbl.style.borderColor = '#f59e0b';
+                            currentLbl.style.background = '#fffbeb';
+                        }
                     });
                 });
 
+                // Destaque visual interativo dos rádios de Mascote
                 modal.querySelectorAll('input[name="formMascot"]').forEach(radio => {
                     radio.addEventListener('change', () => {
-                        modal.querySelectorAll('#mascotOptionsGrid label').forEach(lbl => {
-                            lbl.className = 'relative flex flex-col items-center p-2 rounded-2xl border-2 cursor-pointer transition-all border-slate-200 bg-slate-50 hover:bg-white';
+                        modal.querySelectorAll('#mascotOptionsGrid .form-mascot-label').forEach(lbl => {
+                            lbl.style.borderColor = '#e2e8f0';
+                            lbl.style.background = '#f8fafc';
                         });
-                        radio.closest('label').className = 'relative flex flex-col items-center p-2 rounded-2xl border-2 cursor-pointer transition-all border-amber-500 bg-amber-50 ring-2 ring-amber-300';
+                        const currentLbl = radio.closest('label');
+                        if (currentLbl) {
+                            currentLbl.style.borderColor = '#f59e0b';
+                            currentLbl.style.background = '#fffbeb';
+                        }
                     });
                 });
 
@@ -619,23 +644,25 @@
                 setTimeout(() => {
                     const inputEl = modal.querySelector('#inputStudentName');
                     if (inputEl) inputEl.focus();
-                }, 60);
+                }, 80);
 
-                const formEl = modal.querySelector('#studentProfileForm');
-                formEl.onsubmit = (e) => {
-                    e.preventDefault();
+                // Rotina centralizada de submissão
+                const doSubmit = () => {
                     const inputName = modal.querySelector('#inputStudentName');
                     const name = (inputName ? inputName.value : '').trim();
                     if (!name) {
                         if (inputName) {
                             inputName.focus();
-                            inputName.classList.add('border-rose-500', 'ring-2', 'ring-rose-300');
+                            inputName.style.borderColor = '#ef4444';
+                            inputName.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.2)';
                         }
                         return;
                     }
 
-                    const ageTier = modal.querySelector('input[name="formAgeTier"]:checked')?.value || 'age_6_7';
-                    const mascot = modal.querySelector('input[name="formMascot"]:checked')?.value || 'jaguar';
+                    const ageRadio = modal.querySelector('input[name="formAgeTier"]:checked');
+                    const ageTier = ageRadio ? ageRadio.value : 'age_6_7';
+                    const mascotRadio = modal.querySelector('input[name="formMascot"]:checked');
+                    const mascot = mascotRadio ? mascotRadio.value : 'jaguar';
 
                     try {
                         let saved;
@@ -654,6 +681,23 @@
                         alert('Erro ao salvar o perfil. Por favor tente novamente.');
                     }
                 };
+
+                // Suporta tanto clique no botão quanto Enter no formulário
+                const formEl = modal.querySelector('#studentProfileForm');
+                if (formEl) {
+                    formEl.onsubmit = (e) => {
+                        e.preventDefault();
+                        doSubmit();
+                    };
+                }
+
+                const submitBtn = modal.querySelector('#btnSubmitProfile');
+                if (submitBtn) {
+                    submitBtn.onclick = (e) => {
+                        e.preventDefault();
+                        doSubmit();
+                    };
+                }
             };
 
             // Anexa modal ao DOM antes da renderização para garantir binding de eventos e foco imediato
