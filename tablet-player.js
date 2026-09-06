@@ -564,8 +564,8 @@
     const MASCOTS = {
         jaguar: {
             id: 'jaguar',
-            name: 'Juju',
-            fullName: 'Juju a Jaguatirica',
+            name: 'Jade',
+            fullName: 'Jade a Jaguatirica',
             icon: '🐾',
             avatar: 'assets/mascotes/jaguar_avatar.png',
             fullImg: 'assets/mascotes/jaguar.png',
