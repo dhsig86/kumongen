@@ -943,6 +943,16 @@
         KumonGen.generatePDF('a4-sheet', 'Português', level.title, totalPages, allItems, level, itemsPerPage);
     };
 
+    window.generateWeeklyPackagePDF = () => {
+        const level = LevelLibrary.portugues.find(l => l.id === currentLevelId);
+        if (!level) return;
+
+        const totalPages = 10; // 5 dias x 2 páginas por dia
+        const allItems = generateItemsForLevel(level, totalPages * itemsPerPage);
+
+        KumonGen.generateWeeklyPackagePDF('a4-sheet', 'Português', level.title, allItems, level, itemsPerPage);
+    };
+
     window.refreshPreview = refreshPreview;
 
     // Registra módulo para uso no tablet player (Fase 2)

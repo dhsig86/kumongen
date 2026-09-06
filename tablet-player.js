@@ -76,6 +76,52 @@
             this.playTone(1046.50, 0.35, 'sine', 0.28, 0.24);
         }
 
+        // Arpeggios progressivos por sequência (Streak)
+        playStreakChord(streakCount) {
+            if (this.muted) return;
+            if (streakCount >= 10) {
+                // Fanfarra triunfal completa (6 notas ascendentes)
+                const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98];
+                notes.forEach((f, i) => this.playTone(f, 0.22, 'triangle', 0.25, i * 0.06));
+            } else if (streakCount >= 5) {
+                // Arpeggio pentatônico brilhante (5 notas shimmer)
+                const notes = [523.25, 659.25, 783.99, 987.77, 1046.50];
+                notes.forEach((f, i) => this.playTone(f, 0.18, 'sine', 0.22, i * 0.06));
+            } else if (streakCount >= 3) {
+                // Chime alegre de 3 notas
+                this.playTone(659.25, 0.15, 'triangle', 0.2, 0);
+                this.playTone(783.99, 0.15, 'triangle', 0.22, 0.07);
+                this.playTone(1046.50, 0.28, 'sine', 0.25, 0.14);
+            } else {
+                this.playSuccess();
+            }
+        }
+
+        // Transição motivadora para o modo Gauntlet Kumon
+        playGauntletTransition() {
+            if (this.muted) return;
+            const notes = [
+                { f: 293.66, d: 0.16, t: 0 },    // D4
+                { f: 440.00, d: 0.16, t: 0.11 }, // A4
+                { f: 587.33, d: 0.20, t: 0.22 }, // D5
+                { f: 739.99, d: 0.45, t: 0.35 }  // F#5
+            ];
+            notes.forEach(n => this.playTone(n.f, n.d, 'triangle', 0.28, n.t));
+        }
+
+        // Fanfarra de Maestria 100% Conquistada
+        playMasteryFanfare() {
+            if (this.muted) return;
+            const notes = [
+                { f: 523.25, d: 0.14, t: 0 },
+                { f: 659.25, d: 0.14, t: 0.10 },
+                { f: 783.99, d: 0.14, t: 0.20 },
+                { f: 1046.50, d: 0.22, t: 0.30 },
+                { f: 1318.51, d: 0.55, t: 0.45 }
+            ];
+            notes.forEach(n => this.playTone(n.f, n.d, 'sine', 0.32, n.t));
+        }
+
         // Boop suave e acolhedor (não punitivo)
         playWrong() {
             if (this.muted) return;
@@ -105,14 +151,15 @@
 
     const sound = new SoundEngine();
 
-    // Síntese de voz para fonética
-    function speakWord(text, lang = 'pt-BR') {
+    // Síntese de voz com afinação e velocidade acolhedoras para crianças
+    function speakWord(text, lang = 'pt-BR', pitch = 1.15, rate = 0.92) {
         if (!('speechSynthesis' in window) || sound.muted) return;
         try {
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = lang;
-            utterance.rate = 0.85; // fala um pouco mais pausada para crianças
+            utterance.pitch = pitch;
+            utterance.rate = rate;
             window.speechSynthesis.speak(utterance);
         } catch (e) {
             console.warn('SpeechSynthesis error', e);
@@ -128,6 +175,8 @@
         { id: 'mestre_10', title: 'Imparável', desc: 'Acertou 10 exercícios seguidos!', icon: 'fa-bolt', color: 'text-yellow-400' },
         { id: 'velocidade_kumon', title: 'Velocidade da Luz', desc: 'Terminou a rodada dentro da meta de tempo SCT!', icon: 'fa-stopwatch', color: 'text-blue-400' },
         { id: 'nota_10', title: 'Perfeição Kumon', desc: '100% de acertos de primeira na rodada!', icon: 'fa-crown', color: 'text-purple-400' },
+        { id: 'resiliencia_kumon', title: 'Persistência de Aço', desc: 'Completou o Gauntlet Kumon e atingiu 100% de maestria!', icon: 'fa-shield-alt', color: 'text-amber-400' },
+        { id: 'maestria_total', title: 'Mestre da Maestria', desc: 'Dominou níveis com 100% de maestria acumulada!', icon: 'fa-graduation-cap', color: 'text-emerald-400' },
         { id: 'dedicado_3', title: 'Super Dedicado', desc: 'Completou 3 rodadas de treino!', icon: 'fa-medal', color: 'text-indigo-400' },
         { id: 'campeao_10', title: 'Mestre Kumon', desc: 'Completou 10 rodadas de exercícios!', icon: 'fa-trophy', color: 'text-yellow-500' }
     ];
@@ -251,7 +300,13 @@
         elapsedSeconds: 0,
         targetSctSeconds: 300, // 5 min padrão
         workedExampleDismissed: false,
-        activeCanvas: null
+        activeCanvas: null,
+        // Gauntlet Kumon (Loop de Maestria 100%)
+        missedItemsQueue: [],
+        isGauntletPhase: false,
+        gauntletCycles: 0,
+        initialItemsCount: 10,
+        gauntletItemsSolved: 0
     };
 
     // ============================================================
@@ -399,8 +454,14 @@
         const gridStartX = (pageWidth - totalGridW) / 2;
         const gridY = 103;
 
+        const isMastered = certData.isGauntletMastered || certData.accuracy === 100;
         const metricsData = [
-            { label: 'PRECISÃO', val: `${certData.accuracy}%`, sub: 'Acertos na 1ª tentativa', color: [16, 185, 129] },
+            {
+                label: certData.isGauntletMastered ? 'MAESTRIA KUMON' : 'PRECISÃO',
+                val: certData.isGauntletMastered ? '100%' : `${certData.accuracy}%`,
+                sub: certData.isGauntletMastered ? `1ª tent: ${certData.accuracy}%` : 'Acertos na 1ª tentativa',
+                color: [16, 185, 129]
+            },
             { label: 'TEMPO SCT', val: certData.timeFormatted, sub: `Meta: ${certData.targetFormatted}`, color: [59, 130, 246] },
             { label: 'ESTRELAS', val: `+${certData.starsEarned}`, sub: 'Conquistadas na sessão', color: [245, 158, 11] }
         ];
@@ -422,7 +483,7 @@
             doc.text(m.val, cX + cardW / 2, gridY + 8, { align: 'center' });
 
             // Rótulo principal
-            doc.setFontSize(7.5);
+            doc.setFontSize(7);
             doc.setTextColor(30, 41, 59);
             doc.text(m.label, cX + cardW / 2, gridY + 13, { align: 'center' });
 
@@ -438,24 +499,26 @@
         const sealY = 142;
 
         // Fitas da medalha
-        doc.setFillColor(37, 99, 235); // Blue-600
+        doc.setFillColor(certData.isGauntletMastered ? 217 : 37, certData.isGauntletMastered ? 119 : 99, certData.isGauntletMastered ? 6 : 235); // Âmbar se Gauntlet, Azul se direto
         doc.triangle(sealX - 8, sealY + 8, sealX - 3, sealY + 20, sealX - 12, sealY + 22, 'F');
         doc.triangle(sealX + 8, sealY + 8, sealX + 3, sealY + 20, sealX + 12, sealY + 22, 'F');
 
         // Círculo Ouro Externo
         doc.setFillColor(205, 162, 40);
-        doc.circle(sealX, sealY, 12.5, 'F');
+        doc.circle(sealX, sealY, 13, 'F');
         // Círculo Interno Marfim
         doc.setFillColor(254, 249, 195);
-        doc.circle(sealX, sealY, 10.5, 'F');
+        doc.circle(sealX, sealY, 10.8, 'F');
 
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8.5);
+        doc.setFontSize(7.5);
         doc.setTextColor(146, 64, 14);
-        doc.text('NOTA 10', sealX, sealY - 0.5, { align: 'center' });
-        doc.setFontSize(5.5);
+        const sealTitle = certData.isGauntletMastered ? 'MAESTRIA' : (certData.accuracy === 100 ? 'NOTA 10' : '100%');
+        doc.text(sealTitle, sealX, sealY - 0.5, { align: 'center' });
+        doc.setFontSize(4.8);
         doc.setTextColor(180, 83, 9);
-        doc.text('KUMONGEN', sealX, sealY + 4, { align: 'center' });
+        const sealSubtitle = certData.isGauntletMastered ? 'PERSISTÊNCIA' : 'KUMONGEN';
+        doc.text(sealSubtitle, sealX, sealY + 3.8, { align: 'center' });
 
         // 12. Linhas de Assinatura Balanceadas
         const sigY = 168;
@@ -735,25 +798,44 @@
             }
         },
 
-        speak(text, duration = 3200) {
+        getVoiceConfig() {
+            const m = this.getCurrent();
+            let pitch = 1.15;
+            if (m.id === 'jaguar') pitch = 1.25;        // Jade: ágil e saltitante
+            else if (m.id === 'capivara') pitch = 0.98;   // Capi: calma e serena
+            else if (m.id === 'calango') pitch = 1.20;    // Lango: esperto e rápido
+            else if (m.id === 'golfinho') pitch = 1.30;   // Finho: agudo e saltitante
+            const lang = Session.subjectKey === 'ingles' ? 'en-US' : 'pt-BR';
+            return { pitch, lang };
+        },
+
+        speak(text, duration = 3200, vocalize = false) {
             const bubble = document.getElementById('mascotSpeechBubble');
             const speechText = document.getElementById('mascotSpeechText');
-            if (!bubble || !speechText) return;
+            if (bubble && speechText) {
+                speechText.innerText = text;
+                bubble.style.opacity = '1';
+                bubble.style.transform = 'scale(1)';
 
-            speechText.innerText = text;
-            bubble.style.opacity = '1';
-            bubble.style.transform = 'scale(1)';
+                if (this._speakTimer) clearTimeout(this._speakTimer);
+                this._speakTimer = setTimeout(() => {
+                    speechText.innerText = Session.isGauntletPhase ? 'Foco na maestria! 🎯' : 'Sua vez! ✏️';
+                }, duration);
+            }
 
-            if (this._speakTimer) clearTimeout(this._speakTimer);
-            this._speakTimer = setTimeout(() => {
-                speechText.innerText = 'Sua vez! ✏️';
-            }, duration);
+            if (vocalize) {
+                const { pitch, lang } = this.getVoiceConfig();
+                // Limpeza de emojis para fala limpa sem pronunciar códigos
+                const cleanText = text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
+                speakWord(cleanText, lang, pitch, 0.92);
+            }
         },
 
         onCorrect(streak = 1) {
             const m = this.getCurrent();
             let msg = '';
-            if (streak >= 3 && Math.random() > 0.3) {
+            const isStreakEvent = streak >= 3;
+            if (isStreakEvent && Math.random() > 0.25) {
                 msg = m.cheerStreak[Math.floor(Math.random() * m.cheerStreak.length)];
             } else {
                 msg = m.cheerSuccess[Math.floor(Math.random() * m.cheerSuccess.length)];
@@ -766,13 +848,15 @@
                 setTimeout(() => ring.classList.remove('-translate-y-2'), 350);
             }
 
-            this.speak(msg, 2600);
+            // Vocaliza áudio do mascote se for streak ou modo gauntlet
+            const shouldVocalize = streak >= 3 || Session.isGauntletPhase;
+            this.speak(msg, 2800, shouldVocalize);
         },
 
         onWrong() {
             const m = this.getCurrent();
             const msg = m.cheerWrong[Math.floor(Math.random() * m.cheerWrong.length)];
-            this.speak(msg, 2800);
+            this.speak(msg, 2800, false);
         },
 
         showPickerModal() {
@@ -1212,6 +1296,13 @@
             Session.roundCorrectFirstAttempt = 0;
             Session.workedExampleDismissed = false;
 
+            // Reseta flags do Gauntlet Kumon (Loop de Maestria 100%)
+            Session.missedItemsQueue = [];
+            Session.isGauntletPhase = false;
+            Session.gauntletCycles = 0;
+            Session.initialItemsCount = Session.items.length;
+            Session.gauntletItemsSolved = 0;
+
             // Configura meta de tempo SCT Kumon (baseada em 10 itens = aprox 4 a 6 min)
             const targetMin = Math.max(3, Math.round(Session.items.length * 0.5));
             Session.targetSctSeconds = targetMin * 60;
@@ -1268,12 +1359,25 @@
             const sub = window.KumonSubjects[Session.subjectKey];
             const level = sub.levels.find(l => l.id === Session.levelId);
 
-            // Barra de progresso superior
+            // Barra de progresso superior com destaque para modo Gauntlet
             const progressPercent = Math.round((Session.currentIndex / total) * 100);
             const progressBar = document.getElementById('roundProgressBar');
             const progressText = document.getElementById('roundProgressText');
-            if (progressBar) progressBar.style.width = `${progressPercent}%`;
-            if (progressText) progressText.innerText = `Questão ${Session.currentIndex + 1} de ${total}`;
+            if (progressBar) {
+                progressBar.style.width = `${progressPercent}%`;
+                if (Session.isGauntletPhase) {
+                    progressBar.className = 'h-full bg-gradient-to-r from-amber-400 to-yellow-500 rounded-full transition-all duration-300 shadow';
+                } else {
+                    progressBar.className = 'h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-300 shadow-sm';
+                }
+            }
+            if (progressText) {
+                if (Session.isGauntletPhase) {
+                    progressText.innerHTML = `<span class="text-amber-400 font-black tracking-wide"><i class="fas fa-bullseye"></i> Modo Maestria: ${Session.currentIndex + 1} de ${total}</span>`;
+                } else {
+                    progressText.innerText = `Questão ${Session.currentIndex + 1} de ${total}`;
+                }
+            }
 
             // Exemplo guiado (Worked Example) no exercício 1
             const exampleContainer = document.getElementById('workedExampleModal');
@@ -2229,17 +2333,30 @@
                 Session.roundCorrectFirstAttempt++;
                 Gamification.addStars(1);
                 Gamification.registerCorrect();
+            } else if (Session.isGauntletPhase) {
+                // No modo gauntlet, cada acerto recuperado gera estrela de incentivo
+                Gamification.addStars(1);
+                Gamification.registerCorrect();
+                Session.gauntletItemsSolved++;
             }
 
             const currentStreak = (Gamification.get && Gamification.get().streak) || 1;
             MascotEngine.onCorrect(currentStreak);
+            if (currentStreak >= 3) {
+                sound.playStreakChord(currentStreak);
+            }
 
             this.updateGamificationHeader();
 
             setTimeout(() => {
                 Session.currentIndex++;
                 if (Session.currentIndex >= Session.items.length) {
-                    this.finishRound();
+                    // Se ainda há pendências na fila do Gauntlet Kumon, inicia a fase de maestria
+                    if (Session.missedItemsQueue && Session.missedItemsQueue.length > 0) {
+                        this.startGauntletPhase();
+                    } else {
+                        this.finishRound();
+                    }
                 } else {
                     this.renderCurrentQuestion();
                 }
@@ -2254,9 +2371,24 @@
             this.shakeCard();
             MascotEngine.onWrong();
 
+            // Adiciona cópia limpa do exercício à fila do Gauntlet Kumon (sem duplicar)
+            const currentItem = Session.items[Session.currentIndex];
+            if (currentItem) {
+                try {
+                    const itemClone = JSON.parse(JSON.stringify(currentItem));
+                    const itemKey = JSON.stringify(itemClone);
+                    const alreadyEnqueued = Session.missedItemsQueue.some(it => JSON.stringify(it) === itemKey);
+                    if (!alreadyEnqueued) {
+                        Session.missedItemsQueue.push(itemClone);
+                    }
+                } catch (e) {
+                    console.warn('Erro ao enfileirar no Gauntlet Kumon:', e);
+                }
+            }
+
             const msg = document.getElementById('cardFeedbackMsg');
             if (msg) {
-                msg.innerText = 'Quase lá! Tente mais uma vez.';
+                msg.innerText = Session.isGauntletPhase ? 'Com calma e concentração você domina!' : 'Quase lá! Tente mais uma vez.';
                 msg.classList.remove('text-slate-400');
                 msg.classList.add('text-amber-500');
             }
@@ -2265,6 +2397,83 @@
             const answerBox = document.getElementById('activeAnswerBox');
             if (answerBox) {
                 answerBox.innerHTML = '<span class="text-blue-300 font-light text-2xl">?</span>';
+            }
+        },
+
+        // Inicia o Loop de Maestria 100% (Gauntlet Kumon)
+        startGauntletPhase() {
+            Session.gauntletCycles++;
+            const count = Session.missedItemsQueue.length;
+            Session.isGauntletPhase = true;
+            // A nova lista passa a ser estritamente os exercícios errados
+            Session.items = [...Session.missedItemsQueue];
+            Session.missedItemsQueue = [];
+            Session.currentIndex = 0;
+            Session.currentAttempts = 0;
+            Session.currentInput = '';
+
+            sound.playGauntletTransition();
+            this.showGauntletModal(count);
+        },
+
+        // Modal motivador de entrada no Gauntlet
+        showGauntletModal(count) {
+            const modal = document.getElementById('gauntletModal');
+            if (!modal) {
+                this.renderCurrentQuestion();
+                return;
+            }
+
+            const m = MascotEngine.getCurrent();
+            const speech = count === 1
+                ? 'Falta só 1 exercício para você alcançar a maestria completa de 100%!'
+                : `Faltam apenas ${count} exercícios para você alcançar a maestria completa de 100%!`;
+
+            modal.innerHTML = `
+                <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl text-center border-4 border-amber-400 relative animate-bounce-subtle max-h-[90vh] overflow-y-auto">
+                    <div class="flex items-center justify-center gap-3 mb-2">
+                        <div class="w-16 h-16 rounded-full p-1 bg-gradient-to-tr ${m.ringGradient} shadow-md flex-shrink-0">
+                            <img src="${m.avatar}" alt="${m.name}" class="w-full h-full rounded-full object-cover border-2 border-white shadow-inner">
+                        </div>
+                        <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-3xl shadow-inner flex-shrink-0">
+                            <i class="fas fa-shield-alt text-amber-500"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="inline-block bg-amber-500 text-white text-[11px] font-black uppercase tracking-wider px-3.5 py-1 rounded-full mb-1">
+                            Loop de Maestria Kumon
+                        </span>
+                        <h3 class="text-2xl font-black text-slate-900 mt-1">Rumo aos 100%!</h3>
+                    </div>
+                    
+                    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 my-3 text-left">
+                        <div class="text-xs font-black text-amber-800 uppercase tracking-wide flex items-center gap-1.5 mb-1">
+                            <i class="fas fa-comment-dots text-amber-600"></i> Mensagem da ${m.name}
+                        </div>
+                        <p class="text-xs font-bold text-amber-900 leading-relaxed">
+                            "${speech} No método Kumon, não deixamos dúvidas para trás. Vamos revisar juntos!"
+                        </p>
+                    </div>
+
+                    <p class="text-[11px] text-slate-500 mb-4">
+                        Resolva ${count === 1 ? 'o exercício pendente' : 'os exercícios pendentes'} com calma para conquistar sua medalha de Persistência de Aço!
+                    </p>
+
+                    <button id="btnStartGauntletNow" class="w-full py-4 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-black text-base rounded-2xl shadow-lg transition-transform transform active:scale-95 flex items-center justify-center gap-2 mt-2 mb-1">
+                        <i class="fas fa-fire-alt text-amber-900"></i> Dominar Agora (${count})
+                    </button>
+                </div>
+            `;
+
+            modal.style.display = 'flex';
+            MascotEngine.speak(`${speech} Vamos dominar juntos!`, 3500, true);
+
+            const startBtn = document.getElementById('btnStartGauntletNow');
+            if (startBtn) {
+                startBtn.onclick = () => {
+                    modal.style.display = 'none';
+                    this.renderCurrentQuestion();
+                };
             }
         },
 
@@ -2287,17 +2496,24 @@
         // ============================================================
         finishRound() {
             if (Session.timerInterval) clearInterval(Session.timerInterval);
-            sound.playFanfare();
+            
+            const isGauntletMastered = Session.gauntletCycles > 0;
+            if (isGauntletMastered) {
+                sound.playMasteryFanfare();
+            } else {
+                sound.playFanfare();
+            }
             launchConfetti();
 
-            const total = Session.items.length;
+            const total = Session.initialItemsCount || 10;
             const accuracy = Math.round((Session.roundCorrectFirstAttempt / total) * 100);
             const timeSec = Session.elapsedSeconds;
             const targetSec = Session.targetSctSeconds;
 
-            // Bônus de estrelas se bateu a meta ou teve 100% de precisão
+            // Bônus de estrelas se bateu a meta ou teve 100% de precisão de primeira
             let bonusStars = 0;
-            if (accuracy === 100) bonusStars += 3;
+            if (accuracy === 100) bonusStars += 4;
+            else if (isGauntletMastered) bonusStars += 2; // Bônus de resiliência
             if (timeSec <= targetSec) bonusStars += 2;
             if (bonusStars > 0) {
                 Gamification.addStars(bonusStars);
@@ -2305,15 +2521,46 @@
 
             const { newlyUnlocked } = Gamification.registerRoundFinished(accuracy, timeSec, targetSec);
             
+            // Se completou pelo Gauntlet, garante desbloqueio do badge 'resiliencia_kumon'
+            if (isGauntletMastered) {
+                const cur = Gamification.get();
+                if (!cur.badges.includes('resiliencia_kumon')) {
+                    cur.badges.push('resiliencia_kumon');
+                    Gamification.save(cur);
+                    if (!newlyUnlocked.includes('resiliencia_kumon')) {
+                        newlyUnlocked.push('resiliencia_kumon');
+                    }
+                }
+            }
+
+            // Registra no motor de perfis a maestria do nível
+            try {
+                if (window.StudentProfileEngine && window.StudentProfileEngine.recordLevelMastery) {
+                    window.StudentProfileEngine.recordLevelMastery(
+                        Session.subjectKey,
+                        Session.levelId,
+                        {
+                            accuracy: accuracy,
+                            timeSec: timeSec,
+                            targetSec: targetSec,
+                            gauntletCycles: Session.gauntletCycles
+                        }
+                    );
+                }
+            } catch (e) {
+                console.warn('Erro ao registrar maestria no StudentProfileEngine', e);
+            }
+
             // Registra no histórico geral do KumonGen (Scoreboard e Controle dos Pais)
             try {
                 if (window.KumonGen && window.KumonGen.saveHistory) {
                     const sub = window.KumonSubjects[Session.subjectKey];
                     const level = sub && sub.levels ? sub.levels.find(l => l.id === Session.levelId) : null;
+                    const suffix = isGauntletMastered ? ' · 100% Maestria' : ' · 100% Perfeição';
                     window.KumonGen.saveHistory(
                         sub ? sub.title : 'Matemática',
-                        `${level ? level.title : 'Nível'} · Tablet`,
-                        '10 exer.',
+                        `${level ? level.title : 'Nível'} · Tablet${suffix}`,
+                        `${total} exer.`,
                         true
                     );
                 }
@@ -2326,6 +2573,8 @@
             this.showRoundSummaryModal({
                 total,
                 accuracy,
+                isGauntletMastered,
+                gauntletCycles: Session.gauntletCycles,
                 timeSec,
                 targetSec,
                 bonusStars,
@@ -2372,28 +2621,39 @@
                 `;
             }
 
+            const headerBadgeText = res.isGauntletMastered
+                ? '🎯 100% Maestria Kumon Alcançada!'
+                : (res.accuracy === 100 ? '🏆 100% Perfeição de Primeira!' : 'Rodada Concluída!');
+
             modal.innerHTML = `
-                <div class="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl text-center border-4 border-emerald-400 relative animate-bounce-subtle max-h-[90vh] overflow-y-auto">
+                <div class="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl text-center border-4 ${res.isGauntletMastered ? 'border-amber-400' : 'border-emerald-400'} relative animate-bounce-subtle max-h-[90vh] overflow-y-auto">
                     <div class="flex items-center justify-center gap-3 mb-3">
                         <div class="w-16 h-16 rounded-full p-1 bg-gradient-to-tr ${MascotEngine.getCurrent().ringGradient} shadow-md flex-shrink-0">
                             <img src="${MascotEngine.getCurrent().avatar}" alt="${MascotEngine.getCurrent().name}" class="w-full h-full rounded-full object-cover border-2 border-white shadow-inner">
                         </div>
-                        <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-3xl shadow-inner flex-shrink-0">
-                            <i class="fas fa-trophy text-amber-500"></i>
+                        <div class="w-16 h-16 ${res.isGauntletMastered ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'} rounded-full flex items-center justify-center text-3xl shadow-inner flex-shrink-0">
+                            <i class="fas ${res.isGauntletMastered ? 'fa-shield-alt text-amber-500' : 'fa-trophy text-amber-500'}"></i>
                         </div>
                     </div>
-                    <span class="inline-block bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full mb-1">Rodada Concluída!</span>
+                    <span class="inline-block ${res.isGauntletMastered ? 'bg-amber-500' : 'bg-emerald-600'} text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full mb-1">
+                        ${headerBadgeText}
+                    </span>
                     <h3 class="text-2xl font-black text-slate-900">Parabéns, ${Session.studentName}!</h3>
                     <p class="text-xs text-slate-500 mt-0.5">${level ? level.title : ''} · ${sub ? sub.title : ''}</p>
-                    <div class="bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5 text-xs font-bold text-emerald-800 my-2.5">
-                        "${MascotEngine.getCurrent().cheerFinish}"
+                    <div class="${res.isGauntletMastered ? 'bg-amber-50 border border-amber-200 text-amber-900' : 'bg-emerald-50 border border-emerald-200 text-emerald-800'} rounded-xl px-3 py-1.5 text-xs font-bold my-2.5">
+                        "${res.isGauntletMastered ? 'Sua persistência valeu ouro! Você dominou todas as questões!' : MascotEngine.getCurrent().cheerFinish}"
                     </div>
 
                     <!-- Painel de Métricas -->
                     <div class="grid grid-cols-3 gap-3 my-5">
                         <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-center">
-                            <span class="text-2xl font-black text-blue-600">${res.accuracy}%</span>
-                            <span class="block text-[10px] font-bold text-slate-400 uppercase mt-1">Precisão</span>
+                            <span class="text-2xl font-black ${res.isGauntletMastered ? 'text-amber-500' : 'text-blue-600'}">
+                                ${res.isGauntletMastered ? '100%' : `${res.accuracy}%`}
+                            </span>
+                            <span class="block text-[10px] font-bold text-slate-400 uppercase mt-1">
+                                ${res.isGauntletMastered ? 'Maestria Total' : 'Precisão'}
+                            </span>
+                            ${res.isGauntletMastered ? `<span class="block text-[9px] text-slate-400">1ª tent: ${res.accuracy}%</span>` : ''}
                         </div>
                         <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-center">
                             <span class="text-2xl font-black ${beatSCT ? 'text-emerald-600' : 'text-slate-700'}">${timeFormatted}</span>
@@ -2442,6 +2702,7 @@
                         levelTitle: level ? level.title : 'Nível',
                         levelId: Session.levelId,
                         accuracy: res.accuracy,
+                        isGauntletMastered: res.isGauntletMastered,
                         timeFormatted,
                         targetFormatted,
                         starsEarned: res.bonusStars + Session.roundCorrectFirstAttempt

@@ -462,7 +462,7 @@ const KumonGen = (function() {
     }
 
     // Constrói uma página (esquerda ou direita)
-    function buildPage(container, level, pageNum, items) {
+    function buildPage(container, level, pageNum, items, options = {}) {
         if (!container) return;
         container.innerHTML = '';
 
@@ -480,11 +480,15 @@ const KumonGen = (function() {
             ? sanitizeText(activeStudent.name)
             : '____________________';
 
+        const dayBadge = options.dayLabel
+            ? `<span class="ml-2 inline-block bg-amber-100 text-amber-900 border border-amber-300 text-[0.5rem] font-black px-1.5 py-0.5 rounded">${options.dayLabel}</span>`
+            : '';
+
         const header = document.createElement('div');
         header.className = 'page-header';
         header.innerHTML = `
             <div>
-                <h3>${level?.title || ''}</h3>
+                <h3 class="flex items-center flex-wrap">${level?.title || ''}${dayBadge}</h3>
                 <p>${level?.instruction || ''}</p>
             </div>
             <div class="text-right">
@@ -505,7 +509,7 @@ const KumonGen = (function() {
         // Rodapé
         const footer = document.createElement('div');
         footer.className = 'page-footer';
-        footer.innerHTML = `<span>PÁG ${pageNum}</span>`;
+        footer.innerHTML = `<span>${options.dayLabel ? options.dayLabel + ' · ' : ''}PÁG ${pageNum}</span>`;
         container.appendChild(footer);
 
         // Preenche linhas
@@ -913,6 +917,215 @@ const KumonGen = (function() {
             if (window.refreshPreview) {
                 window.refreshPreview();
             }
+        }
+    }
+
+    // GERAÇÃO DE PACOTE SEMANAL COMPLETO (5 DIAS = 10 PÁGINAS EM 1 CLIQUE)
+    async function generateWeeklyPackagePDF(elementId = 'a4-sheet', subjectTitle, levelTitle, allItems, level, linesPerPage) {
+        if (isGeneratingPDF) return;
+        isGeneratingPDF = true;
+
+        try {
+            await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+            await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+        } catch (loadErr) {
+            isGeneratingPDF = false;
+            alert('Erro ao carregar bibliotecas. Verifique sua conexão.');
+            return;
+        }
+
+        const element = document.getElementById(elementId);
+        if (!element) { isGeneratingPDF = false; return; }
+
+        const originalTransform = zoomContainer ? zoomContainer.style.transform : '';
+        if (zoomContainer) {
+            zoomContainer.style.transform = 'scale(1)';
+            zoomContainer.style.transformOrigin = 'top center';
+        }
+
+        const numSheets = 5; // 5 dias (Segunda a Sexta)
+        const numPages = 10; // 2 páginas por dia
+        const dayNames = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira'];
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: 'a4'
+        });
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+
+        const loader = document.createElement('div');
+        loader.className = 'fixed inset-0 bg-slate-900/80 z-50 flex flex-col items-center justify-center text-white';
+        loader.innerHTML = `
+            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-amber-500 mb-4"></div>
+            <div class="font-bold text-lg">Gerando Pacote Semanal Kumon (5 Dias)...</div>
+            <div class="text-xs text-slate-400 mt-2" id="pdf-weekly-progress">Processando Dia 1 de 5...</div>
+        `;
+        document.body.appendChild(loader);
+
+        try {
+            const pageLeftEl = document.getElementById('pageLeft');
+            const pageRightEl = document.getElementById('pageRight');
+
+            for (let sheetIdx = 0; sheetIdx < numSheets; sheetIdx++) {
+                const dayNum = sheetIdx + 1;
+                const dayLabel = `Dia ${dayNum} de 5 (${dayNames[sheetIdx]})`;
+                const progressEl = document.getElementById('pdf-weekly-progress');
+                if (progressEl) progressEl.innerText = `Processando ${dayLabel}...`;
+
+                const pageNumLeft = sheetIdx * 2 + 1;
+                const pageNumRight = sheetIdx * 2 + 2;
+
+                const leftItems = allItems.slice(sheetIdx * 2 * linesPerPage, (sheetIdx * 2 + 1) * linesPerPage);
+                const rightItems = allItems.slice((sheetIdx * 2 + 1) * linesPerPage, (sheetIdx * 2 + 2) * linesPerPage);
+
+                buildPage(pageLeftEl, level, pageNumLeft, leftItems, { dayLabel });
+                buildPage(pageRightEl, level, pageNumRight, rightItems, { dayLabel });
+
+                await new Promise(resolve => setTimeout(resolve, 200));
+
+                const pdfScale = window.innerWidth <= 768 ? 2 : 3;
+                const canvas = await html2canvas(element, {
+                    scale: pdfScale,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    allowTaint: false,
+                    useCORS: true,
+                    windowWidth: 1123,
+                    windowHeight: 794,
+                    onclone: (clonedDoc) => {
+                        const sheet = clonedDoc.getElementById(elementId);
+                        if (sheet) sheet.style.boxShadow = 'none';
+                    }
+                });
+
+                const imgData = canvas.toDataURL('image/png');
+                if (sheetIdx > 0) {
+                    pdf.addPage();
+                }
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
+            }
+
+            // Gabarito Semanal consolidado de 5 dias
+            if (pedagogicalConfig.answerKey) {
+                const progressEl = document.getElementById('pdf-weekly-progress');
+                if (progressEl) progressEl.innerText = 'Gerando folha de gabarito semanal para os pais...';
+
+                const akSheet = document.createElement('div');
+                akSheet.id = 'temp-answer-key-sheet';
+                akSheet.className = 'answer-key-sheet';
+                akSheet.style.position = 'fixed';
+                akSheet.style.left = '-9999px';
+                akSheet.style.top = '0';
+                akSheet.style.width = '1123px';
+                akSheet.style.height = '794px';
+                akSheet.style.background = '#ffffff';
+                akSheet.style.boxSizing = 'border-box';
+                akSheet.style.padding = '26px';
+
+                let cardsHtml = '';
+                for (let d = 0; d < 5; d++) {
+                    const dayNum = d + 1;
+                    const dayName = dayNames[d];
+                    const pLeft = d * 2;
+                    const pRight = d * 2 + 1;
+
+                    const leftItems = allItems.slice(pLeft * linesPerPage, (pLeft + 1) * linesPerPage);
+                    const rightItems = allItems.slice(pRight * linesPerPage, (pRight + 1) * linesPerPage);
+
+                    let leftListHtml = '';
+                    leftItems.forEach((it, idx) => {
+                        leftListHtml += `<div style="display:flex;justify-content:space-between;padding:1px 0;font-size:9.5px;"><span style="color:#64748b;">${idx + 1}.</span> <span style="font-weight:900;color:#0f172a;">${sanitizeText(solveItem(it))}</span></div>`;
+                    });
+
+                    let rightListHtml = '';
+                    rightItems.forEach((it, idx) => {
+                        rightListHtml += `<div style="display:flex;justify-content:space-between;padding:1px 0;font-size:9.5px;"><span style="color:#64748b;">${idx + 1}.</span> <span style="font-weight:900;color:#0f172a;">${sanitizeText(solveItem(it))}</span></div>`;
+                    });
+
+                    cardsHtml += `
+                        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px;display:flex;flex-direction:column;">
+                            <div style="font-weight:900;font-size:11px;color:#d97706;border-bottom:1px solid #cbd5e1;padding-bottom:3px;margin-bottom:4px;text-transform:uppercase;">
+                                DIA ${dayNum} · ${dayName.slice(0, 3).toUpperCase()}
+                            </div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                                <div><div style="font-size:8px;font-weight:bold;color:#94a3b8;margin-bottom:2px;">PÁG ${pLeft + 1}</div>${leftListHtml}</div>
+                                <div><div style="font-size:8px;font-weight:bold;color:#94a3b8;margin-bottom:2px;">PÁG ${pRight + 1}</div>${rightListHtml}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                akSheet.innerHTML = `
+                    <div style="border-bottom:2px solid #0f172a;padding-bottom:6px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <h2 style="font-size:16px;font-weight:900;text-transform:uppercase;color:#0f172a;margin:0;">
+                                GABARITO SEMANAL OFICIAL (5 DIAS) · ${sanitizeText(subjectTitle.toUpperCase())}
+                            </h2>
+                            <p style="font-size:10px;color:#64748b;margin:2px 0 0 0;font-weight:600;">
+                                Nível: ${sanitizeText(levelTitle)} · Conferência diária dos pais (menos de 1 minuto por dia)
+                            </p>
+                        </div>
+                        <div style="text-align:right;font-size:10px;color:#64748b;">
+                            <strong>5 DIAS · 10 PÁGINAS</strong> | DATA: ___/___/___
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(5, 1fr);gap:8px;flex:1;">
+                        ${cardsHtml}
+                    </div>
+                `;
+
+                document.body.appendChild(akSheet);
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                const akCanvas = await html2canvas(akSheet, {
+                    scale: window.innerWidth <= 768 ? 2 : 3,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    allowTaint: false,
+                    useCORS: true,
+                    windowWidth: 1123,
+                    windowHeight: 794
+                });
+
+                document.body.removeChild(akSheet);
+                pdf.addPage();
+                pdf.addImage(akCanvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
+            }
+
+            const cleanSubject = (subjectTitle || 'Kumon').replace(/[^a-zA-Z0-9]/g, '_');
+            const cleanLevel = (levelTitle || 'Nivel').replace(/[^a-zA-Z0-9]/g, '_');
+            pdf.save(`Semana_Kumon_${cleanSubject}_${cleanLevel}_5Dias.pdf`);
+
+            // Toast de sucesso
+            const successToast = document.createElement('div');
+            successToast.id = 'pdf-weekly-toast';
+            successToast.className = 'fixed bottom-5 right-5 z-50 max-w-sm bg-amber-600 border border-amber-400 text-white rounded-2xl p-4 shadow-2xl flex items-center gap-3 animate-bounce-subtle text-xs md:text-sm';
+            successToast.innerHTML = `
+                <div class="bg-amber-400/30 text-amber-100 w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <span class="font-bold">Pacote Semanal pronto! 5 dias de estudo em 1 único arquivo 📅</span>
+            `;
+            document.body.appendChild(successToast);
+            setTimeout(() => {
+                const el = document.getElementById('pdf-weekly-toast');
+                if (el) el.remove();
+            }, 4500);
+
+            // Salva no histórico
+            saveHistory(subjectTitle, `${levelTitle} · Semana Completa`, '5 Dias (10 pág)');
+            showPrintTip(10);
+        } catch (err) {
+            console.error('Erro ao gerar Pacote Semanal em PDF:', err);
+            alert('Ocorreu um erro ao gerar o Pacote Semanal em PDF: ' + err.message);
+        } finally {
+            isGeneratingPDF = false;
+            if (loader && loader.parentNode) loader.parentNode.removeChild(loader);
+            if (zoomContainer) zoomContainer.style.transform = originalTransform;
+            if (window.refreshPreview) window.refreshPreview();
         }
     }
 
@@ -1448,6 +1661,7 @@ const KumonGen = (function() {
         adjustZoom,
         buildPage,
         generatePDF,
+        generateWeeklyPackagePDF,
         adjustPreviewScale,
         getHistory,
         saveHistory,
@@ -1471,4 +1685,6 @@ const KumonGen = (function() {
         }
     };
 })();
+
+window.KumonGen = KumonGen;
 
