@@ -1,0 +1,109 @@
+{
+  "testName": "KumonGen Animation Benchmark & Telemetry Studio",
+  "milestone": "Milestone 4 (R4)",
+  "timestamp": "2026-09-06T18:36:22.722Z",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "cpus": 8,
+    "totalMemoryGB": 7.85,
+    "browserUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+    "chromeBinary": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+  },
+  "animejs": {
+    "engine": "Anime.js v3.2.2 via CDN",
+    "durationMs": 5019,
+    "totalFrames": 669,
+    "fps": {
+      "instant": 61,
+      "mean": 106.27,
+      "min": 9,
+      "max": 120,
+      "stdDev": 23.04
+    },
+    "frameTimesMs": {
+      "p50": 5.6,
+      "p95": 16.7,
+      "p99": 25.3
+    },
+    "droppedFrames": 18,
+    "dropRatePercent": 2.69,
+    "choreographies": [
+      {
+        "name": "Spring Physics Mascotes",
+        "status": "PASSED",
+        "easing": "spring(1, 80, 10, 0)"
+      },
+      {
+        "name": "Staggering Estrelas & Streaks",
+        "status": "PASSED",
+        "easing": "stagger(60, center) + easeOutExpo"
+      },
+      {
+        "name": "Transição Modal Gauntlet",
+        "status": "PASSED",
+        "easing": "anime.timeline() + spring(1, 75, 10, 0)"
+      },
+      {
+        "name": "Carga de 100 Partículas DOM",
+        "status": "PASSED",
+        "easing": "stagger(10) + easeOutExpo"
+      }
+    ],
+    "verdict": "PASSED"
+  },
+  "cssNative": {
+    "engine": "CSS Nativo (Keyframes & Transitions)",
+    "durationMs": 5010,
+    "totalFrames": 950,
+    "fps": {
+      "instant": 83,
+      "mean": 111.92,
+      "min": 11,
+      "max": 120,
+      "stdDev": 19.96
+    },
+    "frameTimesMs": {
+      "p50": 2.9,
+      "p95": 15.8,
+      "p99": 33.2
+    },
+    "droppedFrames": 18,
+    "dropRatePercent": 1.89,
+    "choreographies": [
+      {
+        "name": "Bounce Rígido Mascote",
+        "status": "PASSED",
+        "easing": "@keyframes cssMascotBounce"
+      },
+      {
+        "name": "Dispersão Simultânea Estrelas",
+        "status": "PASSED",
+        "easing": "@keyframes cssStarBurst"
+      },
+      {
+        "name": "Fade/Scale Modal Gauntlet",
+        "status": "PASSED",
+        "easing": "@keyframes cssModalCardPop"
+      },
+      {
+        "name": "Carga de 100 Partículas CSS",
+        "status": "PASSED",
+        "easing": "transition: all 1.2s cubic-bezier"
+      }
+    ],
+    "verdict": "PASSED"
+  },
+  "comparativeAnalysis": {
+    "fpsDelta": -5.65,
+    "performanceParity": "HIGH_PARITY",
+    "visualFidelityAdvantages": [
+      "Spring Physics nos Mascotes: amortecimento inercial autêntico via spring(1, 80, 10, 0) eliminando a rigidez robótica dos keyframes CSS.",
+      "Staggering de Estrelas & Streaks: cascata radial orgânica via anime.stagger(60, {from: center}) e rotação randômica individual.",
+      "Odômetro Numérico Suave: interpolação contínua de valores numéricos frame a frame em vez de saltos abruptos no innerText.",
+      "Transição Cinemática do Gauntlet: timeline multi-estágio com backdrop blur progressivo, expansão elástica e raio dourado brilhante.",
+      "Resiliência Offline: Chaveamento transparente e automático para CSS Nativo caso a CDN externa esteja bloqueada ou indisponível."
+    ],
+    "verdict": "PASSED — Anime.js v3.2.2 aprovado com excelência de desempenho (> 55 FPS médio em ambos os modos, sem gargalos de CPU na thread principal)."
+  }
+}

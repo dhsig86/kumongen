@@ -38,7 +38,14 @@
 
         toggleMute() {
             this.muted = !this.muted;
-            localStorage.setItem('kumongen_tablet_muted', this.muted ? 'true' : 'false');
+            if (typeof window !== 'undefined' && window.speechSynthesis) {
+                try {
+                    window.speechSynthesis.cancel();
+                } catch (e) {}
+            }
+            try {
+                localStorage.setItem('kumongen_tablet_muted', this.muted ? 'true' : 'false');
+            } catch (e) {}
             return this.muted;
         }
 
@@ -153,10 +160,11 @@
 
     // Síntese de voz com afinação e velocidade acolhedoras para crianças
     function speakWord(text, lang = 'pt-BR', pitch = 1.15, rate = 0.92) {
+        if (!text || typeof text !== 'string') return;
         if (!('speechSynthesis' in window) || sound.muted) return;
         try {
             window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
+            const utterance = new SpeechSynthesisUtterance(text.slice(0, 300));
             utterance.lang = lang;
             utterance.pitch = pitch;
             utterance.rate = rate;
@@ -297,6 +305,8 @@
         roundCorrectFirstAttempt: 0,
         startTime: null,
         timerInterval: null,
+        transitionTimeout: null,
+        isTransitionLocked: false,
         elapsedSeconds: 0,
         targetSctSeconds: 300, // 5 min padrão
         workedExampleDismissed: false,
@@ -304,6 +314,7 @@
         // Gauntlet Kumon (Loop de Maestria 100%)
         missedItemsQueue: [],
         isGauntletPhase: false,
+        isGauntlet: false,
         gauntletCycles: 0,
         initialItemsCount: 10,
         gauntletItemsSolved: 0
@@ -1042,6 +1053,11 @@
                 this.updateSoundBtn();
                 soundBtn.addEventListener('click', () => {
                     sound.toggleMute();
+                    if (typeof window !== 'undefined' && window.speechSynthesis) {
+                        try {
+                            window.speechSynthesis.cancel();
+                        } catch (e) {}
+                    }
                     this.updateSoundBtn();
                 });
             }
@@ -1054,6 +1070,7 @@
 
             // Teclado físico do computador também funciona para conveniência
             window.addEventListener('keydown', (e) => {
+                if (Session.isTransitionLocked) return;
                 if (e.key >= '0' && e.key <= '9') {
                     sound.init();
                     sound.playClick();
@@ -1088,6 +1105,7 @@
             keypad.querySelectorAll('button[data-key]').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
+                    if (Session.isTransitionLocked) return;
                     sound.init();
                     sound.playClick();
                     const key = btn.getAttribute('data-key');
@@ -1282,6 +1300,31 @@
         },
 
         startRound() {
+            // Limpa qualquer timer pendente de transição e reseta trava
+            if (Session.transitionTimeout) {
+                clearTimeout(Session.transitionTimeout);
+                Session.transitionTimeout = null;
+            }
+            Session.isTransitionLocked = false;
+
+            // Fecha/oculta explicitamente modais que possam ter ficado abertos
+            const gModal = document.getElementById('gauntletModal');
+            if (gModal) gModal.style.display = 'none';
+            const rModal = document.getElementById('roundFinishedModal');
+            if (rModal) rModal.style.display = 'none';
+
+            // Cancela síntese de voz ativa
+            if (typeof window !== 'undefined' && window.speechSynthesis) {
+                try {
+                    window.speechSynthesis.cancel();
+                } catch (e) {}
+            }
+
+            // Limpa event listeners residuais de traçado
+            if (typeof this.cleanupTraceCanvas === 'function') {
+                this.cleanupTraceCanvas();
+            }
+
             const sub = window.KumonSubjects[Session.subjectKey];
             if (!sub) return;
             const level = sub.levels.find(l => l.id === Session.levelId) || sub.levels[0];
@@ -1299,6 +1342,7 @@
             // Reseta flags do Gauntlet Kumon (Loop de Maestria 100%)
             Session.missedItemsQueue = [];
             Session.isGauntletPhase = false;
+            Session.isGauntlet = false;
             Session.gauntletCycles = 0;
             Session.initialItemsCount = Session.items.length;
             Session.gauntletItemsSolved = 0;
@@ -1351,13 +1395,18 @@
         // 7. RENDERIZAÇÃO DO CARD DE FOCO
         // ============================================================
         renderCurrentQuestion() {
+            if (typeof this.cleanupTraceCanvas === 'function') {
+                this.cleanupTraceCanvas();
+            }
+            Session.isTransitionLocked = false;
             Session.currentInput = '';
             Session.currentAttempts = 0;
 
             const item = Session.items[Session.currentIndex];
+            if (!item) return;
             const total = Session.items.length;
             const sub = window.KumonSubjects[Session.subjectKey];
-            const level = sub.levels.find(l => l.id === Session.levelId);
+            const level = sub && sub.levels ? sub.levels.find(l => l.id === Session.levelId) : null;
 
             // Barra de progresso superior com destaque para modo Gauntlet
             const progressPercent = Math.round((Session.currentIndex / total) * 100);
@@ -1399,7 +1448,7 @@
             if (!focusContainer) return;
 
             // Controle de visibilidade do teclado numérico touch
-            const numericTypes = ['math', 'quantity', 'sequence', 'tens'];
+            const numericTypes = ['math', 'quantity', 'sequence', 'tens', 'neighbors'];
             if (keypadWrapper) {
                 if (numericTypes.includes(item.type)) {
                     keypadWrapper.style.display = '';
@@ -1684,6 +1733,7 @@
 
             container.querySelectorAll('.compare-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
+                    if (Session.isTransitionLocked) return;
                     const op = btn.getAttribute('data-op');
                     this.checkCompareAnswer(op, a, b);
                 });
@@ -1713,39 +1763,42 @@
         // Renderizador: TRAÇADO TOUCH/STYLUS (Português/Inglês P1/I1)
         renderTraceCard(item, container) {
             const char = item.char || 'A';
+            const lang = Session.subjectKey === 'ingles' ? 'en-US' : 'pt-BR';
+
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-2">
                     <div class="flex items-center gap-3 mb-2">
-                        <span class="text-sm font-bold text-slate-600">Treine o traçado da letra ou número com o dedo ou caneta stylus:</span>
-                        <button id="speakCharBtn" class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center hover:bg-blue-200 transition-colors" title="Ouvir som">
-                            <i class="fas fa-volume-up text-xs"></i>
+                        <span class="text-sm font-bold text-slate-600">Trace a letra com o dedo ou caneta stylus:</span>
+                        <button id="speakTraceBtn" class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-bold text-xs flex items-center gap-1.5 hover:bg-blue-200 transition-colors">
+                            <i class="fas fa-volume-up"></i> Ouvir Letra
                         </button>
                     </div>
 
-                    <div class="relative w-64 h-64 md:w-72 md:h-72 bg-white rounded-3xl border-4 border-slate-200 shadow-inner overflow-hidden cursor-crosshair">
-                        <!-- Letra guia pontilhada ao fundo -->
-                        <div class="absolute inset-0 flex items-center justify-center text-slate-200 font-serif font-bold text-[140px] md:text-[160px] select-none pointer-events-none opacity-40">
+                    <!-- Área de Traçado com Letra Guia de Fundo -->
+                    <div class="relative w-64 h-64 md:w-80 md:h-80 bg-slate-50 border-4 border-dashed border-blue-400 rounded-3xl shadow-inner flex items-center justify-center overflow-hidden my-2">
+                        <!-- Letra de fundo pontilhada / cinza claro -->
+                        <span class="absolute text-slate-200 font-serif font-black text-[150px] md:text-[190px] select-none pointer-events-none tracking-tighter">
                             ${char}
-                        </div>
-                        <!-- Canvas interativo de desenho -->
-                        <canvas id="traceCanvas" class="absolute inset-0 w-full h-full touch-none z-10"></canvas>
+                        </span>
+
+                        <!-- Canvas transparente para captura do traço -->
+                        <canvas id="traceCanvas" class="absolute inset-0 w-full h-full cursor-crosshair z-10 touch-none"></canvas>
                     </div>
 
-                    <div class="flex items-center gap-4 mt-4">
-                        <button id="clearTraceBtn" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors">
-                            <i class="fas fa-eraser"></i> Limpar
+                    <div class="flex items-center gap-4 mt-3">
+                        <button id="clearTraceBtn" class="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-2xl font-bold text-sm flex items-center gap-2 transition-colors active:scale-95 shadow-sm">
+                            <i class="fas fa-eraser text-slate-500"></i> Limpar
                         </button>
-                        <button id="confirmTraceBtn" class="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-black rounded-xl shadow-md flex items-center gap-2 transition-transform transform active:scale-95">
-                            <i class="fas fa-check"></i> Traçado Concluído!
+                        <button id="confirmTraceBtn" class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl font-black text-sm flex items-center gap-2 shadow-md active:scale-95 transition-all">
+                            <i class="fas fa-check"></i> Pronto! Próxima
                         </button>
                     </div>
                 </div>
             `;
 
-            const speakBtn = document.getElementById('speakCharBtn');
+            const speakBtn = document.getElementById('speakTraceBtn');
             if (speakBtn) {
                 speakBtn.addEventListener('click', () => {
-                    const lang = Session.subjectKey === 'ingles' ? 'en-US' : 'pt-BR';
                     speakWord(char, lang);
                 });
             }
@@ -1755,9 +1808,11 @@
             const clearBtn = document.getElementById('clearTraceBtn');
             if (clearBtn) {
                 clearBtn.addEventListener('click', () => {
-                    if (Session.activeCanvas) {
+                    if (Session.activeCanvas && Session.activeCanvas.getContext) {
                         const ctx = Session.activeCanvas.getContext('2d');
-                        ctx.clearRect(0, 0, Session.activeCanvas.width, Session.activeCanvas.height);
+                        if (ctx && ctx.clearRect) {
+                            ctx.clearRect(0, 0, Session.activeCanvas.width, Session.activeCanvas.height);
+                        }
                     }
                 });
             }
@@ -1765,51 +1820,67 @@
             const confirmBtn = document.getElementById('confirmTraceBtn');
             if (confirmBtn) {
                 confirmBtn.addEventListener('click', () => {
+                    if (Session.isTransitionLocked) return;
                     this.registerSuccess();
                 });
             }
         },
 
+        cleanupTraceCanvas() {
+            if (this._traceEndDrawHandler) {
+                window.removeEventListener('mouseup', this._traceEndDrawHandler);
+                window.removeEventListener('touchend', this._traceEndDrawHandler);
+                this._traceEndDrawHandler = null;
+            }
+            Session.activeCanvas = null;
+        },
+
         setupTraceCanvas() {
+            this.cleanupTraceCanvas();
             const canvas = document.getElementById('traceCanvas');
             if (!canvas) return;
             Session.activeCanvas = canvas;
-            const rect = canvas.getBoundingClientRect();
-            canvas.width = rect.width;
-            canvas.height = rect.height;
+            const rect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { width: 400, height: 300, left: 0, top: 0 };
+            canvas.width = rect.width || 400;
+            canvas.height = rect.height || 300;
 
-            const ctx = canvas.getContext('2d');
-            ctx.strokeStyle = '#2563eb'; // azul vivo
-            ctx.lineWidth = 14;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
+            const ctx = canvas.getContext ? canvas.getContext('2d') : null;
+            if (ctx) {
+                ctx.strokeStyle = '#2563eb'; // azul vivo
+                ctx.lineWidth = 14;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+            }
 
             let drawing = false;
 
             const startDraw = (e) => {
-                e.preventDefault();
+                if (e && e.preventDefault) e.preventDefault();
                 drawing = true;
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                const cRect = canvas.getBoundingClientRect();
+                if (!ctx) return;
+                const clientX = (e.touches && e.touches[0]) ? e.touches[0].clientX : (e.clientX || 0);
+                const clientY = (e.touches && e.touches[0]) ? e.touches[0].clientY : (e.clientY || 0);
+                const cRect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { left: 0, top: 0 };
                 ctx.beginPath();
-                ctx.moveTo(clientX - cRect.left, clientY - cRect.top);
+                ctx.moveTo(clientX - (cRect.left || 0), clientY - (cRect.top || 0));
             };
 
             const moveDraw = (e) => {
-                if (!drawing) return;
-                e.preventDefault();
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                const cRect = canvas.getBoundingClientRect();
-                ctx.lineTo(clientX - cRect.left, clientY - cRect.top);
+                if (!drawing || !ctx) return;
+                if (e && e.preventDefault) e.preventDefault();
+                const clientX = (e.touches && e.touches[0]) ? e.touches[0].clientX : (e.clientX || 0);
+                const clientY = (e.touches && e.touches[0]) ? e.touches[0].clientY : (e.clientY || 0);
+                const cRect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { left: 0, top: 0 };
+                ctx.lineTo(clientX - (cRect.left || 0), clientY - (cRect.top || 0));
                 ctx.stroke();
             };
 
             const endDraw = (e) => {
-                e.preventDefault();
+                if (e && e.cancelable && e.preventDefault) e.preventDefault();
                 drawing = false;
             };
+
+            this._traceEndDrawHandler = endDraw;
 
             canvas.addEventListener('mousedown', startDraw);
             canvas.addEventListener('mousemove', moveDraw);
@@ -1887,6 +1958,7 @@
 
             chipsWrapper.querySelectorAll('.syllable-chip').forEach(btn => {
                 btn.addEventListener('click', () => {
+                    if (Session.isTransitionLocked) return;
                     sound.init();
                     sound.playClick();
                     const syl = btn.getAttribute('data-syllable');
@@ -1963,6 +2035,7 @@
 
             container.querySelectorAll('.syl-choice-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
+                    if (Session.isTransitionLocked) return;
                     const chosen = btn.getAttribute('data-syl');
                     if (chosen === targetSyl) {
                         this.registerSuccess();
@@ -2031,6 +2104,7 @@
 
             container.querySelectorAll('.fraction-choice-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
+                    if (Session.isTransitionLocked) return;
                     const chosen = btn.getAttribute('data-frac');
                     if (chosen === correctFraction) {
                         this.registerSuccess();
@@ -2080,6 +2154,7 @@
 
             container.querySelectorAll('.rhyme-choice-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
+                    if (Session.isTransitionLocked) return;
                     const chosen = btn.getAttribute('data-word');
                     if (chosen === targetWord) {
                         this.registerSuccess();
@@ -2151,6 +2226,7 @@
 
             chipsWrapper.querySelectorAll('.sentence-chip').forEach(btn => {
                 btn.addEventListener('click', () => {
+                    if (Session.isTransitionLocked) return;
                     sound.init();
                     sound.playClick();
                     const chipVal = btn.getAttribute('data-chip');
@@ -2230,6 +2306,7 @@
 
             container.querySelectorAll('.opposite-choice-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
+                    if (Session.isTransitionLocked) return;
                     const chosen = btn.getAttribute('data-word');
                     if (chosen === target) {
                         this.registerSuccess();
@@ -2245,33 +2322,44 @@
         // 8. TECLADO VIRTUAL & VALIDAÇÃO DE RESPOSTAS
         // ============================================================
         handleKeypadPress(key) {
+            if (Session.isTransitionLocked) return;
             const answerBox = document.getElementById('activeAnswerBox');
             if (!answerBox) return;
 
+            if (typeof key !== 'string') {
+                if (key === null || key === undefined) key = '';
+                else key = String(key);
+            }
+
             if (key === 'backspace') {
-                Session.currentInput = Session.currentInput.slice(0, -1);
+                Session.currentInput = (Session.currentInput || '').slice(0, -1);
             } else if (key === 'clear') {
                 Session.currentInput = '';
             } else if (key === 'enter') {
                 this.validateNumericAnswer();
                 return;
-            } else if (key >= '0' && key <= '9') {
-                if (Session.currentInput.length < 4) {
-                    Session.currentInput += key;
+            } else if (key >= '0' && key <= '9' && key.length === 1) {
+                if ((Session.currentInput || '').length < 4) {
+                    Session.currentInput = (Session.currentInput || '') + key;
                 }
             }
 
-            if (Session.currentInput === '') {
+            if (!Session.currentInput || Session.currentInput === '') {
                 answerBox.innerHTML = '<span class="text-blue-300 font-light text-2xl">?</span>';
             } else {
-                answerBox.innerHTML = `<span class="text-blue-700 font-black">${Session.currentInput}</span>`;
+                const safeInput = String(Session.currentInput).replace(/[&<>"']/g, '');
+                answerBox.innerHTML = `<span class="text-blue-700 font-black">${safeInput}</span>`;
             }
         },
 
         validateNumericAnswer() {
-            if (Session.currentInput.trim() === '') return;
+            if (Session.isTransitionLocked) return;
+            if (!Session.currentInput || typeof Session.currentInput !== 'string' || Session.currentInput.trim() === '') return;
+            if (!Session.items || !Session.items[Session.currentIndex]) return;
+
             const item = Session.items[Session.currentIndex];
             const entered = parseInt(Session.currentInput, 10);
+            if (isNaN(entered) || !isFinite(entered)) return;
 
             let expected = null;
             if (item.type === 'math') {
@@ -2290,7 +2378,7 @@
                 expected = item.center - 1;
             }
 
-            if (entered === expected) {
+            if (expected !== null && entered === expected) {
                 this.registerSuccess();
             } else {
                 this.registerWrong();
@@ -2314,6 +2402,7 @@
         },
 
         checkCompareAnswer(op, a, b) {
+            if (Session.isTransitionLocked) return;
             let correctOp = '=';
             if (a > b) correctOp = '>';
             else if (a < b) correctOp = '<';
@@ -2326,14 +2415,17 @@
         },
 
         registerSuccess() {
+            if (Session.isTransitionLocked) return;
+            Session.isTransitionLocked = true;
+
             sound.playSuccess();
             this.pulseSuccessCard();
 
-            if (Session.currentAttempts === 0) {
+            if (Session.currentAttempts === 0 && !Session.isGauntletPhase && !Session.isGauntlet) {
                 Session.roundCorrectFirstAttempt++;
                 Gamification.addStars(1);
                 Gamification.registerCorrect();
-            } else if (Session.isGauntletPhase) {
+            } else if (Session.isGauntletPhase || Session.isGauntlet) {
                 // No modo gauntlet, cada acerto recuperado gera estrela de incentivo
                 Gamification.addStars(1);
                 Gamification.registerCorrect();
@@ -2348,7 +2440,12 @@
 
             this.updateGamificationHeader();
 
-            setTimeout(() => {
+            if (Session.transitionTimeout) {
+                clearTimeout(Session.transitionTimeout);
+            }
+            Session.transitionTimeout = setTimeout(() => {
+                Session.transitionTimeout = null;
+                Session.isTransitionLocked = false;
                 Session.currentIndex++;
                 if (Session.currentIndex >= Session.items.length) {
                     // Se ainda há pendências na fila do Gauntlet Kumon, inicia a fase de maestria
@@ -2402,9 +2499,15 @@
 
         // Inicia o Loop de Maestria 100% (Gauntlet Kumon)
         startGauntletPhase() {
+            if (Session.transitionTimeout) {
+                clearTimeout(Session.transitionTimeout);
+                Session.transitionTimeout = null;
+            }
+            Session.isTransitionLocked = false;
             Session.gauntletCycles++;
             const count = Session.missedItemsQueue.length;
             Session.isGauntletPhase = true;
+            Session.isGauntlet = true;
             // A nova lista passa a ser estritamente os exercícios errados
             Session.items = [...Session.missedItemsQueue];
             Session.missedItemsQueue = [];
@@ -2495,6 +2598,14 @@
         // 9. CONCLUSÃO DA RODADA & CELEBRAÇÃO
         // ============================================================
         finishRound() {
+            if (Session.transitionTimeout) {
+                clearTimeout(Session.transitionTimeout);
+                Session.transitionTimeout = null;
+            }
+            Session.isTransitionLocked = false;
+            if (typeof this.cleanupTraceCanvas === 'function') {
+                this.cleanupTraceCanvas();
+            }
             if (Session.timerInterval) clearInterval(Session.timerInterval);
             
             const isGauntletMastered = Session.gauntletCycles > 0;
@@ -2791,7 +2902,15 @@
         }
     };
 
-    // Exporta globalmente para uso na página
+    // Exporta globalmente para uso na página e testes
+    TabletPlayer.Session = Session;
+    TabletPlayer.sound = sound;
+    TabletPlayer.Gamification = Gamification;
+    TabletPlayer.MascotEngine = MascotEngine;
+    TabletPlayer.renderCard = function() {
+        Session.isTransitionLocked = false;
+        return this.renderCurrentQuestion();
+    };
     window.TabletPlayer = TabletPlayer;
 
     if (document.readyState === 'loading') {

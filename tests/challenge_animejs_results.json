@@ -1,0 +1,189 @@
+{
+  "suite1_animeBaseline": {
+    "badgeText": "Anime.js v3.2.2 CDN Ativo",
+    "mascotSwitched": false,
+    "modalFlow": true,
+    "starCountUpdated": true,
+    "benchmarkData": {
+      "testName": "KumonGen Anime.js v3.2.2 & CSS Native Animation Benchmark",
+      "milestone": "Milestone 4 (R4)",
+      "timestamp": "2026-09-06T18:45:27.987Z",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+      "durationMs": 5006,
+      "engineMode": "anime",
+      "cdnAvailable": true,
+      "fps": {
+        "instant": 120,
+        "mean": 119.66,
+        "min": 15,
+        "max": 120,
+        "stdDev": 4.88
+      },
+      "frameTimesMs": {
+        "p50": 2.7,
+        "p95": 5.7,
+        "p99": 8.4
+      },
+      "totalFrames": 1698,
+      "droppedFrames": 3,
+      "dropRatePercent": 0.18,
+      "choreographiesTested": [
+        {
+          "name": "Spring Physics Mascotes",
+          "status": "PASSED",
+          "easing": "spring(1, 80, 10, 0)"
+        },
+        {
+          "name": "Staggering Estrelas & Streaks",
+          "status": "PASSED",
+          "easing": "stagger(60, center) + easeOutExpo"
+        },
+        {
+          "name": "Transição Modal Gauntlet",
+          "status": "PASSED",
+          "easing": "anime.timeline() + spring(1, 75, 10, 0)"
+        },
+        {
+          "name": "Carga de 100 Partículas DOM",
+          "status": "PASSED",
+          "easing": "stagger(10) + easeOutExpo"
+        }
+      ],
+      "verdict": "PASSED",
+      "verdictSummary": "Taxa média de 119.66 FPS mantida durante sequência de 5 segundos sob carga contínua."
+    },
+    "errorsCount": 0
+  },
+  "suite2_cssFallbackBlockedCDN": {
+    "hasAnime": false,
+    "badgeText": "Fallback CSS Nativo (CDN Offline)",
+    "dialogHandled": true,
+    "mascotBounce": true,
+    "mascotShake": true,
+    "starsSampleStyle": {
+      "hasAnimClass": true,
+      "dx": "60px",
+      "dy": "0px",
+      "rot": "0deg"
+    },
+    "streakClass": true,
+    "starCountCss": "150",
+    "modalCssCheck": {
+      "isOpen": true,
+      "backdropHasClass": true,
+      "cardHasClass": true,
+      "crestHasClass": true
+    },
+    "isModalClosedCss": true,
+    "particleCount": 25,
+    "cssBenchmarkData": {
+      "testName": "KumonGen Anime.js v3.2.2 & CSS Native Animation Benchmark",
+      "milestone": "Milestone 4 (R4)",
+      "timestamp": "2026-09-06T18:45:35.552Z",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+      "durationMs": 5009,
+      "engineMode": "css",
+      "cdnAvailable": false,
+      "fps": {
+        "instant": 120,
+        "mean": 119.84,
+        "min": 74,
+        "max": 120,
+        "stdDev": 2.09
+      },
+      "frameTimesMs": {
+        "p50": 2.2,
+        "p95": 6.1,
+        "p99": 8.4
+      },
+      "totalFrames": 1859,
+      "droppedFrames": 0,
+      "dropRatePercent": 0,
+      "choreographiesTested": [
+        {
+          "name": "Spring Physics Mascotes",
+          "status": "PASSED",
+          "easing": "spring(1, 80, 10, 0)"
+        },
+        {
+          "name": "Staggering Estrelas & Streaks",
+          "status": "PASSED",
+          "easing": "stagger(60, center) + easeOutExpo"
+        },
+        {
+          "name": "Transição Modal Gauntlet",
+          "status": "PASSED",
+          "easing": "anime.timeline() + spring(1, 75, 10, 0)"
+        },
+        {
+          "name": "Carga de 100 Partículas DOM",
+          "status": "PASSED",
+          "easing": "stagger(10) + easeOutExpo"
+        }
+      ],
+      "verdict": "PASSED",
+      "verdictSummary": "Taxa média de 119.84 FPS mantida durante sequência de 5 segundos sob carga contínua."
+    },
+    "errorsCount": 1
+  },
+  "suite3_fpsTelemetryAccuracy": {
+    "profilerVerification": {
+      "initialHistorySize": 120,
+      "initialDropped": 0,
+      "hasCanvas": true,
+      "hasCtx": true
+    },
+    "baselineMetrics": {
+      "instant": 120,
+      "mean": 117.54,
+      "min": 10,
+      "max": 120,
+      "stdDev": 14.17,
+      "droppedFrames": 5,
+      "totalFrames": 224,
+      "frameTimesMs": {
+        "p50": 1.1,
+        "p95": 5.7,
+        "p99": 32.8
+      }
+    },
+    "jankDetectionResult": {
+      "initialDrops": 5,
+      "finalDrops": 7,
+      "dropsDelta": 2,
+      "minFps": 10,
+      "p95Delta": 5.9
+    },
+    "mathVerification": {
+      "reportedMean": 116.53,
+      "calculatedMean": 116.53,
+      "meanMatches": true,
+      "reportedMin": 10,
+      "calculatedMin": 10,
+      "minMatches": true,
+      "reportedMax": 120,
+      "calculatedMax": 120,
+      "maxMatches": true
+    },
+    "verdict": "FAILED"
+  },
+  "suite4_stressHammering": {
+    "errorsCount": 0,
+    "particleDOMResiduals": {
+      "particlesLeft": 200,
+      "text": ""
+    },
+    "status": "PASSED_ROBUST"
+  },
+  "suite5_splitMode": {
+    "badgeCard1": "Modo: Comparativo Split A/B",
+    "errorsCount": 0,
+    "status": "FAILED"
+  },
+  "consoleErrors": [
+    {
+      "suite": "suite2",
+      "error": "Failed to load resource: net::ERR_FAILED"
+    }
+  ]
+}

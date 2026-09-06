@@ -1,0 +1,225 @@
+{
+  "timestamp": "2026-09-06T18:47:52.774Z",
+  "totalTests": 33,
+  "passed": 33,
+  "failed": 0,
+  "uncaughtExceptions": 0,
+  "scenarios": [
+    {
+      "id": 1,
+      "name": "Hammering / Double-tap intenso",
+      "assertions": [
+        {
+          "name": "Trava isTransitionLocked é ativada imediatamente no 1º acerto",
+          "passed": true,
+          "details": "lock ativo em 50/50 chamadas"
+        },
+        {
+          "name": "Índice da questão não sofre salto prematuro durante o delay do lock",
+          "passed": true,
+          "details": "currentIndex=0, esperado=0"
+        },
+        {
+          "name": "Exatamente 1 questão avançou após 50 cliques de hammering (sem pular exercícios)",
+          "passed": true,
+          "details": "currentIndex=1, esperado=1"
+        },
+        {
+          "name": "Trava isTransitionLocked é liberada após conclusão da transição",
+          "passed": true,
+          "details": "isTransitionLocked=false"
+        },
+        {
+          "name": "Gauntlet inicializado com 100% de integridade (fila de itens não esvazia para array vazio)",
+          "passed": true,
+          "details": "items.length=1, item[0].operand1=5"
+        },
+        {
+          "name": "Nenhuma exceção não tratada lançada durante o hammering no Gauntlet",
+          "passed": true,
+          "details": "exceções=0"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": 2,
+      "name": "Integridade de contadores do Gauntlet",
+      "assertions": [
+        {
+          "name": "Fase Gauntlet inicia com flags isGauntlet e isGauntletPhase ativas",
+          "passed": true,
+          "details": "isGauntlet=true, isGauntletPhase=true"
+        },
+        {
+          "name": "currentAttempts é redefinido para 0 na questão do Gauntlet",
+          "passed": true,
+          "details": "currentAttempts=0"
+        },
+        {
+          "name": "roundCorrectFirstAttempt NÃO é inflado no Gauntlet mesmo acertando de primeira",
+          "passed": true,
+          "details": "roundCorrectFirstAttempt=8, esperado=8"
+        },
+        {
+          "name": "gauntletItemsSolved é incrementado corretamente no acerto do Gauntlet",
+          "passed": true,
+          "details": "gauntletItemsSolved=1"
+        },
+        {
+          "name": "Acurácia final reporta os 80% reais de 1ª tentativa (e não 100% fraudulento)",
+          "passed": true,
+          "details": "acurácia calculada=80%, esperado=80%"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": 3,
+      "name": "Exibição de Teclado M7",
+      "assertions": [
+        {
+          "name": "Nível M7 gera itens com tipo \"neighbors\"",
+          "passed": true,
+          "details": "tipo gerado=neighbors"
+        },
+        {
+          "name": "keypadWrapper permanece VISÍVEL no nível M7 (style.display !== \"none\")",
+          "passed": true,
+          "details": "keypadWrapper.style.display=\"\""
+        },
+        {
+          "name": "Entrada do antecessor registrada corretamente em Session.currentInput",
+          "passed": true,
+          "details": "currentInput=\"14\", esperado=\"14\""
+        },
+        {
+          "name": "Submissão via teclado virtual no nível M7 ativa trava de transição com sucesso",
+          "passed": true,
+          "details": "isTransitionLocked=true"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": 4,
+      "name": "Alternância a quente de matéria/nível",
+      "assertions": [
+        {
+          "name": "Timeout de transição ativo durante resolução da questão",
+          "passed": true,
+          "details": "Session.transitionTimeout ativo"
+        },
+        {
+          "name": "startRound cancela qualquer transitionTimeout pendente e destrava a sessão",
+          "passed": true,
+          "details": "isTransitionLocked=false"
+        },
+        {
+          "name": "Sessão iniciada na nova disciplina sem contaminação do índice antigo",
+          "passed": true,
+          "details": "subject=portugues, level=p2, index=0"
+        },
+        {
+          "name": "Nenhum callback órfão da matéria anterior avançou o índice na matéria nova",
+          "passed": true,
+          "details": "currentIndex=0, esperado=0"
+        },
+        {
+          "name": "startRound oculta explicitamente gauntletModal aberto (display=\"none\")",
+          "passed": true,
+          "details": "gauntletModal.style.display=\"none\""
+        },
+        {
+          "name": "startRound oculta explicitamente roundFinishedModal aberto (display=\"none\")",
+          "passed": true,
+          "details": "roundFinishedModal.style.display=\"none\""
+        },
+        {
+          "name": "startRound cancela qualquer síntese de voz ativa no navegador",
+          "passed": true,
+          "details": "speechSynthesis.cancelledCount=4"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": 5,
+      "name": "Mute/unmute repentino",
+      "assertions": [
+        {
+          "name": "0 exceções durante reprodução e alternância rápida de 100 ciclos de áudio",
+          "passed": true,
+          "details": "exceções=0"
+        },
+        {
+          "name": "speechSynthesis.cancel() foi invocado durante os ciclos de mute",
+          "passed": true,
+          "details": "cancelamentos=301"
+        },
+        {
+          "name": "SoundEngine mantém estado consistente de mute",
+          "passed": true,
+          "details": "sound.muted=false"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": 6,
+      "name": "Entradas atípicas e limites",
+      "assertions": [
+        {
+          "name": "handleKeypadPress não lança exceção para nenhuma das 19 entradas atípicas",
+          "passed": true,
+          "details": "falhas=0"
+        },
+        {
+          "name": "validateNumericAnswer não quebra com entradas atípicas/maliciosas",
+          "passed": true,
+          "details": "falhas=0"
+        },
+        {
+          "name": "checkCompareAnswer trata operadores inválidos sem lançar erro",
+          "passed": true,
+          "details": "falhas=0"
+        },
+        {
+          "name": "solveSequenceHole devolve número válido em todas as sequências anômalas",
+          "passed": true,
+          "details": "falhas=0"
+        },
+        {
+          "name": "MascotEngine.speak tolera textos nulos, vazios e strings longas (>500 chars)",
+          "passed": true,
+          "details": "falhas=0"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": 7,
+      "name": "Limpeza de listeners de traçado",
+      "assertions": [
+        {
+          "name": "Listeners de mouseup em window não se acumulam em rodadas sucessivas (sem leak)",
+          "passed": true,
+          "details": "inicial=0, final=0"
+        },
+        {
+          "name": "Listeners de touchend em window não se acumulam em rodadas sucessivas (sem leak)",
+          "passed": true,
+          "details": "inicial=0, final=0"
+        },
+        {
+          "name": "cleanupTraceCanvas remove os listeners globais ao sair para outra disciplina",
+          "passed": true,
+          "details": "mouseup=0, touchend=0"
+        }
+      ],
+      "passed": true
+    }
+  ],
+  "durationMs": 3940.71,
+  "status": "PASSED"
+}
