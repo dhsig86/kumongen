@@ -38,6 +38,18 @@
                 title: 'P6 · Dígrafos',
                 type: 'syllables',
                 instruction: 'Treine as sílabas com dígrafos.'
+            },
+            {
+                id: 'p7',
+                title: 'P7 · Rimas & Sons Finais',
+                type: 'rhyme',
+                instruction: 'Encontre a palavra que rima.'
+            },
+            {
+                id: 'p8',
+                title: 'P8 · Frases Curtas',
+                type: 'sentence',
+                instruction: 'Ordene as palavras para formar a frase.'
             }
         ]
     };
@@ -240,6 +252,34 @@
         { word: 'TARTARUGA', parts: ['TAR','TA','RU','GA'] }
     ];
 
+    const DEFAULT_RHYMES_P7 = [
+        { word: 'GATO', target: 'PATO', options: ['PATO', 'BOLO', 'MESA'], rhymeEnding: 'ATO' },
+        { word: 'BOLA', target: 'MOLA', options: ['MOLA', 'DADO', 'GIRAFA'], rhymeEnding: 'OLA' },
+        { word: 'MÃO', target: 'PÃO', options: ['PÃO', 'LUVA', 'TATU'], rhymeEnding: 'ÃO' },
+        { word: 'COELHO', target: 'ESPELHO', options: ['ESPELHO', 'JANELA', 'RATO'], rhymeEnding: 'ELHO' },
+        { word: 'PANELA', target: 'JANELA', options: ['JANELA', 'SAPATO', 'BONECO'], rhymeEnding: 'ELA' },
+        { word: 'CORAÇÃO', target: 'BALÃO', options: ['BALÃO', 'CANETA', 'CACHORRO'], rhymeEnding: 'ÃO' },
+        { word: 'CHUVA', target: 'UVA', options: ['UVA', 'BANANA', 'BODE'], rhymeEnding: 'UVA' },
+        { word: 'SAPATO', target: 'RATO', options: ['RATO', 'CABELO', 'FOGO'], rhymeEnding: 'ATO' },
+        { word: 'FLOR', target: 'AMOR', options: ['AMOR', 'PEIXE', 'DENTE'], rhymeEnding: 'OR' },
+        { word: 'DADO', target: 'CADEADO', options: ['CADEADO', 'PIPOCA', 'LEÃO'], rhymeEnding: 'ADO' },
+        { word: 'DENTE', target: 'PRESENTE', options: ['PRESENTE', 'GELADO', 'SUCO'], rhymeEnding: 'ENTE' },
+        { word: 'LATA', target: 'BATA', options: ['BATA', 'COPO', 'SINO'], rhymeEnding: 'ATA' }
+    ];
+
+    const DEFAULT_SENTENCES_P8 = [
+        { sentence: 'O GATO BEBE LEITE', parts: ['O GATO', 'BEBE', 'LEITE'] },
+        { sentence: 'A BOLA É AZUL', parts: ['A BOLA', 'É', 'AZUL'] },
+        { sentence: 'O CACHORRO LATIU ALTO', parts: ['O CACHORRO', 'LATIU', 'ALTO'] },
+        { sentence: 'A MENINA COMEU MAÇÃ', parts: ['A MENINA', 'COMEU', 'MAÇÃ'] },
+        { sentence: 'O SOL BRILHA NO CÉU', parts: ['O SOL', 'BRILHA', 'NO CÉU'] },
+        { sentence: 'O SAPO PULA NA LAGOA', parts: ['O SAPO', 'PULA', 'NA LAGOA'] },
+        { sentence: 'EU GOSTO DE DESENHAR', parts: ['EU GOSTO', 'DE', 'DESENHAR'] },
+        { sentence: 'O PASSARINHO CANTA FELIZ', parts: ['O PASSARINHO', 'CANTA', 'FELIZ'] },
+        { sentence: 'O PEIXE NADA NO RIO', parts: ['O PEIXE', 'NADA', 'NO RIO'] },
+        { sentence: 'O LIVRO TEM HISTÓRIAS', parts: ['O LIVRO', 'TEM', 'HISTÓRIAS'] }
+    ];
+
     // ---------- FUNÇÕES DE GERAÇÃO DE ITENS ----------
     function generateItemsForLevel(level, count) {
         if (!level) return [];
@@ -294,6 +334,30 @@
                 break;
             }
 
+            case 'rhyme': {
+                DEFAULT_RHYMES_P7.forEach(rh => {
+                    baseItems.push({
+                        type: 'rhyme',
+                        word: rh.word,
+                        target: rh.target,
+                        options: [...rh.options],
+                        rhymeEnding: rh.rhymeEnding
+                    });
+                });
+                break;
+            }
+
+            case 'sentence': {
+                DEFAULT_SENTENCES_P8.forEach(st => {
+                    baseItems.push({
+                        type: 'sentence',
+                        sentence: st.sentence,
+                        parts: [...st.parts]
+                    });
+                });
+                break;
+            }
+
             default:
                 return Array(target).fill({ type: 'unknown' });
         }
@@ -304,6 +368,8 @@
             if (item.type === 'trace') return item.char;
             if (item.type === 'syllable') return item.syllable;
             if (item.type === 'word') return item.word;
+            if (item.type === 'rhyme') return item.word;
+            if (item.type === 'sentence') return item.sentence;
             return '';
         };
 

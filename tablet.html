@@ -129,7 +129,46 @@
     <div id="mascotPickerModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:45;background:rgba(2,6,23,0.85);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:1rem">
         <!-- Injetado dinamicamente via JS -->
     </div>
-    <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 px-3 md:px-6 py-2.5 flex items-center justify-between flex-shrink-0 z-30">
+
+    <!-- MODAL: SELETOR VISUAL TOUCH-FIRST DE NÍVEIS -->
+    <div id="levelPickerModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:60;background:rgba(2,6,23,0.85);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:1rem">
+        <div class="bg-slate-900 border-2 border-slate-700 rounded-3xl max-w-lg w-full p-5 md:p-6 shadow-2xl flex flex-col max-h-[85vh] text-white">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4 flex-shrink-0">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-2xl bg-blue-600/20 text-blue-400 flex items-center justify-center text-lg shadow-inner">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-black text-white text-base leading-tight">Escolha o Desafio</h3>
+                        <p class="text-[11px] text-slate-400">25 Níveis Curriculares Kumon</p>
+                    </div>
+                </div>
+                <button id="closeLevelPickerBtn" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Tabs de Matérias Touch-Friendly -->
+            <div class="grid grid-cols-3 gap-2 mb-3 flex-shrink-0">
+                <button type="button" class="level-tab-btn py-2.5 rounded-2xl font-black text-xs md:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-blue-600 text-white shadow" data-subject="matematica">
+                    <span>Matemática</span>
+                </button>
+                <button type="button" class="level-tab-btn py-2.5 rounded-2xl font-black text-xs md:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-slate-800 text-slate-400 hover:bg-slate-700" data-subject="portugues">
+                    <span>Português</span>
+                </button>
+                <button type="button" class="level-tab-btn py-2.5 rounded-2xl font-black text-xs md:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-slate-800 text-slate-400 hover:bg-slate-700" data-subject="ingles">
+                    <span>Inglês</span>
+                </button>
+            </div>
+
+            <!-- Grade de Níveis com scroll suave -->
+            <div id="levelPickerGrid" class="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                <!-- Injetado dinamicamente via JS -->
+            </div>
+        </div>
+    </div>
+
+    <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 px-3 md:px-6 py-2.5 flex items-center justify-between flex-shrink-0 z-50">
         <!-- Lado Esquerdo: Voltar + Seletor de Matéria e Nível -->
         <div class="flex items-center gap-2 md:gap-3">
             <a href="index.html" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors" title="Voltar ao início">
@@ -141,17 +180,22 @@
                     <i class="fas fa-tablet-alt mr-1"></i> TABLET
                 </span>
 
-                <!-- Seletor de Matéria -->
-                <select id="subjectSelect" class="bg-slate-800 border border-slate-700 text-white text-xs md:text-sm font-bold rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-blue-500">
-                    <option value="matematica">Matemática</option>
-                    <option value="portugues">Português</option>
-                    <option value="ingles">Inglês</option>
-                </select>
+                <!-- Botão Seletor Visual de Nível Touch-First -->
+                <button type="button" id="openLevelPickerBtn" class="bg-slate-800 hover:bg-slate-700/90 border border-slate-700 hover:border-blue-500/60 text-white text-xs md:text-sm font-bold rounded-xl px-2.5 md:px-3 py-1.5 flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95">
+                    <span id="pickerSubjectDot" class="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm flex-shrink-0"></span>
+                    <span id="pickerLevelTitle" class="truncate max-w-[120px] sm:max-w-[160px] md:max-w-[200px] text-slate-100 font-black">M1 · Quantidade</span>
+                    <i class="fas fa-chevron-down text-[9px] text-slate-400"></i>
+                </button>
 
-                <!-- Seletor de Nível -->
-                <select id="levelSelect" class="bg-slate-800 border border-slate-700 text-white text-xs md:text-sm font-bold rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-blue-500 max-w-[140px] md:max-w-xs truncate">
-                    <!-- Preenchido dinamicamente via JS -->
-                </select>
+                <!-- Selects nativos mantidos ocultos/sincronizados para compatibilidade de automação -->
+                <div class="hidden">
+                    <select id="subjectSelect">
+                        <option value="matematica">Matemática</option>
+                        <option value="portugues">Português</option>
+                        <option value="ingles">Inglês</option>
+                    </select>
+                    <select id="levelSelect"></select>
+                </div>
             </div>
         </div>
 
@@ -280,13 +324,14 @@
     </main>
     <!-- SCRIPTS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="student-profiles.js?v=3.8.4"></script>
-    <script src="gerador.js?v=3.8.3"></script>
-    <script src="content-pool.js?v=3.8.3"></script>
-    <script src="matematica.js?v=3.8.3"></script>
-    <script src="portugues.js?v=3.8.3"></script>
-    <script src="ingles.js?v=3.8.3"></script>
-    <script src="tablet-player.js?v=3.8.3"></script>
+    <script src="student-profiles.js?v=3.9.0"></script>
+    <script src="gerador.js?v=3.9.0"></script>
+    <script src="content-pool.js?v=3.9.0"></script>
+    <script src="matematica.js?v=3.9.0"></script>
+    <script src="portugues.js?v=3.9.0"></script>
+    <script src="ingles.js?v=3.9.0"></script>
+    <script src="tablet-player.js?v=3.9.0"></script>
+    <script src="nav-dock.js?v=3.9.0"></script>
 
     <!-- Debug inteligente: ignora erros de extensões e só exibe banner visual se ?debug=1 estiver na URL -->
     <script>

@@ -31,6 +31,18 @@
                 title: 'I5 · CVCe (Magic E)',
                 type: 'wordbuilding',
                 instruction: 'Palavras com E mudo que muda a vogal.'
+            },
+            {
+                id: 'i6',
+                title: 'I6 · Simple Sentences',
+                type: 'sentence',
+                instruction: 'Put the words in order to form the sentence.'
+            },
+            {
+                id: 'i7',
+                title: 'I7 · Opposites',
+                type: 'opposite',
+                instruction: 'Find the opposite word.'
             }
         ]
     };
@@ -196,6 +208,32 @@
         { word: 'MADE', parts: ['M','A','DE'] }
     ];
 
+    const DEFAULT_SENTENCES_I6 = [
+        { sentence: 'I SEE A CAT', parts: ['I SEE', 'A CAT'] },
+        { sentence: 'THE DOG IS BIG', parts: ['THE DOG', 'IS', 'BIG'] },
+        { sentence: 'I LIKE RED APPLES', parts: ['I LIKE', 'RED', 'APPLES'] },
+        { sentence: 'THE SUN IS HOT', parts: ['THE SUN', 'IS', 'HOT'] },
+        { sentence: 'SHE HAS A DOLL', parts: ['SHE HAS', 'A', 'DOLL'] },
+        { sentence: 'WE PLAY IN THE PARK', parts: ['WE PLAY', 'IN THE', 'PARK'] },
+        { sentence: 'HE CAN RUN FAST', parts: ['HE CAN', 'RUN', 'FAST'] },
+        { sentence: 'THE BIRD CAN FLY', parts: ['THE BIRD', 'CAN', 'FLY'] },
+        { sentence: 'LOOK AT THE MOON', parts: ['LOOK AT', 'THE', 'MOON'] },
+        { sentence: 'THIS IS MY BOOK', parts: ['THIS IS', 'MY', 'BOOK'] }
+    ];
+
+    const DEFAULT_OPPOSITES_I7 = [
+        { word: 'BIG', target: 'SMALL', options: ['SMALL', 'HOT', 'RED'], icon: '🐘 / 🐭' },
+        { word: 'HOT', target: 'COLD', options: ['COLD', 'FAST', 'SUN'], icon: '🔥 / ❄️' },
+        { word: 'HAPPY', target: 'SAD', options: ['SAD', 'BIG', 'BLUE'], icon: '😊 / 😢' },
+        { word: 'UP', target: 'DOWN', options: ['DOWN', 'IN', 'OUT'], icon: '⬆️ / ⬇️' },
+        { word: 'DAY', target: 'NIGHT', options: ['NIGHT', 'RAIN', 'MOON'], icon: '☀️ / 🌙' },
+        { word: 'FAST', target: 'SLOW', options: ['SLOW', 'COLD', 'RUN'], icon: '🏎️ / 🐢' },
+        { word: 'OPEN', target: 'CLOSED', options: ['CLOSED', 'BOX', 'DOOR'], icon: '📖 / 📕' },
+        { word: 'IN', target: 'OUT', options: ['OUT', 'ON', 'OFF'], icon: '📥 / 📤' },
+        { word: 'HARD', target: 'SOFT', options: ['SOFT', 'ROCK', 'TALL'], icon: '🪨 / 🧸' },
+        { word: 'TALL', target: 'SHORT', options: ['SHORT', 'LITTLE', 'TREE'], icon: '🦒 / 🦔' }
+    ];
+
     let customParams = {
         traceSelected: [],
         traceRepeat: 2,
@@ -250,6 +288,30 @@
                 break;
             }
 
+            case 'sentence': {
+                DEFAULT_SENTENCES_I6.forEach(st => {
+                    baseItems.push({
+                        type: 'sentence',
+                        sentence: st.sentence,
+                        parts: [...st.parts]
+                    });
+                });
+                break;
+            }
+
+            case 'opposite': {
+                DEFAULT_OPPOSITES_I7.forEach(op => {
+                    baseItems.push({
+                        type: 'opposite',
+                        word: op.word,
+                        target: op.target,
+                        options: [...op.options],
+                        icon: op.icon
+                    });
+                });
+                break;
+            }
+
             default:
                 return Array(target).fill({ type: 'unknown' });
         }
@@ -259,6 +321,8 @@
         const keyFn = (item) => {
             if (item.type === 'trace') return item.char;
             if (item.type === 'word') return item.word;
+            if (item.type === 'sentence') return item.sentence;
+            if (item.type === 'opposite') return item.word;
             return '';
         };
 

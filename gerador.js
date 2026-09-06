@@ -58,7 +58,16 @@ const KumonGen = (function() {
                 if (item.operator === '+') return item.operand1 + item.operand2;
                 if (item.operator === '-') return item.operand1 - item.operand2;
                 if (item.operator === '×' || item.operator === '*') return item.operand1 * item.operand2;
+                if (item.operator === '÷' || item.operator === '/') return item.operand2 !== 0 ? Math.floor(item.operand1 / item.operand2) : 0;
                 return '';
+            case 'fraction':
+                return `${item.numerator}/${item.denominator}`;
+            case 'rhyme':
+                return item.target || item.rhyme || '';
+            case 'sentence':
+                return item.sentence || (item.parts ? item.parts.join(' ') : '');
+            case 'opposite':
+                return item.target || item.opposite || '';
             case 'quantity':
                 return item.value;
             case 'sequence':
@@ -189,6 +198,42 @@ const KumonGen = (function() {
                 <div class="flex flex-col items-center my-4">
                     <label class="text-xs font-bold text-slate-500 mb-1.5">Sílaba para treino:</label>
                     <input type="text" id="editSyllable" maxlength="4" value="${item.syllable}" class="w-28 text-center text-3xl font-black uppercase bg-slate-100 border-2 border-slate-300 rounded-2xl p-2">
+                </div>
+            `;
+        } else if (item.type === 'fraction') {
+            fieldsHtml = `
+                <div class="flex flex-col items-center my-4">
+                    <label class="text-xs font-bold text-slate-500 mb-2">Fração (Numerador / Denominador):</label>
+                    <div class="flex items-center gap-3">
+                        <input type="number" id="editFractionNum" min="1" max="10" value="${item.numerator}" class="w-20 text-center text-2xl font-black bg-slate-100 border-2 border-slate-300 rounded-2xl p-2">
+                        <span class="text-2xl font-black text-slate-400">/</span>
+                        <input type="number" id="editFractionDen" min="2" max="12" value="${item.denominator}" class="w-20 text-center text-2xl font-black bg-slate-100 border-2 border-slate-300 rounded-2xl p-2">
+                    </div>
+                </div>
+            `;
+        } else if (item.type === 'rhyme') {
+            fieldsHtml = `
+                <div class="flex flex-col my-4">
+                    <label class="text-xs font-bold text-slate-500 mb-1">Palavra base:</label>
+                    <input type="text" id="editRhymeWord" value="${item.word || ''}" class="w-full text-center text-xl font-black uppercase bg-slate-100 border-2 border-slate-300 rounded-xl p-2 mb-2">
+                    <label class="text-xs font-bold text-slate-500 mb-1">Rima correta:</label>
+                    <input type="text" id="editRhymeTarget" value="${item.target || ''}" class="w-full text-center text-xl font-black uppercase bg-slate-100 border-2 border-slate-300 rounded-xl p-2">
+                </div>
+            `;
+        } else if (item.type === 'sentence') {
+            fieldsHtml = `
+                <div class="flex flex-col my-4">
+                    <label class="text-xs font-bold text-slate-500 mb-1">Frase:</label>
+                    <input type="text" id="editSentence" value="${item.sentence || ''}" class="w-full text-center text-base font-bold uppercase bg-slate-100 border-2 border-slate-300 rounded-xl p-3">
+                </div>
+            `;
+        } else if (item.type === 'opposite') {
+            fieldsHtml = `
+                <div class="flex flex-col my-4">
+                    <label class="text-xs font-bold text-slate-500 mb-1">Palavra:</label>
+                    <input type="text" id="editOppositeWord" value="${item.word || ''}" class="w-full text-center text-xl font-black uppercase bg-slate-100 border-2 border-slate-300 rounded-xl p-2 mb-2">
+                    <label class="text-xs font-bold text-slate-500 mb-1">Oposto correto:</label>
+                    <input type="text" id="editOppositeTarget" value="${item.target || ''}" class="w-full text-center text-xl font-black uppercase bg-slate-100 border-2 border-slate-300 rounded-xl p-2">
                 </div>
             `;
         } else {
@@ -324,6 +369,33 @@ const KumonGen = (function() {
                 } else if (item.type === 'syllable') {
                     const syl = modal.querySelector('#editSyllable').value.trim().toUpperCase();
                     if (syl) item.syllable = syl;
+                } else if (item.type === 'fraction') {
+                    const n = parseInt(modal.querySelector('#editFractionNum').value, 10);
+                    const d = parseInt(modal.querySelector('#editFractionDen').value, 10);
+                    if (!isNaN(n) && !isNaN(d) && d > 0) {
+                        item.numerator = Math.min(n, d);
+                        item.denominator = d;
+                    }
+                } else if (item.type === 'rhyme') {
+                    const w = modal.querySelector('#editRhymeWord').value.trim().toUpperCase();
+                    const t = modal.querySelector('#editRhymeTarget').value.trim().toUpperCase();
+                    if (w && t) {
+                        item.word = w;
+                        item.target = t;
+                    }
+                } else if (item.type === 'sentence') {
+                    const s = modal.querySelector('#editSentence').value.trim().toUpperCase();
+                    if (s) {
+                        item.sentence = s;
+                        item.parts = s.split(' ');
+                    }
+                } else if (item.type === 'opposite') {
+                    const w = modal.querySelector('#editOppositeWord').value.trim().toUpperCase();
+                    const t = modal.querySelector('#editOppositeTarget').value.trim().toUpperCase();
+                    if (w && t) {
+                        item.word = w;
+                        item.target = t;
+                    }
                 }
 
                 modal.remove();
@@ -538,6 +610,36 @@ const KumonGen = (function() {
                         content.innerHTML = `<span class="example-badge">EXEMPLO</span> <div class="flex items-center gap-0.5">${partsHtml}</div> <span class="example-answer ml-2">${wordAns}</span>`;
                     } else {
                         content.innerHTML = `<div class="flex items-center gap-0.5">${partsHtml}</div> <span class="w-16 border-b-4 border-double border-slate-400 ml-2"></span>`;
+                    }
+                    break;
+                case 'fraction':
+                    if (isWorkedExample) {
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="inline-flex flex-col items-center justify-center font-black text-sm leading-tight border border-slate-300 rounded px-1.5 py-0.5 bg-slate-50"><span class="border-b border-slate-700 w-full text-center">${item.numerator}</span><span>${item.denominator}</span></span> <span class="text-xs text-slate-500 font-medium ml-1">(${item.numerator} de ${item.denominator})</span> <span class="example-answer ml-auto">${item.numerator}/${item.denominator}</span>`;
+                    } else {
+                        content.innerHTML = `<span class="inline-flex flex-col items-center justify-center font-black text-sm leading-tight border border-slate-300 rounded px-1.5 py-0.5 bg-slate-50"><span class="border-b border-slate-700 w-full text-center">${item.numerator}</span><span>${item.denominator}</span></span> <span class="text-[11px] text-slate-400 ml-1">pinte / represente</span> <span class="answer-line ml-auto w-14"></span>`;
+                    }
+                    break;
+                case 'rhyme':
+                    if (isWorkedExample) {
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-xs text-slate-500">Rima com</span> <span class="font-black text-indigo-700 bg-indigo-50 px-1 border rounded text-xs">${item.word}</span> <span class="text-xs text-slate-400">→</span> <span class="example-answer font-bold text-xs">${item.target}</span>`;
+                    } else {
+                        const opts = Array.isArray(item.options) ? item.options.join(' · ') : '';
+                        content.innerHTML = `<span class="text-xs text-slate-500">Rima com</span> <span class="font-bold text-slate-800 bg-slate-100 px-1 border rounded text-xs">${item.word}</span> <span class="text-[10px] text-slate-400">(${opts})</span> <span class="answer-line ml-auto w-14"></span>`;
+                    }
+                    break;
+                case 'sentence':
+                    if (isWorkedExample) {
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-xs font-black text-slate-700 tracking-wide">${item.sentence}</span> <span class="example-answer ml-auto text-[11px]">${item.sentence}</span>`;
+                    } else {
+                        content.innerHTML = `<div class="flex flex-col w-full gap-0.5"><span class="text-xs font-bold text-slate-800 tracking-wide">${item.sentence}</span><span class="w-full border-b border-dotted border-slate-300 h-3"></span></div>`;
+                    }
+                    break;
+                case 'opposite':
+                    if (isWorkedExample) {
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-xs text-slate-500">Opposite of</span> <span class="font-black text-purple-700 bg-purple-50 px-1 border rounded text-xs">${item.word}</span> <span class="text-xs text-slate-400">→</span> <span class="example-answer font-bold text-xs">${item.target}</span>`;
+                    } else {
+                        const opts = Array.isArray(item.options) ? item.options.join(' · ') : '';
+                        content.innerHTML = `<span class="text-xs text-slate-500">Opposite:</span> <span class="font-bold text-slate-800 bg-slate-100 px-1 border rounded text-xs">${item.word}</span> <span class="text-[10px] text-slate-400">(${opts})</span> <span class="answer-line ml-auto w-14"></span>`;
                     }
                     break;
                 default:

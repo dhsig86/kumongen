@@ -1,5 +1,5 @@
 // KumonGen Service Worker
-const CACHE_NAME = 'kumongen-v3.8.4';
+const CACHE_NAME = 'kumongen-v3.9.0';
 
 const APP_SHELL = [
   './index.html',
@@ -9,6 +9,7 @@ const APP_SHELL = [
   './tablet.html',
   './tablet-player.js',
   './student-profiles.js',
+  './nav-dock.js',
   './kumon.css',
   './tailwind.min.css',
   './gerador.js',

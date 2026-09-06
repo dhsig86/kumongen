@@ -10,7 +10,9 @@
             { id: 'm5', title: 'M5 · Comparação', type: 'compare', pairs: [[3,5],[7,2],[4,4],[6,9],[1,8],[5,5],[10,3],[2,7],[8,6],[9,1],[3,3],[6,4]], instruction: 'Circule o maior (ou igual).' },
             { id: 'm6', title: 'M6 · Subtração', type: 'math', operator: '-', operand: 1, range: [2,10], instruction: 'Resolva as subtrações.' },
             { id: 'm7', title: 'M7 · Vizinhos', type: 'neighbors', centers: [3,5,7,10,12,15,18,20,25,30,42,50], instruction: 'Escreva o antes e depois.' },
-            { id: 'm8', title: 'M8 · Multiplicação', type: 'math', operator: '×', operand: 2, range: [1,10], instruction: 'Resolva as multiplicações.' }
+            { id: 'm8', title: 'M8 · Multiplicação', type: 'math', operator: '×', operand: 2, range: [1,10], instruction: 'Resolva as multiplicações.' },
+            { id: 'm9', title: 'M9 · Divisão', type: 'math', operator: '÷', operand: 2, range: [2,20], instruction: 'Resolva as divisões exatas.' },
+            { id: 'm10', title: 'M10 · Frações', type: 'fraction', fractions: [[1,2],[1,3],[2,3],[1,4],[2,4],[3,4],[1,5],[2,5],[3,5],[4,5]], instruction: 'Identifique a fração correspondente.' }
         ]
     };
 
@@ -92,6 +94,21 @@
                 const minVal = (isLevelActive && customParams.min !== undefined) ? customParams.min : ((level.range && level.range[0] !== undefined) ? level.range[0] : 1);
                 const maxVal = (isLevelActive && customParams.max !== undefined) ? customParams.max : ((level.range && level.range[1] !== undefined) ? level.range[1] : 10);
 
+                if (op === '÷' || op === '/') {
+                    const divisor = Math.max(1, op2 || 2);
+                    for (let i = 0; i < target; i++) {
+                        const quotient = Math.floor(Math.random() * 10) + 1;
+                        const dividend = divisor * quotient;
+                        baseItems.push({
+                            type: 'math',
+                            operand1: dividend,
+                            operator: '÷',
+                            operand2: divisor
+                        });
+                    }
+                    return baseItems;
+                }
+
                 let lastA = null;
                 for (let i = 0; i < target; i++) {
                     let a;
@@ -115,6 +132,18 @@
                     });
                 }
                 return baseItems;
+
+            case 'fraction': {
+                const fractionPool = level.fractions || [[1,2],[1,3],[2,3],[1,4],[2,4],[3,4],[1,5],[2,5],[3,5],[4,5]];
+                fractionPool.forEach(fr => {
+                    baseItems.push({
+                        type: 'fraction',
+                        numerator: fr[0],
+                        denominator: fr[1]
+                    });
+                });
+                break;
+            }
 
             case 'sequence':
                 if (customParams.seqFixed) {
@@ -201,6 +230,7 @@
             if (item.type === 'tens') return item.number;
             if (item.type === 'compare') return item.pair.join(',');
             if (item.type === 'neighbors') return item.center;
+            if (item.type === 'fraction') return `${item.numerator}/${item.denominator}`;
             return '';
         };
 
@@ -255,7 +285,7 @@
     function renderMathPanel() {
         return `
             <div class="param-control">
-                <div class="param-row"><label>Operador:</label><select id="mathOperator"><option value="+" ${customParams.operator === '+' ? 'selected' : ''}>+</option><option value="-" ${customParams.operator === '-' ? 'selected' : ''}>-</option><option value="×" ${customParams.operator === '×' ? 'selected' : ''}>×</option></select></div>
+                <div class="param-row"><label>Operador:</label><select id="mathOperator"><option value="+" ${customParams.operator === '+' ? 'selected' : ''}>+</option><option value="-" ${customParams.operator === '-' ? 'selected' : ''}>-</option><option value="×" ${customParams.operator === '×' ? 'selected' : ''}>×</option><option value="÷" ${customParams.operator === '÷' ? 'selected' : ''}>÷</option></select></div>
                 <div class="param-row"><label>Valor:</label><input type="number" id="mathOperand" value="${customParams.operand}" min="1" max="20"></div>
                 <div class="param-row"><label>Mínimo:</label><input type="number" id="mathMin" value="${customParams.min}" min="1" max="50"></div>
                 <div class="param-row"><label>Máximo:</label><input type="number" id="mathMax" value="${customParams.max}" min="1" max="50"></div>

@@ -882,6 +882,32 @@
                 });
             }
 
+            // Seletor visual touch-first de níveis (Modal)
+            const openPickerBtn = document.getElementById('openLevelPickerBtn');
+            if (openPickerBtn) {
+                openPickerBtn.addEventListener('click', () => this.showLevelPickerModal());
+            }
+
+            const closePickerBtn = document.getElementById('closeLevelPickerBtn');
+            if (closePickerBtn) {
+                closePickerBtn.addEventListener('click', () => this.closeLevelPickerModal());
+            }
+
+            const pickerModal = document.getElementById('levelPickerModal');
+            if (pickerModal) {
+                pickerModal.addEventListener('click', (e) => {
+                    if (e.target === pickerModal) this.closeLevelPickerModal();
+                });
+            }
+
+            // Tabs do modal de níveis
+            document.querySelectorAll('.level-tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetSub = btn.getAttribute('data-subject');
+                    this.switchLevelPickerTab(targetSub);
+                });
+            });
+
             // Seletor de Perfil do Aluno (Múltiplos Perfis)
             const nameBtn = document.getElementById('studentNameBtn');
             if (nameBtn) {
@@ -1071,6 +1097,104 @@
             if (!levelExists && sub.levels.length > 0) {
                 Session.levelId = sub.levels[0].id;
             }
+
+            // Atualiza o botão visual touch-first no header
+            const curLevel = sub.levels.find(l => l.id === Session.levelId) || sub.levels[0];
+            const titleEl = document.getElementById('pickerLevelTitle');
+            const dotEl = document.getElementById('pickerSubjectDot');
+            if (titleEl && curLevel) {
+                titleEl.innerText = curLevel.title;
+            }
+            if (dotEl) {
+                if (Session.subjectKey === 'matematica') dotEl.className = 'w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm flex-shrink-0';
+                else if (Session.subjectKey === 'portugues') dotEl.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm flex-shrink-0';
+                else if (Session.subjectKey === 'ingles') dotEl.className = 'w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm flex-shrink-0';
+            }
+        },
+
+        showLevelPickerModal() {
+            const modal = document.getElementById('levelPickerModal');
+            if (!modal) return;
+            const wModal = document.getElementById('workedExampleModal');
+            if (wModal) wModal.style.display = 'none';
+            this.switchLevelPickerTab(Session.subjectKey);
+            modal.style.display = 'flex';
+        },
+
+        closeLevelPickerModal() {
+            const modal = document.getElementById('levelPickerModal');
+            if (modal) modal.style.display = 'none';
+        },
+
+        switchLevelPickerTab(subjectKey) {
+            document.querySelectorAll('.level-tab-btn').forEach(btn => {
+                const isCurrent = btn.getAttribute('data-subject') === subjectKey;
+                if (isCurrent) {
+                    let activeBg = 'bg-blue-600 text-white shadow';
+                    if (subjectKey === 'portugues') activeBg = 'bg-emerald-600 text-white shadow';
+                    else if (subjectKey === 'ingles') activeBg = 'bg-red-600 text-white shadow';
+                    btn.className = `level-tab-btn py-2.5 rounded-2xl font-black text-xs md:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${activeBg}`;
+                } else {
+                    btn.className = 'level-tab-btn py-2.5 rounded-2xl font-black text-xs md:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-slate-800 text-slate-400 hover:bg-slate-700';
+                }
+            });
+
+            this.renderLevelPickerGrid(subjectKey);
+        },
+
+        renderLevelPickerGrid(subjectKey) {
+            const grid = document.getElementById('levelPickerGrid');
+            if (!grid || !window.KumonSubjects) return;
+
+            const sub = window.KumonSubjects[subjectKey];
+            if (!sub || !sub.levels) return;
+
+            grid.innerHTML = sub.levels.map(lvl => {
+                const isSelected = (subjectKey === Session.subjectKey && lvl.id === Session.levelId);
+                const activeCardClasses = isSelected
+                    ? 'bg-blue-600/25 border-blue-500 text-white shadow-md'
+                    : 'bg-slate-800/60 border-slate-700/60 hover:bg-slate-800 text-slate-300';
+                const badgeClasses = isSelected
+                    ? 'bg-blue-500 text-white shadow'
+                    : 'bg-slate-700 text-slate-300';
+
+                return `
+                    <button type="button" class="level-card-btn w-full p-3 md:p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between text-left cursor-pointer active:scale-98 ${activeCardClasses}" data-subject="${subjectKey}" data-level-id="${lvl.id}">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <span class="w-9 h-9 rounded-xl font-black text-xs md:text-sm flex items-center justify-center flex-shrink-0 ${badgeClasses}">
+                                ${lvl.id.toUpperCase()}
+                            </span>
+                            <div class="min-w-0">
+                                <div class="font-black text-xs md:text-sm text-white truncate">${lvl.title}</div>
+                                <div class="text-[10px] md:text-[11px] text-slate-400 truncate">${lvl.instruction}</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+                            ${isSelected ? '<i class="fas fa-check-circle text-blue-400 text-base"></i>' : '<i class="fas fa-play text-slate-500 text-xs"></i>'}
+                        </div>
+                    </button>
+                `;
+            }).join('');
+
+            grid.querySelectorAll('.level-card-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const chosenSub = btn.getAttribute('data-subject');
+                    const chosenLvl = btn.getAttribute('data-level-id');
+
+                    Session.subjectKey = chosenSub;
+                    Session.levelId = chosenLvl;
+
+                    const subSelect = document.getElementById('subjectSelect');
+                    if (subSelect) subSelect.value = chosenSub;
+                    this.populateLevels();
+
+                    const lvlSelect = document.getElementById('levelSelect');
+                    if (lvlSelect) lvlSelect.value = chosenLvl;
+
+                    this.closeLevelPickerModal();
+                    this.startRound();
+                });
+            });
         },
 
         startRound() {
@@ -1209,6 +1333,18 @@
                 case 'syllable':
                     this.renderSyllableCard(item, focusContainer);
                     break;
+                case 'fraction':
+                    this.renderFractionCard(item, focusContainer);
+                    break;
+                case 'rhyme':
+                    this.renderRhymeCard(item, focusContainer);
+                    break;
+                case 'sentence':
+                    this.renderSentenceCard(item, focusContainer);
+                    break;
+                case 'opposite':
+                    this.renderOppositeCard(item, focusContainer);
+                    break;
                 default:
                     focusContainer.innerHTML = `<div class="p-8 text-center text-slate-400">Exercício em preparação.</div>`;
             }
@@ -1233,6 +1369,34 @@
                         <span>${item.operand2}</span>
                         <span>=</span>
                         <span class="bg-blue-100 text-blue-700 px-4 py-2 rounded-2xl border-2 border-dashed border-blue-400 font-black animate-pulse">${solved}</span>
+                    </div>
+                `;
+            } else if (item.type === 'fraction') {
+                exampleHtml = `
+                    <div class="text-2xl md:text-3xl font-black text-slate-800 flex items-center justify-center gap-3 my-6">
+                        <span>Fração modelo:</span>
+                        <span class="bg-blue-100 text-blue-700 px-4 py-2 rounded-2xl border-2 border-dashed border-blue-400 font-black">${solved}</span>
+                    </div>
+                `;
+            } else if (item.type === 'rhyme') {
+                exampleHtml = `
+                    <div class="text-xl md:text-2xl font-bold text-slate-800 flex flex-col items-center justify-center gap-2 my-6">
+                        <span>"${item.word}" rima com:</span>
+                        <span class="bg-indigo-100 text-indigo-700 px-4 py-2 rounded-2xl border-2 border-dashed border-indigo-400 font-black text-2xl">${solved}</span>
+                    </div>
+                `;
+            } else if (item.type === 'sentence') {
+                exampleHtml = `
+                    <div class="text-lg md:text-xl font-bold text-slate-800 flex flex-col items-center justify-center gap-2 my-6">
+                        <span>Frase modelo:</span>
+                        <span class="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-2xl border-2 border-dashed border-emerald-400 font-black text-xl">${solved}</span>
+                    </div>
+                `;
+            } else if (item.type === 'opposite') {
+                exampleHtml = `
+                    <div class="text-xl md:text-2xl font-bold text-slate-800 flex flex-col items-center justify-center gap-2 my-6">
+                        <span>Opposite of "${item.word}":</span>
+                        <span class="bg-purple-100 text-purple-700 px-4 py-2 rounded-2xl border-2 border-dashed border-purple-400 font-black text-2xl">${solved}</span>
                     </div>
                 `;
             } else {
@@ -1706,6 +1870,273 @@
             });
         },
 
+        // Renderizador: FRAÇÕES (Matemática M10)
+        renderFractionCard(item, container) {
+            const num = item.numerator;
+            const den = item.denominator;
+            const correctFraction = `${num}/${den}`;
+
+            let segmentsHtml = '';
+            for (let i = 0; i < den; i++) {
+                const isFilled = i < num;
+                segmentsHtml += `
+                    <div class="flex-1 h-14 md:h-16 rounded-xl transition-all duration-300 ${isFilled ? 'bg-gradient-to-tr from-blue-500 to-indigo-600 shadow-md border-2 border-blue-400' : 'bg-slate-100 border-2 border-dashed border-slate-300'} flex items-center justify-center">
+                        ${isFilled ? '<i class="fas fa-check text-white text-xs md:text-sm"></i>' : ''}
+                    </div>
+                `;
+            }
+
+            const d1Num = Math.max(1, num === 1 ? 2 : num - 1);
+            const d2Den = den === 2 ? 3 : den === 4 ? 3 : den + 1;
+            const options = [
+                correctFraction,
+                `${d1Num}/${den}`,
+                `${num}/${d2Den}`
+            ].filter((v, idx, self) => self.indexOf(v) === idx);
+
+            while (options.length < 3) {
+                options.push(`${(num % den) + 1}/${den + 1}`);
+            }
+            options.sort(() => Math.random() - 0.5);
+
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-3">
+                    <div class="text-sm font-bold text-slate-600 mb-4">Qual fração representa as partes em azul?</div>
+                    
+                    <div class="w-full max-w-sm flex items-center gap-1.5 p-3 bg-white border-2 border-slate-200 rounded-2xl shadow-inner mb-6">
+                        ${segmentsHtml}
+                    </div>
+                    <div class="text-xs font-semibold text-slate-400 mb-4">
+                        ${num} de ${den} partes pintadas
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-3 w-full max-w-xs">
+                        ${options.map(opt => {
+                            const [top, bottom] = opt.split('/');
+                            return `
+                                <button class="fraction-choice-btn py-3 px-2 bg-white border-2 border-blue-400 hover:bg-blue-50 text-blue-900 rounded-2xl shadow-md active:scale-95 transition-transform flex flex-col items-center justify-center font-black cursor-pointer" data-frac="${opt}">
+                                    <span class="text-xl md:text-2xl border-b-2 border-blue-800 w-8 text-center pb-0.5 leading-none">${top}</span>
+                                    <span class="text-xl md:text-2xl pt-1 leading-none">${bottom}</span>
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+                    <div id="cardFeedbackMsg" class="h-6 mt-3 text-xs font-bold text-slate-400">Toque na fração correta</div>
+                </div>
+            `;
+
+            container.querySelectorAll('.fraction-choice-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const chosen = btn.getAttribute('data-frac');
+                    if (chosen === correctFraction) {
+                        this.registerSuccess();
+                    } else {
+                        sound.playWrong();
+                        this.shakeCard();
+                    }
+                });
+            });
+        },
+
+        // Renderizador: RIMAS (Português P7)
+        renderRhymeCard(item, container) {
+            const baseWord = item.word;
+            const targetWord = item.target;
+            const options = (item.options || [targetWord]).slice().sort(() => Math.random() - 0.5);
+
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-2">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-sm font-bold text-slate-600">Qual palavra rima com:</span>
+                        <button id="speakRhymeBtn" class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full font-bold text-xs flex items-center gap-1.5 hover:bg-indigo-200 transition-colors">
+                            <i class="fas fa-volume-up"></i> Ouvir
+                        </button>
+                    </div>
+
+                    <div class="text-3xl md:text-4xl font-black text-indigo-900 bg-indigo-50 border-3 border-indigo-300 px-8 py-4 rounded-3xl shadow-inner mb-6 tracking-wide">
+                        ${baseWord}
+                    </div>
+
+                    <div class="flex flex-col gap-3 w-full max-w-xs">
+                        ${options.map(opt => `
+                            <button class="rhyme-choice-btn py-3.5 px-4 bg-white border-2 border-indigo-400 hover:bg-indigo-50 text-indigo-900 rounded-2xl text-lg md:text-xl font-black shadow-md active:scale-95 transition-transform text-center cursor-pointer" data-word="${opt}">
+                                ${opt}
+                            </button>
+                        `).join('')}
+                    </div>
+                    <div id="cardFeedbackMsg" class="h-6 mt-3 text-xs font-bold text-slate-400">Toque na palavra que rima</div>
+                </div>
+            `;
+
+            const speakBtn = document.getElementById('speakRhymeBtn');
+            if (speakBtn) {
+                speakBtn.addEventListener('click', () => speakWord(baseWord, 'pt-BR'));
+                setTimeout(() => speakWord(baseWord, 'pt-BR'), 300);
+            }
+
+            container.querySelectorAll('.rhyme-choice-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const chosen = btn.getAttribute('data-word');
+                    if (chosen === targetWord) {
+                        this.registerSuccess();
+                    } else {
+                        sound.playWrong();
+                        this.shakeCard();
+                    }
+                });
+            });
+        },
+
+        // Renderizador: CONSTRUÇÃO DE FRASES (Português P8, Inglês I6)
+        renderSentenceCard(item, container) {
+            const sentence = item.sentence;
+            const parts = item.parts || sentence.split(' ');
+            const lang = Session.subjectKey === 'ingles' ? 'en-US' : 'pt-BR';
+            const scrambled = parts.slice().sort(() => Math.random() - 0.5);
+
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-2">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-sm font-bold text-slate-600">Toque nas partes para montar a frase:</span>
+                        <button id="speakSentenceBtn" class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full font-bold text-xs flex items-center gap-1.5 hover:bg-emerald-200 transition-colors">
+                            <i class="fas fa-volume-up"></i> Ouvir Frase
+                        </button>
+                    </div>
+
+                    <div id="sentenceTargetSlots" class="w-full max-w-md min-h-[70px] bg-slate-50 border-3 border-dashed border-emerald-400 rounded-2xl flex flex-wrap items-center justify-center gap-2 p-3 shadow-inner mb-5">
+                        <span class="text-slate-400 text-xs md:text-sm font-medium">Toque nos blocos abaixo...</span>
+                    </div>
+
+                    <div id="sentenceChipsWrapper" class="flex flex-wrap items-center justify-center gap-2.5 max-w-md">
+                        ${scrambled.map((chip, idx) => `
+                            <button class="sentence-chip px-4 py-3 bg-white border-2 border-emerald-500 hover:bg-emerald-50 text-emerald-900 text-base md:text-lg font-black rounded-2xl shadow-md active:scale-95 transition-transform cursor-pointer" data-chip="${chip}" data-idx="${idx}">
+                                ${chip}
+                            </button>
+                        `).join('')}
+                    </div>
+
+                    <div class="flex items-center gap-3 mt-4">
+                        <button id="resetSentenceChipsBtn" class="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-200 transition-colors cursor-pointer">
+                            <i class="fas fa-undo"></i> Recomeçar frase
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            const speakBtn = document.getElementById('speakSentenceBtn');
+            if (speakBtn) {
+                speakBtn.addEventListener('click', () => speakWord(sentence, lang));
+                setTimeout(() => speakWord(sentence, lang), 400);
+            }
+
+            let assembled = [];
+            const slotsContainer = document.getElementById('sentenceTargetSlots');
+            const chipsWrapper = document.getElementById('sentenceChipsWrapper');
+
+            const updateSlots = () => {
+                if (assembled.length === 0) {
+                    slotsContainer.innerHTML = '<span class="text-slate-400 text-xs md:text-sm font-medium">Toque nos blocos abaixo...</span>';
+                } else {
+                    slotsContainer.innerHTML = assembled.map(s => `
+                        <div class="px-3 py-1.5 bg-emerald-600 text-white rounded-xl font-black text-sm md:text-base shadow">
+                            ${s}
+                        </div>
+                    `).join('');
+                }
+            };
+
+            chipsWrapper.querySelectorAll('.sentence-chip').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    sound.init();
+                    sound.playClick();
+                    const chipVal = btn.getAttribute('data-chip');
+                    assembled.push(chipVal);
+                    btn.classList.add('opacity-30', 'pointer-events-none');
+                    updateSlots();
+
+                    if (assembled.length === parts.length) {
+                        const builtStr = assembled.join(' ');
+                        const targetStr = parts.join(' ');
+                        if (builtStr === targetStr || builtStr === sentence) {
+                            this.registerSuccess();
+                        } else {
+                            sound.playWrong();
+                            this.shakeCard();
+                            setTimeout(() => {
+                                assembled = [];
+                                updateSlots();
+                                chipsWrapper.querySelectorAll('.sentence-chip').forEach(b => {
+                                    b.classList.remove('opacity-30', 'pointer-events-none');
+                                });
+                            }, 700);
+                        }
+                    }
+                });
+            });
+
+            const resetBtn = document.getElementById('resetSentenceChipsBtn');
+            if (resetBtn) {
+                resetBtn.addEventListener('click', () => {
+                    assembled = [];
+                    updateSlots();
+                    chipsWrapper.querySelectorAll('.sentence-chip').forEach(b => {
+                        b.classList.remove('opacity-30', 'pointer-events-none');
+                    });
+                });
+            }
+        },
+
+        // Renderizador: OPOSTOS EM INGLÊS (Inglês I7)
+        renderOppositeCard(item, container) {
+            const word = item.word;
+            const target = item.target;
+            const icon = item.icon || '↔️';
+            const options = (item.options || [target]).slice().sort(() => Math.random() - 0.5);
+
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-2">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-sm font-bold text-slate-600">What is the opposite of:</span>
+                        <button id="speakOppositeBtn" class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-bold text-xs flex items-center gap-1.5 hover:bg-purple-200 transition-colors">
+                            <i class="fas fa-volume-up"></i> Listen
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-3 bg-purple-50 border-3 border-purple-300 px-8 py-4 rounded-3xl shadow-inner mb-6">
+                        <span class="text-2xl">${icon}</span>
+                        <span class="text-3xl md:text-4xl font-black text-purple-900 tracking-wider">${word}</span>
+                    </div>
+
+                    <div class="flex flex-col gap-3 w-full max-w-xs">
+                        ${options.map(opt => `
+                            <button class="opposite-choice-btn py-3.5 px-4 bg-white border-2 border-purple-400 hover:bg-purple-50 text-purple-900 rounded-2xl text-lg md:text-xl font-black shadow-md active:scale-95 transition-transform text-center cursor-pointer" data-word="${opt}">
+                                ${opt}
+                            </button>
+                        `).join('')}
+                    </div>
+                    <div id="cardFeedbackMsg" class="h-6 mt-3 text-xs font-bold text-slate-400">Choose the opposite word</div>
+                </div>
+            `;
+
+            const speakBtn = document.getElementById('speakOppositeBtn');
+            if (speakBtn) {
+                speakBtn.addEventListener('click', () => speakWord(word, 'en-US'));
+                setTimeout(() => speakWord(word, 'en-US'), 300);
+            }
+
+            container.querySelectorAll('.opposite-choice-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const chosen = btn.getAttribute('data-word');
+                    if (chosen === target) {
+                        this.registerSuccess();
+                    } else {
+                        sound.playWrong();
+                        this.shakeCard();
+                    }
+                });
+            });
+        },
+
         // ============================================================
         // 8. TECLADO VIRTUAL & VALIDAÇÃO DE RESPOSTAS
         // ============================================================
@@ -1743,6 +2174,7 @@
                 if (item.operator === '+') expected = item.operand1 + item.operand2;
                 if (item.operator === '-') expected = item.operand1 - item.operand2;
                 if (item.operator === '×' || item.operator === '*') expected = item.operand1 * item.operand2;
+                if (item.operator === '÷' || item.operator === '/') expected = item.operand2 !== 0 ? Math.floor(item.operand1 / item.operand2) : 0;
             } else if (item.type === 'quantity') {
                 expected = item.value;
             } else if (item.type === 'sequence') {
