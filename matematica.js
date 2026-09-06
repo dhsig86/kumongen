@@ -86,26 +86,32 @@
                 break;
 
             case 'math':
+                const isLevelActive = (currentLevelId === level.id);
+                const op = (isLevelActive && customParams.operator) ? customParams.operator : (level.operator || '+');
+                const op2 = (isLevelActive && customParams.operand !== undefined) ? customParams.operand : ((level.operand !== undefined) ? level.operand : 1);
+                const minVal = (isLevelActive && customParams.min !== undefined) ? customParams.min : ((level.range && level.range[0] !== undefined) ? level.range[0] : 1);
+                const maxVal = (isLevelActive && customParams.max !== undefined) ? customParams.max : ((level.range && level.range[1] !== undefined) ? level.range[1] : 10);
+
                 let lastA = null;
                 for (let i = 0; i < target; i++) {
                     let a;
                     let attempts = 0;
-                    const rangeSize = customParams.max - customParams.min + 1;
+                    const rangeSize = Math.max(1, maxVal - minVal + 1);
                     do {
-                        a = Math.floor(Math.random() * rangeSize) + customParams.min;
+                        a = Math.floor(Math.random() * rangeSize) + minVal;
                         attempts++;
                     } while (a === lastA && attempts < 10 && rangeSize > 1);
                     
                     lastA = a;
                     let displayA = a;
-                    if (customParams.operator === '-' && !customParams.allowNegative) {
-                        displayA = Math.max(a, customParams.operand);
+                    if (op === '-' && !customParams.allowNegative) {
+                        displayA = Math.max(a, op2);
                     }
                     baseItems.push({
                         type: 'math',
                         operand1: displayA,
-                        operator: customParams.operator,
-                        operand2: customParams.operand
+                        operator: op,
+                        operand2: op2
                     });
                 }
                 return baseItems;

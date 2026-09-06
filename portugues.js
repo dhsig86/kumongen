@@ -164,6 +164,82 @@
         localStorage.setItem('kumongen_por_params', JSON.stringify(customParams));
     }
 
+    const DEFAULT_WORDS_P3 = [
+        { word: 'BOLA', parts: ['BO','LA'] },
+        { word: 'CASA', parts: ['CA','SA'] },
+        { word: 'DADO', parts: ['DA','DO'] },
+        { word: 'FOCA', parts: ['FO','CA'] },
+        { word: 'GATO', parts: ['GA','TO'] },
+        { word: 'JACA', parts: ['JA','CA'] },
+        { word: 'LIMA', parts: ['LI','MA'] },
+        { word: 'MALA', parts: ['MA','LA'] },
+        { word: 'NOVE', parts: ['NO','VE'] },
+        { word: 'PATO', parts: ['PA','TO'] },
+        { word: 'RATO', parts: ['RA','TO'] },
+        { word: 'SAPO', parts: ['SA','PO'] },
+        { word: 'TATU', parts: ['TA','TU'] },
+        { word: 'VACA', parts: ['VA','CA'] },
+        { word: 'BOLO', parts: ['BO','LO'] },
+        { word: 'COPO', parts: ['CO','PO'] },
+        { word: 'DOCE', parts: ['DO','CE'] },
+        { word: 'LOBO', parts: ['LO','BO'] },
+        { word: 'SUCO', parts: ['SU','CO'] },
+        { word: 'VOTO', parts: ['VO','TO'] },
+        { word: 'FOGO', parts: ['FO','GO'] },
+        { word: 'LIXO', parts: ['LI','XO'] },
+        { word: 'TETO', parts: ['TE','TO'] },
+        { word: 'GELO', parts: ['GE','LO'] },
+        { word: 'MURO', parts: ['MU','RO'] },
+        { word: 'LAGO', parts: ['LA','GO'] },
+        { word: 'SINO', parts: ['SI','NO'] },
+        { word: 'RODA', parts: ['RO','DA'] },
+        { word: 'PENA', parts: ['PE','NA'] },
+        { word: 'LUVA', parts: ['LU','VA'] },
+        { word: 'DEDO', parts: ['DE','DO'] },
+        { word: 'NABO', parts: ['NA','BO'] },
+        { word: 'FADA', parts: ['FA','DA'] },
+        { word: 'JIPE', parts: ['JI','PE'] },
+        { word: 'TUBO', parts: ['TU','BO'] },
+        { word: 'REDE', parts: ['RE','DE'] },
+        { word: 'MEDO', parts: ['ME','DO'] },
+        { word: 'PIPA', parts: ['PI','PA'] },
+        { word: 'SOPA', parts: ['SO','PA'] },
+        { word: 'VIDA', parts: ['VI','DA'] }
+    ];
+
+    const DEFAULT_WORDS_P4 = [
+        { word: 'BANANA', parts: ['BA','NA','NA'] },
+        { word: 'PIPOCA', parts: ['PI','PO','CA'] },
+        { word: 'PETECA', parts: ['PE','TE','CA'] },
+        { word: 'SAPATO', parts: ['SA','PA','TO'] },
+        { word: 'TOMATE', parts: ['TO','MA','TE'] },
+        { word: 'SACOLA', parts: ['SA','CO','LA'] },
+        { word: 'PANELA', parts: ['PA','NE','LA'] },
+        { word: 'CABELO', parts: ['CA','BE','LO'] },
+        { word: 'JANELA', parts: ['JA','NE','LA'] },
+        { word: 'BONECO', parts: ['BO','NE','CO'] },
+        { word: 'PIJAMA', parts: ['PI','JA','MA'] },
+        { word: 'GELADO', parts: ['GE','LA','DO'] },
+        { word: 'CAVALO', parts: ['CA','VA','LO'] },
+        { word: 'MACACO', parts: ['MA','CA','CO'] },
+        { word: 'RAPOSA', parts: ['RA','PO','SA'] },
+        { word: 'COMIDA', parts: ['CO','MI','DA'] },
+        { word: 'SALADA', parts: ['SA','LA','DA'] },
+        { word: 'CANETA', parts: ['CA','NE','TA'] },
+        { word: 'PATETA', parts: ['PA','TE','TA'] },
+        { word: 'MENINO', parts: ['ME','NI','NO'] },
+        { word: 'MENINA', parts: ['ME','NI','NA'] },
+        { word: 'TUCANO', parts: ['TU','CA','NO'] },
+        { word: 'GIRAFA', parts: ['GI','RA','FA'] },
+        { word: 'BICICLETA', parts: ['BI','CI','CLE','TA'] },
+        { word: 'GELADEIRA', parts: ['GE','LA','DEI','RA'] },
+        { word: 'CHOCOLATE', parts: ['CHO','CO','LA','TE'] },
+        { word: 'TELEFONE', parts: ['TE','LE','FO','NE'] },
+        { word: 'ABACAXI', parts: ['A','BA','CA','XI'] },
+        { word: 'BORBOLETA', parts: ['BOR','BO','LE','TA'] },
+        { word: 'TARTARUGA', parts: ['TAR','TA','RU','GA'] }
+    ];
+
     // ---------- FUNÇÕES DE GERAÇÃO DE ITENS ----------
     function generateItemsForLevel(level, count) {
         if (!level) return [];
@@ -172,34 +248,51 @@
         let baseItems = [];
 
         switch (level.type) {
-            case 'trace':
-                customParams.traceSelected.forEach(letter => {
-                    for (let i = 0; i < customParams.traceRepeat; i++) {
+            case 'trace': {
+                const letters = (customParams.traceSelected && customParams.traceSelected.length > 0)
+                    ? customParams.traceSelected
+                    : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+                letters.forEach(letter => {
+                    for (let i = 0; i < (customParams.traceRepeat || 2); i++) {
                         baseItems.push({ type: 'trace', char: letter });
                     }
                 });
                 break;
+            }
 
             case 'syllables': {
+                const lvlId = (level && level.id) || currentLevelId;
                 let sylMap = customParams.syllableFamilies;
-                if (currentLevelId === 'p5') sylMap = customParams.syllableComplexFamilies;
-                if (currentLevelId === 'p6') sylMap = customParams.syllableDigraphFamilies;
+                if (lvlId === 'p5') sylMap = customParams.syllableComplexFamilies;
+                if (lvlId === 'p6') sylMap = customParams.syllableDigraphFamilies;
                 const selectedSyllables = Object.keys(sylMap).filter(s => sylMap[s]);
                 selectedSyllables.forEach(syllable => {
-                    for (let i = 0; i < customParams.syllableRepeat; i++) {
+                    for (let i = 0; i < (customParams.syllableRepeat || 2); i++) {
                         baseItems.push({ type: 'syllable', syllable: syllable });
                     }
                 });
                 break;
             }
 
-            case 'wordbuilding':
-                customParams.wordList.forEach(wordObj => {
-                    for (let i = 0; i < customParams.wordRepeat; i++) {
+            case 'wordbuilding': {
+                const lvlId = (level && level.id) || currentLevelId;
+                let wordsToUse = customParams.wordList;
+                if (lvlId === 'p4') {
+                    wordsToUse = (currentLevelId === 'p4' && customParams.wordList && customParams.wordList.length > 0)
+                        ? customParams.wordList
+                        : DEFAULT_WORDS_P4;
+                } else if (lvlId === 'p3') {
+                    wordsToUse = (currentLevelId === 'p3' && customParams.wordList && customParams.wordList.length > 0)
+                        ? customParams.wordList
+                        : DEFAULT_WORDS_P3;
+                }
+                wordsToUse.forEach(wordObj => {
+                    for (let i = 0; i < (customParams.wordRepeat || 1); i++) {
                         baseItems.push({ type: 'word', word: wordObj.word, parts: wordObj.parts });
                     }
                 });
                 break;
+            }
 
             default:
                 return Array(target).fill({ type: 'unknown' });

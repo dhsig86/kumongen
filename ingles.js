@@ -64,46 +64,142 @@
         localStorage.setItem('kumongen_eng_params', JSON.stringify(customParams));
     }
 
+    const DEFAULT_WORDS_I2 = [
+        { word: 'CAT', parts: ['C','A','T'] },
+        { word: 'DOG', parts: ['D','O','G'] },
+        { word: 'SUN', parts: ['S','U','N'] },
+        { word: 'CAR', parts: ['C','A','R'] },
+        { word: 'BED', parts: ['B','E','D'] },
+        { word: 'HAT', parts: ['H','A','T'] },
+        { word: 'FOG', parts: ['F','O','G'] },
+        { word: 'LEG', parts: ['L','E','G'] },
+        { word: 'PIG', parts: ['P','I','G'] },
+        { word: 'BUS', parts: ['B','U','S'] },
+        { word: 'MAP', parts: ['M','A','P'] },
+        { word: 'PEN', parts: ['P','E','N'] },
+        { word: 'FOX', parts: ['F','O','X'] },
+        { word: 'BAT', parts: ['B','A','T'] },
+        { word: 'CUP', parts: ['C','U','P'] },
+        { word: 'MUG', parts: ['M','U','G'] },
+        { word: 'BOX', parts: ['B','O','X'] },
+        { word: 'RUG', parts: ['R','U','G'] },
+        { word: 'JAM', parts: ['J','A','M'] },
+        { word: 'HEN', parts: ['H','E','N'] },
+        { word: 'WET', parts: ['W','E','T'] },
+        { word: 'DIG', parts: ['D','I','G'] },
+        { word: 'HOP', parts: ['H','O','P'] },
+        { word: 'RUN', parts: ['R','U','N'] },
+        { word: 'NET', parts: ['N','E','T'] },
+        { word: 'JOG', parts: ['J','O','G'] },
+        { word: 'FAN', parts: ['F','A','N'] },
+        { word: 'BIG', parts: ['B','I','G'] },
+        { word: 'TOP', parts: ['T','O','P'] },
+        { word: 'GUM', parts: ['G','U','M'] },
+        { word: 'TIN', parts: ['T','I','N'] },
+        { word: 'POT', parts: ['P','O','T'] },
+        { word: 'BUG', parts: ['B','U','G'] },
+        { word: 'VAN', parts: ['V','A','N'] },
+        { word: 'ZIP', parts: ['Z','I','P'] }
+    ];
+
+    const DEFAULT_WORDS_I3 = [
+        { word: 'BIRD', parts: ['B','IR','D'] },
+        { word: 'FISH', parts: ['F','I','SH'] },
+        { word: 'TREE', parts: ['T','R','EE'] },
+        { word: 'BOOK', parts: ['B','OO','K'] },
+        { word: 'FROG', parts: ['F','R','O','G'] },
+        { word: 'DUCK', parts: ['D','U','CK'] },
+        { word: 'STAR', parts: ['S','T','A','R'] },
+        { word: 'BOAT', parts: ['B','OA','T'] },
+        { word: 'MILK', parts: ['M','I','L','K'] },
+        { word: 'HAND', parts: ['H','A','N','D'] },
+        { word: 'JUMP', parts: ['J','U','M','P'] },
+        { word: 'LAMP', parts: ['L','A','M','P'] },
+        { word: 'DRUM', parts: ['D','R','U','M'] },
+        { word: 'RING', parts: ['R','I','NG'] },
+        { word: 'KING', parts: ['K','I','NG'] },
+        { word: 'SWIM', parts: ['S','W','I','M'] },
+        { word: 'SHIP', parts: ['SH','I','P'] },
+        { word: 'CHIN', parts: ['CH','I','N'] },
+        { word: 'THIN', parts: ['TH','I','N'] },
+        { word: 'SOCK', parts: ['S','O','CK'] },
+        { word: 'BELL', parts: ['B','E','LL'] },
+        { word: 'HILL', parts: ['H','I','LL'] },
+        { word: 'WOLF', parts: ['W','O','L','F'] },
+        { word: 'NEST', parts: ['N','E','S','T'] },
+        { word: 'GIFT', parts: ['G','I','F','T'] },
+        { word: 'POND', parts: ['P','O','N','D'] },
+        { word: 'CRAB', parts: ['C','R','A','B'] },
+        { word: 'SNAIL', parts: ['S','N','AI','L'] },
+        { word: 'PLANT', parts: ['P','L','A','N','T'] },
+        { word: 'CLOUD', parts: ['C','L','OU','D'] }
+    ];
+
+    const DEFAULT_WORDS_I4 = [
+        { word: 'THE', parts: ['TH','E'] },
+        { word: 'AND', parts: ['A','N','D'] },
+        { word: 'IS', parts: ['I','S'] },
+        { word: 'IN', parts: ['I','N'] },
+        { word: 'IT', parts: ['I','T'] },
+        { word: 'TO', parts: ['T','O'] },
+        { word: 'HE', parts: ['H','E'] },
+        { word: 'SHE', parts: ['SH','E'] },
+        { word: 'WE', parts: ['W','E'] },
+        { word: 'YOU', parts: ['Y','OU'] },
+        { word: 'ARE', parts: ['A','RE'] },
+        { word: 'WAS', parts: ['W','A','S'] },
+        { word: 'FOR', parts: ['F','OR'] },
+        { word: 'ON', parts: ['O','N'] },
+        { word: 'CAN', parts: ['C','A','N'] },
+        { word: 'HAD', parts: ['H','A','D'] },
+        { word: 'HAS', parts: ['H','A','S'] },
+        { word: 'HIS', parts: ['H','I','S'] },
+        { word: 'HER', parts: ['H','ER'] },
+        { word: 'NOT', parts: ['N','O','T'] },
+        { word: 'BUT', parts: ['B','U','T'] },
+        { word: 'ALL', parts: ['A','LL'] },
+        { word: 'MY', parts: ['M','Y'] },
+        { word: 'GO', parts: ['G','O'] },
+        { word: 'SEE', parts: ['S','EE'] },
+        { word: 'LIKE', parts: ['L','I','KE'] },
+        { word: 'COME', parts: ['C','O','ME'] },
+        { word: 'LOOK', parts: ['L','OO','K'] },
+        { word: 'SAID', parts: ['S','AI','D'] },
+        { word: 'PLAY', parts: ['P','L','AY'] }
+    ];
+
+    const DEFAULT_WORDS_I5 = [
+        { word: 'CAKE', parts: ['C','A','KE'] },
+        { word: 'BIKE', parts: ['B','I','KE'] },
+        { word: 'HOME', parts: ['H','O','ME'] },
+        { word: 'TUBE', parts: ['T','U','BE'] },
+        { word: 'GATE', parts: ['G','A','TE'] },
+        { word: 'KITE', parts: ['K','I','TE'] },
+        { word: 'BONE', parts: ['B','O','NE'] },
+        { word: 'CUTE', parts: ['C','U','TE'] },
+        { word: 'LAKE', parts: ['L','A','KE'] },
+        { word: 'PINE', parts: ['P','I','NE'] },
+        { word: 'NOSE', parts: ['N','O','SE'] },
+        { word: 'MULE', parts: ['M','U','LE'] },
+        { word: 'WAVE', parts: ['W','A','VE'] },
+        { word: 'LINE', parts: ['L','I','NE'] },
+        { word: 'ROPE', parts: ['R','O','PE'] },
+        { word: 'TUNE', parts: ['T','U','NE'] },
+        { word: 'RACE', parts: ['R','A','CE'] },
+        { word: 'MICE', parts: ['M','I','CE'] },
+        { word: 'POLE', parts: ['P','O','LE'] },
+        { word: 'HUGE', parts: ['H','U','GE'] },
+        { word: 'FACE', parts: ['F','A','CE'] },
+        { word: 'FIRE', parts: ['F','I','RE'] },
+        { word: 'NOTE', parts: ['N','O','TE'] },
+        { word: 'CUBE', parts: ['C','U','BE'] },
+        { word: 'MADE', parts: ['M','A','DE'] }
+    ];
+
     let customParams = {
         traceSelected: [],
         traceRepeat: 2,
-        wordList: [
-            { word: 'CAT', parts: ['C','A','T'] },
-            { word: 'DOG', parts: ['D','O','G'] },
-            { word: 'SUN', parts: ['S','U','N'] },
-            { word: 'CAR', parts: ['C','A','R'] },
-            { word: 'BED', parts: ['B','E','D'] },
-            { word: 'HAT', parts: ['H','A','T'] },
-            { word: 'FOG', parts: ['F','O','G'] },
-            { word: 'LEG', parts: ['L','E','G'] },
-            { word: 'PIG', parts: ['P','I','G'] },
-            { word: 'BUS', parts: ['B','U','S'] },
-            { word: 'MAP', parts: ['M','A','P'] },
-            { word: 'PEN', parts: ['P','E','N'] },
-            { word: 'FOX', parts: ['F','O','X'] },
-            { word: 'BAT', parts: ['B','A','T'] },
-            { word: 'CUP', parts: ['C','U','P'] },
-            { word: 'MUG', parts: ['M','U','G'] },
-            { word: 'BOX', parts: ['B','O','X'] },
-            { word: 'RUG', parts: ['R','U','G'] },
-            { word: 'JAM', parts: ['J','A','M'] },
-            { word: 'HEN', parts: ['H','E','N'] },
-            { word: 'WET', parts: ['W','E','T'] },
-            { word: 'DIG', parts: ['D','I','G'] },
-            { word: 'HOP', parts: ['H','O','P'] },
-            { word: 'RUN', parts: ['R','U','N'] },
-            { word: 'NET', parts: ['N','E','T'] },
-            { word: 'JOG', parts: ['J','O','G'] },
-            { word: 'FAN', parts: ['F','A','N'] },
-            { word: 'BIG', parts: ['B','I','G'] },
-            { word: 'TOP', parts: ['T','O','P'] },
-            { word: 'GUM', parts: ['G','U','M'] },
-            { word: 'TIN', parts: ['T','I','N'] },
-            { word: 'POT', parts: ['P','O','T'] },
-            { word: 'BUG', parts: ['B','U','G'] },
-            { word: 'VAN', parts: ['V','A','N'] },
-            { word: 'ZIP', parts: ['Z','I','P'] }
-        ],
+        wordList: [...DEFAULT_WORDS_I2],
         wordRepeat: 2
     };
 
@@ -114,21 +210,45 @@
         let baseItems = [];
 
         switch (level.type) {
-            case 'trace':
-                customParams.traceSelected.forEach(letter => {
-                    for (let i = 0; i < customParams.traceRepeat; i++) {
+            case 'trace': {
+                const letters = (customParams.traceSelected && customParams.traceSelected.length > 0)
+                    ? customParams.traceSelected
+                    : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+                letters.forEach(letter => {
+                    for (let i = 0; i < (customParams.traceRepeat || 2); i++) {
                         baseItems.push({ type: 'trace', char: letter });
                     }
                 });
                 break;
+            }
 
-            case 'wordbuilding':
-                customParams.wordList.forEach(wordObj => {
-                    for (let i = 0; i < customParams.wordRepeat; i++) {
+            case 'wordbuilding': {
+                const lvlId = (level && level.id) || currentLevelId;
+                let wordsToUse = customParams.wordList;
+                if (lvlId === 'i2') {
+                    wordsToUse = (currentLevelId === 'i2' && customParams.wordList && customParams.wordList.length > 0)
+                        ? customParams.wordList
+                        : DEFAULT_WORDS_I2;
+                } else if (lvlId === 'i3') {
+                    wordsToUse = (currentLevelId === 'i3' && customParams.wordList && customParams.wordList.length > 0)
+                        ? customParams.wordList
+                        : DEFAULT_WORDS_I3;
+                } else if (lvlId === 'i4') {
+                    wordsToUse = (currentLevelId === 'i4' && customParams.wordList && customParams.wordList.length > 0)
+                        ? customParams.wordList
+                        : DEFAULT_WORDS_I4;
+                } else if (lvlId === 'i5') {
+                    wordsToUse = (currentLevelId === 'i5' && customParams.wordList && customParams.wordList.length > 0)
+                        ? customParams.wordList
+                        : DEFAULT_WORDS_I5;
+                }
+                wordsToUse.forEach(wordObj => {
+                    for (let i = 0; i < (customParams.wordRepeat || 1); i++) {
                         baseItems.push({ type: 'word', word: wordObj.word, parts: wordObj.parts });
                     }
                 });
                 break;
+            }
 
             default:
                 return Array(target).fill({ type: 'unknown' });
