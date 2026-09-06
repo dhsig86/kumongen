@@ -943,21 +943,27 @@ const KumonGen = (function() {
         const ageInfo = window.StudentProfileEngine.AGE_TIERS[active.ageTier] || window.StudentProfileEngine.AGE_TIERS.age_6_7;
 
         container.innerHTML = `
-            <button type="button" onclick="window.StudentProfileEngine.showProfileModal({ onSelect: () => window.KumonGen.onStudentSelected() })" class="w-full flex items-center justify-between bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl p-2 text-slate-800 transition-all font-bold text-xs shadow-sm hover:shadow group cursor-pointer mb-2">
-                <div class="flex items-center gap-2 min-w-0">
-                    <div class="w-7 h-7 rounded-full p-0.5 bg-gradient-to-tr ${mascotInfo.ring} shadow flex-shrink-0">
-                        <img src="${mascotInfo.avatar}" alt="${mascotInfo.name}" class="w-full h-full rounded-full object-cover">
+            <div class="flex items-center gap-1.5 mb-2">
+                <button type="button" onclick="window.StudentProfileEngine.showProfileModal({ onSelect: () => window.KumonGen.onStudentSelected() })" class="flex-1 min-w-0 flex items-center justify-between bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl p-2 text-slate-800 transition-all font-bold text-xs shadow-sm hover:shadow group cursor-pointer" title="Trocar ou selecionar perfil de aluno">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <div class="w-7 h-7 rounded-full p-0.5 bg-gradient-to-tr ${mascotInfo.ring} shadow flex-shrink-0">
+                            <img src="${mascotInfo.avatar}" alt="${mascotInfo.name}" class="w-full h-full rounded-full object-cover">
+                        </div>
+                        <div class="text-left min-w-0">
+                            <div class="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">Aluno Ativo</div>
+                            <div class="font-black text-xs text-slate-900 truncate leading-tight">${sanitizeText(active.name)} <span class="text-[10px] font-normal text-slate-500">(${ageInfo.label})</span></div>
+                        </div>
                     </div>
-                    <div class="text-left min-w-0">
-                        <div class="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">Aluno Ativo</div>
-                        <div class="font-black text-xs text-slate-900 truncate leading-tight">${sanitizeText(active.name)} <span class="text-[10px] font-normal text-slate-500">(${ageInfo.label})</span></div>
+                    <div class="text-slate-400 group-hover:text-slate-600 flex items-center gap-1 text-[10px] font-bold flex-shrink-0 ml-1">
+                        <span>Trocar</span>
+                        <i class="fas fa-chevron-right text-[8px]"></i>
                     </div>
-                </div>
-                <div class="text-slate-400 group-hover:text-slate-600 flex items-center gap-1 text-[10px] font-bold flex-shrink-0">
-                    <span>Trocar</span>
-                    <i class="fas fa-chevron-right text-[8px]"></i>
-                </div>
-            </button>
+                </button>
+                <button type="button" onclick="window.StudentProfileEngine.showProfileModal({ initialView: 'form', onSelect: () => window.KumonGen.onStudentSelected() })" class="px-2.5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-black text-xs shadow-sm hover:shadow flex items-center gap-1 cursor-pointer flex-shrink-0 transition-all active:scale-95" title="Cadastrar nova criança / outro perfil">
+                    <i class="fas fa-user-plus text-xs"></i>
+                    <span class="hidden xl:inline text-[11px]">+ Novo</span>
+                </button>
+            </div>
         `;
     }
 
@@ -1110,6 +1116,9 @@ const KumonGen = (function() {
                         </button>
                         <button type="button" onclick="document.getElementById('parental-modal').remove(); if(window.StudentProfileEngine) window.StudentProfileEngine.showProfileModal({ onSelect: () => window.KumonGen.onStudentSelected() });" class="hover:text-blue-700 flex items-center gap-1 cursor-pointer">
                             <i class="fas fa-users text-blue-500"></i> Perfis
+                        </button>
+                        <button type="button" onclick="document.getElementById('parental-modal').remove(); if(window.StudentProfileEngine) window.StudentProfileEngine.showProfileModal({ initialView: 'form', onSelect: () => window.KumonGen.onStudentSelected() });" class="hover:text-emerald-700 font-bold flex items-center gap-1 cursor-pointer" title="Cadastrar nova criança">
+                            <i class="fas fa-user-plus text-emerald-500"></i> + Novo Aluno
                         </button>
                     </div>
                     <button onclick="document.getElementById('parental-modal').remove()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-5 rounded-xl transition-all text-xs cursor-pointer">

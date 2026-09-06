@@ -904,6 +904,21 @@
                 });
             }
 
+            // Botão Direto para Cadastrar Outro Perfil / Criança
+            const addProfileBtn = document.getElementById('headerAddProfileBtn');
+            if (addProfileBtn) {
+                addProfileBtn.addEventListener('click', () => {
+                    if (window.StudentProfileEngine) {
+                        window.StudentProfileEngine.showProfileModal({
+                            initialView: 'form',
+                            onSelect: (student) => {
+                                this.onStudentChanged(student);
+                            }
+                        });
+                    }
+                });
+            }
+
             // Escuta trocas de aluno originadas em qualquer parte da aplicação
             window.addEventListener('kumongen:student_changed', (e) => {
                 if (e.detail && e.detail.student) {

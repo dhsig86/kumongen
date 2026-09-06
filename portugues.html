@@ -273,9 +273,9 @@
 </main>
 
 <!-- Scripts -->
-<script src="student-profiles.js"></script>
-<script src="gerador.js"></script>
-<script src="portugues.js"></script>
+<script src="student-profiles.js?v=3.8.2"></script>
+<script src="gerador.js?v=3.8.2"></script>
+<script src="portugues.js?v=3.8.2"></script>
 <script>
     window.addEventListener('resize', KumonGen.adjustPreviewScale);
     window.addEventListener('load', KumonGen.adjustPreviewScale);
@@ -285,7 +285,10 @@
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('[KumonGen] SW registrado:', reg.scope))
+          .then(reg => {
+            console.log('[KumonGen] SW registrado:', reg.scope);
+            reg.update();
+          })
           .catch(err => console.error('[KumonGen] SW falhou:', err));
       });
     }

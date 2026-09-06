@@ -359,20 +359,25 @@
                                     <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Múltiplos Perfis KumonGen</span>
                                 </div>
                             </div>
-                            <button id="btnCloseProfileModal" class="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors">
-                                <i class="fas fa-times text-base"></i>
-                            </button>
+                            <div class="flex items-center gap-1">
+                                <button type="button" id="btnHeaderAddStudent" class="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs rounded-xl shadow-sm transition-all flex items-center gap-1 cursor-pointer" title="Cadastrar nova criança">
+                                    <i class="fas fa-user-plus text-[10px]"></i> + Novo
+                                </button>
+                                <button id="btnCloseProfileModal" class="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors">
+                                    <i class="fas fa-times text-base"></i>
+                                </button>
+                            </div>
                         </div>
+
+                        <!-- Botão de Destaque para Cadastrar Outra Criança -->
+                        <button type="button" id="btnShowAddStudentForm" class="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-xs rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer mb-3.5 border-2 border-amber-300">
+                            <i class="fas fa-user-plus text-sm"></i> + Cadastrar Outro Perfil / Criança
+                        </button>
 
                         <!-- Lista de Crianças -->
                         <div class="space-y-2.5 mb-4">
                             ${studentListHtml}
                         </div>
-
-                        <!-- Botão Adicionar Criança -->
-                        <button type="button" id="btnShowAddStudentForm" class="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-xs rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer mb-3">
-                            <i class="fas fa-plus-circle text-sm"></i> Cadastrar Nova Criança
-                        </button>
 
                         <!-- Rodapé: Backup & Restauração -->
                         <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
@@ -389,6 +394,8 @@
 
                 // Event Listeners da Lista
                 modal.querySelector('#btnCloseProfileModal').onclick = () => modal.remove();
+                const headerAddBtn = modal.querySelector('#btnHeaderAddStudent');
+                if (headerAddBtn) headerAddBtn.onclick = () => renderFormView(null);
 
                 modal.querySelectorAll('.btn-select-student').forEach(btn => {
                     btn.onclick = () => {
@@ -569,7 +576,11 @@
                 };
             };
 
-            renderCardsView();
+            if (options.initialView === 'form') {
+                renderFormView(null);
+            } else {
+                renderCardsView();
+            }
             document.body.appendChild(modal);
         }
     };

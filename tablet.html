@@ -166,6 +166,12 @@
                 <i class="fas fa-chevron-down text-[8px] text-slate-400"></i>
             </button>
 
+            <!-- Botão Explícito: Cadastrar Outro Perfil / Criança -->
+            <button id="headerAddProfileBtn" class="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 transition-all shadow-sm cursor-pointer" title="Cadastrar outra criança / novo perfil">
+                <i class="fas fa-user-plus text-[10px] text-amber-400"></i>
+                <span class="hidden sm:inline font-black">+ Perfil</span>
+            </button>
+
             <!-- Cronômetro SCT Kumon -->
             <div id="sctTimerDisplay" class="bg-slate-900 border border-slate-800 px-3 py-1 rounded-xl text-xs md:text-sm font-mono font-bold flex items-center gap-1.5">
                 <i class="fas fa-stopwatch text-blue-400"></i>
@@ -274,13 +280,13 @@
     </main>
     <!-- SCRIPTS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="student-profiles.js"></script>
-    <script src="gerador.js"></script>
-    <script src="content-pool.js"></script>
-    <script src="matematica.js"></script>
-    <script src="portugues.js"></script>
-    <script src="ingles.js"></script>
-    <script src="tablet-player.js"></script>
+    <script src="student-profiles.js?v=3.8.2"></script>
+    <script src="gerador.js?v=3.8.2"></script>
+    <script src="content-pool.js?v=3.8.2"></script>
+    <script src="matematica.js?v=3.8.2"></script>
+    <script src="portugues.js?v=3.8.2"></script>
+    <script src="ingles.js?v=3.8.2"></script>
+    <script src="tablet-player.js?v=3.8.2"></script>
 
     <!-- Debug inteligente: ignora erros de extensões e só exibe banner visual se ?debug=1 estiver na URL -->
     <script>
@@ -304,7 +310,10 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('[KumonGen Tablet] SW registrado:', reg.scope))
+                    .then(reg => {
+                        console.log('[KumonGen Tablet] SW registrado:', reg.scope);
+                        reg.update();
+                    })
                     .catch(err => console.error('[KumonGen Tablet] SW falhou:', err));
             });
         }

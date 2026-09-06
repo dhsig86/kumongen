@@ -1,5 +1,5 @@
 // KumonGen Service Worker
-const CACHE_NAME = 'kumongen-v3.8';
+const CACHE_NAME = 'kumongen-v3.8.2';
 
 const APP_SHELL = [
   './index.html',
@@ -42,10 +42,10 @@ function isCDN(url) {
 
 // ── Install: pre-cache app shell ──
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
   );
 });
 
@@ -88,13 +88,34 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // Strategy: Network-First for HTML navigation (prevents stale cached index/tablet on updates)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          if (response && response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request).then(cached => cached || caches.match('./offline.html')))
+    );
+    return;
+  }
+
   // Strategy: cache-first for app shell / static assets
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
 
-      return fetch(event.request).catch(() => {
-        // If navigation request fails, show offline page
+      return fetch(event.request).then(response => {
+        if (response && response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => {
         if (event.request.mode === 'navigate') {
           return caches.match('./offline.html');
         }
