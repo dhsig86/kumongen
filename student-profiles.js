@@ -1,9 +1,49 @@
 // KumonGen — Motor Canônico de Múltiplos Perfis de Alunos (100% LocalStorage / Zero Backend)
+// Resiliente a Tracking Prevention, InPrivate/Incognito, iframes e restrições de armazenamento
 (function(window) {
     'use strict';
 
     const STORAGE_STUDENTS = 'kumongen_students';
     const STORAGE_ACTIVE_ID = 'kumongen_active_student_id';
+
+    // SafeStorage: Fallback em memória transparente caso o navegador restrinja o localStorage
+    const SafeStorage = {
+        _mem: {},
+        getItem(key) {
+            try {
+                if (typeof window !== 'undefined' && window.localStorage) {
+                    return window.localStorage.getItem(key);
+                } else if (typeof localStorage !== 'undefined') {
+                    return localStorage.getItem(key);
+                }
+            } catch (e) {
+                // Tracking Prevention / InPrivate / restrição de terceiros
+            }
+            return Object.prototype.hasOwnProperty.call(this._mem, key) ? this._mem[key] : null;
+        },
+        setItem(key, value) {
+            try {
+                if (typeof window !== 'undefined' && window.localStorage) {
+                    window.localStorage.setItem(key, String(value));
+                } else if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem(key, String(value));
+                }
+            } catch (e) {
+                // Tracking Prevention / InPrivate / restrição de terceiros
+            }
+            this._mem[key] = String(value);
+        },
+        removeItem(key) {
+            try {
+                if (typeof window !== 'undefined' && window.localStorage) {
+                    window.localStorage.removeItem(key);
+                } else if (typeof localStorage !== 'undefined') {
+                    localStorage.removeItem(key);
+                }
+            } catch (e) {}
+            delete this._mem[key];
+        }
+    };
 
     // Presets de mascotes disponíveis para a criança
     const MASCOT_PRESETS = {
@@ -28,16 +68,16 @@
     // Rotina de migração retrocompatível (executa automaticamente no 1º acesso)
     function _migrateLegacyData() {
         try {
-            const existingRaw = localStorage.getItem(STORAGE_STUDENTS);
+            const existingRaw = SafeStorage.getItem(STORAGE_STUDENTS);
             if (existingRaw) {
                 const list = JSON.parse(existingRaw);
                 if (Array.isArray(list) && list.length > 0) return list;
             }
         } catch (e) {}
 
-        // Coleta dados legados existentes
-        const legacyName = localStorage.getItem('kumongen_student_name') || 'Super Aluno';
-        const legacyMascot = localStorage.getItem('kumongen_active_mascot') || 'jaguar';
+        // Coleta dados legados existentes de forma segura
+        const legacyName = SafeStorage.getItem('kumongen_student_name') || 'Super Aluno';
+        const legacyMascot = SafeStorage.getItem('kumongen_active_mascot') || 'jaguar';
 
         let legacyGamification = {
             stars: 0,
@@ -49,7 +89,7 @@
             lastPlayed: null
         };
         try {
-            const rawG = localStorage.getItem('kumongen_gamification_v3');
+            const rawG = SafeStorage.getItem('kumongen_gamification_v3');
             if (rawG) {
                 const parsedG = JSON.parse(rawG);
                 legacyGamification = Object.assign(legacyGamification, parsedG);
@@ -58,7 +98,7 @@
 
         let legacyHistory = [];
         try {
-            const rawH = localStorage.getItem('kumongen_history');
+            const rawH = SafeStorage.getItem('kumongen_history');
             if (rawH) {
                 const parsedH = JSON.parse(rawH);
                 if (Array.isArray(parsedH)) legacyHistory = parsedH;
@@ -76,8 +116,8 @@
         };
 
         const initialList = [defaultStudent];
-        localStorage.setItem(STORAGE_STUDENTS, JSON.stringify(initialList));
-        localStorage.setItem(STORAGE_ACTIVE_ID, defaultStudent.id);
+        SafeStorage.setItem(STORAGE_STUDENTS, JSON.stringify(initialList));
+        SafeStorage.setItem(STORAGE_ACTIVE_ID, defaultStudent.id);
         _mirrorLegacyKeys(defaultStudent);
         return initialList;
     }
@@ -86,13 +126,13 @@
     function _mirrorLegacyKeys(student) {
         if (!student) return;
         try {
-            localStorage.setItem('kumongen_student_name', student.name);
-            localStorage.setItem('kumongen_active_mascot', student.mascot || 'jaguar');
+            SafeStorage.setItem('kumongen_student_name', student.name);
+            SafeStorage.setItem('kumongen_active_mascot', student.mascot || 'jaguar');
             if (student.gamification) {
-                localStorage.setItem('kumongen_gamification_v3', JSON.stringify(student.gamification));
+                SafeStorage.setItem('kumongen_gamification_v3', JSON.stringify(student.gamification));
             }
             if (student.history) {
-                localStorage.setItem('kumongen_history', JSON.stringify(student.history));
+                SafeStorage.setItem('kumongen_history', JSON.stringify(student.history));
             }
         } catch (e) {
             console.warn('[StudentProfileEngine] Erro ao espelhar chaves legadas:', e);
@@ -112,7 +152,7 @@
 
         getAll() {
             try {
-                const raw = localStorage.getItem(STORAGE_STUDENTS);
+                const raw = SafeStorage.getItem(STORAGE_STUDENTS);
                 if (!raw) return _migrateLegacyData();
                 const list = JSON.parse(raw);
                 if (!Array.isArray(list) || list.length === 0) return _migrateLegacyData();
@@ -129,7 +169,7 @@
 
         getActive() {
             const list = this.getAll();
-            const activeId = localStorage.getItem(STORAGE_ACTIVE_ID);
+            const activeId = SafeStorage.getItem(STORAGE_ACTIVE_ID);
             let student = list.find(s => s.id === activeId);
             if (!student && list.length > 0) {
                 student = list[0];
@@ -142,7 +182,7 @@
             const list = this.getAll();
             const student = list.find(s => s.id === id);
             if (!student) return null;
-            localStorage.setItem(STORAGE_ACTIVE_ID, student.id);
+            SafeStorage.setItem(STORAGE_ACTIVE_ID, student.id);
             _notifyChange(student);
             return student;
         },
@@ -171,7 +211,7 @@
             };
 
             list.push(newStudent);
-            localStorage.setItem(STORAGE_STUDENTS, JSON.stringify(list));
+            SafeStorage.setItem(STORAGE_STUDENTS, JSON.stringify(list));
             this.setActive(newStudent.id);
             return newStudent;
         },
@@ -187,9 +227,9 @@
             if (fields.mascot && fields.mascot in MASCOT_PRESETS) student.mascot = fields.mascot;
 
             list[idx] = student;
-            localStorage.setItem(STORAGE_STUDENTS, JSON.stringify(list));
+            SafeStorage.setItem(STORAGE_STUDENTS, JSON.stringify(list));
 
-            const activeId = localStorage.getItem(STORAGE_ACTIVE_ID);
+            const activeId = SafeStorage.getItem(STORAGE_ACTIVE_ID);
             if (activeId === id) {
                 _notifyChange(student);
             }
@@ -204,9 +244,9 @@
             }
 
             list = list.filter(s => s.id !== id);
-            localStorage.setItem(STORAGE_STUDENTS, JSON.stringify(list));
+            SafeStorage.setItem(STORAGE_STUDENTS, JSON.stringify(list));
 
-            const activeId = localStorage.getItem(STORAGE_ACTIVE_ID);
+            const activeId = SafeStorage.getItem(STORAGE_ACTIVE_ID);
             if (activeId === id) {
                 this.setActive(list[0].id);
             }
@@ -224,7 +264,7 @@
             const idx = list.findIndex(s => s.id === active.id);
             if (idx !== -1) {
                 list[idx] = active;
-                localStorage.setItem(STORAGE_STUDENTS, JSON.stringify(list));
+                SafeStorage.setItem(STORAGE_STUDENTS, JSON.stringify(list));
             }
             _mirrorLegacyKeys(active);
             return active.gamification;
@@ -236,13 +276,13 @@
             if (!active) return;
             active.history = active.history || [];
             active.history.unshift(taskItem);
-            active.history = active.history.slice(0, 50); // guarda os últimos 50
+            active.history = active.history.slice(0, 50);
 
             const list = this.getAll();
             const idx = list.findIndex(s => s.id === active.id);
             if (idx !== -1) {
                 list[idx] = active;
-                localStorage.setItem(STORAGE_STUDENTS, JSON.stringify(list));
+                SafeStorage.setItem(STORAGE_STUDENTS, JSON.stringify(list));
             }
             _mirrorLegacyKeys(active);
         },
@@ -251,9 +291,9 @@
         exportBackup() {
             const data = {
                 app: 'KumonGen',
-                version: '3.8',
+                version: '3.8.3',
                 exportedAt: new Date().toISOString(),
-                activeStudentId: localStorage.getItem(STORAGE_ACTIVE_ID),
+                activeStudentId: SafeStorage.getItem(STORAGE_ACTIVE_ID),
                 students: this.getAll()
             };
 
@@ -277,7 +317,7 @@
                     throw new Error('Formato de backup inválido.');
                 }
 
-                localStorage.setItem(STORAGE_STUDENTS, JSON.stringify(parsed.students));
+                SafeStorage.setItem(STORAGE_STUDENTS, JSON.stringify(parsed.students));
                 const targetId = parsed.activeStudentId || parsed.students[0].id;
                 this.setActive(targetId);
                 return { success: true, count: parsed.students.length };
@@ -295,6 +335,23 @@
             modal.id = 'studentProfileManagerModal';
             modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn';
             modal.style.touchAction = 'manipulation';
+
+            const closeModal = () => {
+                document.removeEventListener('keydown', escListener);
+                if (modal && modal.parentNode) {
+                    modal.remove();
+                }
+            };
+
+            const escListener = (e) => {
+                if (e.key === 'Escape') closeModal();
+            };
+            document.addEventListener('keydown', escListener);
+
+            // Clique no backdrop escuro fecha o modal
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal();
+            });
 
             const self = this;
 
@@ -334,11 +391,11 @@
                             </button>
 
                             <div class="flex items-center gap-1 flex-shrink-0">
-                                <button type="button" class="btn-edit-student p-2 text-slate-400 hover:text-blue-600 rounded-xl hover:bg-slate-100 transition-colors" data-student-id="${s.id}" title="Editar Criança">
+                                <button type="button" class="btn-edit-student p-2 text-slate-400 hover:text-blue-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer" data-student-id="${s.id}" title="Editar Criança">
                                     <i class="fas fa-pen text-xs"></i>
                                 </button>
                                 ${students.length > 1 ? `
-                                    <button type="button" class="btn-delete-student p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors" data-student-id="${s.id}" title="Excluir Perfil">
+                                    <button type="button" class="btn-delete-student p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors cursor-pointer" data-student-id="${s.id}" title="Excluir Perfil">
                                         <i class="fas fa-trash-alt text-xs"></i>
                                     </button>
                                 ` : ''}
@@ -348,7 +405,7 @@
                 }).join('');
 
                 modal.innerHTML = `
-                    <div class="bg-white rounded-3xl p-5 md:p-6 max-w-md w-full shadow-2xl border-4 border-amber-400 max-h-[90vh] overflow-y-auto text-slate-800">
+                    <div class="bg-white rounded-3xl p-5 md:p-6 max-w-md w-full shadow-2xl border-4 border-amber-400 max-h-[90vh] overflow-y-auto text-slate-800 animate-fadeIn" onclick="event.stopPropagation()">
                         <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
                             <div class="flex items-center gap-2.5">
                                 <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-lg shadow-inner">
@@ -393,7 +450,7 @@
                 `;
 
                 // Event Listeners da Lista
-                modal.querySelector('#btnCloseProfileModal').onclick = () => modal.remove();
+                modal.querySelector('#btnCloseProfileModal').onclick = closeModal;
                 const headerAddBtn = modal.querySelector('#btnHeaderAddStudent');
                 if (headerAddBtn) headerAddBtn.onclick = () => renderFormView(null);
 
@@ -401,7 +458,7 @@
                     btn.onclick = () => {
                         const sid = btn.getAttribute('data-student-id');
                         self.setActive(sid);
-                        modal.remove();
+                        closeModal();
                         if (typeof options.onSelect === 'function') options.onSelect(self.getActive());
                     };
                 });
@@ -442,7 +499,7 @@
                             const res = self.importBackup(evt.target.result);
                             if (res.success) {
                                 alert(`Backup restaurado com sucesso! ${res.count} perfil(is) carregado(s).`);
-                                modal.remove();
+                                closeModal();
                                 if (typeof options.onSelect === 'function') options.onSelect(self.getActive());
                             } else {
                                 alert('Falha ao restaurar backup: ' + res.error);
@@ -462,12 +519,13 @@
                 const mascotOptionsHtml = Object.keys(MASCOT_PRESETS).map(key => {
                     const m = MASCOT_PRESETS[key];
                     const isMSelected = m.id === currentMascot;
+                    const subtitle = m.title ? (m.title.split(' ')[1] || m.title) : '';
                     return `
                         <label class="relative flex flex-col items-center p-2 rounded-2xl border-2 cursor-pointer transition-all ${isMSelected ? 'border-amber-500 bg-amber-50 ring-2 ring-amber-300' : 'border-slate-200 bg-slate-50 hover:bg-white'}">
                             <input type="radio" name="formMascot" value="${m.id}" class="sr-only" ${isMSelected ? 'checked' : ''}>
                             <img src="${m.avatar}" alt="${m.name}" class="w-10 h-10 rounded-full object-cover border border-white shadow mb-1">
                             <span class="text-[10px] font-black text-slate-800">${m.name}</span>
-                            <span class="text-[8px] text-slate-400 leading-tight">${m.title.split(' ')[1] || ''}</span>
+                            <span class="text-[8px] text-slate-400 leading-tight">${subtitle}</span>
                         </label>
                     `;
                 }).join('');
@@ -488,22 +546,22 @@
                 }).join('');
 
                 modal.innerHTML = `
-                    <div class="bg-white rounded-3xl p-5 md:p-6 max-w-md w-full shadow-2xl border-4 border-amber-400 max-h-[90vh] overflow-y-auto text-slate-800 animate-fadeIn">
+                    <div class="bg-white rounded-3xl p-5 md:p-6 max-w-md w-full shadow-2xl border-4 border-amber-400 max-h-[90vh] overflow-y-auto text-slate-800 animate-fadeIn" onclick="event.stopPropagation()">
                         <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
                             <div class="flex items-center gap-2">
-                                <button type="button" id="btnBackToProfiles" class="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 cursor-pointer">
+                                <button type="button" id="btnBackToProfiles" class="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 cursor-pointer" title="Voltar à lista">
                                     <i class="fas fa-arrow-left"></i>
                                 </button>
                                 <h3 class="font-black text-base text-slate-900">${isEditing ? 'Editar Perfil' : 'Nova Criança'}</h3>
                             </div>
-                            <button id="btnCloseFormModal" class="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 cursor-pointer">
+                            <button id="btnCloseFormModal" class="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 cursor-pointer" title="Fechar">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
 
                         <form id="studentProfileForm" class="space-y-4">
                             <div>
-                                <label class="text-[10px] font-black text-slate-500 uppercase block mb-1">Nome da Criança</label>
+                                <label class="text-[10px] font-black text-slate-500 uppercase block mb-1">Nome da Criança <span class="text-rose-500">*</span></label>
                                 <input type="text" id="inputStudentName" required maxlength="25" placeholder="Ex: Theo, Alice..." value="${currentName}" class="w-full text-base font-bold bg-slate-50 border-2 border-slate-200 rounded-2xl p-3 focus:outline-none focus:border-amber-500 focus:bg-white transition-all">
                             </div>
 
@@ -525,7 +583,7 @@
                                 <button type="button" id="btnCancelForm" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer">
                                     Cancelar
                                 </button>
-                                <button type="submit" class="py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer">
+                                <button type="submit" id="btnSubmitProfile" class="py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer">
                                     <i class="fas fa-check"></i> ${isEditing ? 'Salvar' : 'Concluir'}
                                 </button>
                             </div>
@@ -534,7 +592,7 @@
                 `;
 
                 // Listeners do formulário
-                modal.querySelector('#btnCloseFormModal').onclick = () => modal.remove();
+                modal.querySelector('#btnCloseFormModal').onclick = closeModal;
                 modal.querySelector('#btnBackToProfiles').onclick = () => renderCardsView();
                 modal.querySelector('#btnCancelForm').onclick = () => renderCardsView();
 
@@ -557,37 +615,66 @@
                     });
                 });
 
-                modal.querySelector('#studentProfileForm').onsubmit = (e) => {
+                // Autofoco suave no input do nome
+                setTimeout(() => {
+                    const inputEl = modal.querySelector('#inputStudentName');
+                    if (inputEl) inputEl.focus();
+                }, 60);
+
+                const formEl = modal.querySelector('#studentProfileForm');
+                formEl.onsubmit = (e) => {
                     e.preventDefault();
-                    const name = modal.querySelector('#inputStudentName').value.trim();
+                    const inputName = modal.querySelector('#inputStudentName');
+                    const name = (inputName ? inputName.value : '').trim();
+                    if (!name) {
+                        if (inputName) {
+                            inputName.focus();
+                            inputName.classList.add('border-rose-500', 'ring-2', 'ring-rose-300');
+                        }
+                        return;
+                    }
+
                     const ageTier = modal.querySelector('input[name="formAgeTier"]:checked')?.value || 'age_6_7';
                     const mascot = modal.querySelector('input[name="formMascot"]:checked')?.value || 'jaguar';
 
-                    if (!name) return;
+                    try {
+                        let saved;
+                        if (isEditing) {
+                            saved = self.update(studentToEdit.id, { name, ageTier, mascot });
+                        } else {
+                            saved = self.create({ name, ageTier, mascot });
+                        }
 
-                    if (isEditing) {
-                        self.update(studentToEdit.id, { name, ageTier, mascot });
-                    } else {
-                        self.create({ name, ageTier, mascot });
+                        closeModal();
+                        if (typeof options.onSelect === 'function') {
+                            options.onSelect(saved || self.getActive());
+                        }
+                    } catch (err) {
+                        console.error('[StudentProfileEngine] Erro ao salvar:', err);
+                        alert('Erro ao salvar o perfil. Por favor tente novamente.');
                     }
-
-                    modal.remove();
-                    if (typeof options.onSelect === 'function') options.onSelect(self.getActive());
                 };
             };
+
+            // Anexa modal ao DOM antes da renderização para garantir binding de eventos e foco imediato
+            document.body.appendChild(modal);
 
             if (options.initialView === 'form') {
                 renderFormView(null);
             } else {
                 renderCardsView();
             }
-            document.body.appendChild(modal);
         }
     };
 
-    // Inicialização automática silenciosa
-    _migrateLegacyData();
-
+    // Publica globalmente primeiro para garantir disponibilidade imediata
     window.StudentProfileEngine = StudentProfileEngine;
 
-})(window);
+    // Inicialização automática silenciosa e protegida
+    try {
+        _migrateLegacyData();
+    } catch (e) {
+        console.warn('[StudentProfileEngine] Falha silenciosa na inicialização:', e);
+    }
+
+})(typeof window !== 'undefined' ? window : this);

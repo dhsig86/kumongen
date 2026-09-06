@@ -7,13 +7,15 @@
     <!-- Tailwind pré-compilado -->
     <link rel="stylesheet" href="tailwind.min.css">
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="KumonGen">
+    <script src="student-profiles.js?v=3.8.3"></script>
     <meta name="description" content="KumonGen — Gerador gratuito de cadernos de exercícios personalizados de Matemática, Português e Inglês para crianças. Imprima folhas A4.">
     <meta property="og:title" content="KumonGen — Cadernos de Exercícios">
     <meta property="og:description" content="Gere cadernos de exercícios personalizados de Matemática, Português e Inglês para impressão gratuita.">
@@ -56,10 +58,10 @@
                 </div>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
-                <button type="button" onclick="if(window.StudentProfileEngine) window.StudentProfileEngine.showProfileModal({ onSelect: updateHomeProfile })" class="px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95">
+                <button type="button" onclick="openStudentProfiles('cards')" class="px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95">
                     <i class="fas fa-users"></i> Trocar
                 </button>
-                <button type="button" onclick="if(window.StudentProfileEngine) window.StudentProfileEngine.showProfileModal({ initialView: 'form', onSelect: updateHomeProfile })" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-amber-300 font-black text-xs rounded-xl shadow transition-all flex items-center gap-1 cursor-pointer active:scale-95" title="Criar outro perfil">
+                <button type="button" onclick="openStudentProfiles('form')" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-amber-300 font-black text-xs rounded-xl shadow transition-all flex items-center gap-1 cursor-pointer active:scale-95" title="Criar outro perfil">
                     <i class="fas fa-user-plus"></i> + Novo Perfil
                 </button>
             </div>
@@ -184,26 +186,41 @@
             <span>By Dr. Dario Hart — Free Use 2026</span>
         </div>
     </div>
-<script src="student-profiles.js?v=3.8.2"></script>
 <script>
-function updateHomeProfile() {
-    if (!window.StudentProfileEngine) return;
-    const student = window.StudentProfileEngine.getActive();
-    if (!student) return;
-    const nameEl = document.getElementById('homeStudentName');
-    const avatarEl = document.getElementById('homeStudentAvatar');
-    const tierEl = document.getElementById('homeStudentTier');
-    if (nameEl) nameEl.innerText = student.name;
-    if (avatarEl) {
-        const m = window.StudentProfileEngine.MASCOTS[student.mascot] || window.StudentProfileEngine.MASCOTS.jaguar;
-        avatarEl.src = m.avatar;
-    }
-    if (tierEl) {
-        const age = window.StudentProfileEngine.AGE_TIERS[student.ageTier] || window.StudentProfileEngine.AGE_TIERS.age_6_7;
-        const stars = (student.gamification && student.gamification.stars) || 0;
-        tierEl.innerText = `${age.label} · ${stars} ★`;
+function openStudentProfiles(initialView) {
+    if (window.StudentProfileEngine) {
+        window.StudentProfileEngine.showProfileModal({
+            initialView: initialView || 'cards',
+            onSelect: updateHomeProfile
+        });
+    } else {
+        alert('Carregando sistema de perfis, por favor tente novamente em alguns instantes.');
     }
 }
+
+function updateHomeProfile() {
+    try {
+        if (!window.StudentProfileEngine) return;
+        const student = window.StudentProfileEngine.getActive();
+        if (!student) return;
+        const nameEl = document.getElementById('homeStudentName');
+        const avatarEl = document.getElementById('homeStudentAvatar');
+        const tierEl = document.getElementById('homeStudentTier');
+        if (nameEl) nameEl.innerText = student.name || 'Super Aluno';
+        if (avatarEl) {
+            const m = window.StudentProfileEngine.MASCOTS[student.mascot] || window.StudentProfileEngine.MASCOTS.jaguar;
+            avatarEl.src = m.avatar;
+        }
+        if (tierEl) {
+            const age = window.StudentProfileEngine.AGE_TIERS[student.ageTier] || window.StudentProfileEngine.AGE_TIERS.age_6_7;
+            const stars = (student.gamification && student.gamification.stars) || 0;
+            tierEl.innerText = `${(age && age.label) || '6-7 anos'} · ${stars} ★`;
+        }
+    } catch (e) {
+        console.warn('[updateHomeProfile] Falha silenciosa:', e);
+    }
+}
+updateHomeProfile();
 window.addEventListener('DOMContentLoaded', updateHomeProfile);
 window.addEventListener('kumongen:student_changed', updateHomeProfile);
 
