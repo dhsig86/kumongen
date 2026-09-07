@@ -1207,6 +1207,9 @@
     // ============================================================
     // 5b. WIZARD DE CONFIGURAÇÃO DE TAREFA (PAI → CRIANÇA)
     // ============================================================
+    // ============================================================
+    // 5. WIZARD GUIADO DE CONFIGURAÇÃO DE TAREFA (PARA PAIS/ALUNOS)
+    // ============================================================
     const TaskWizard = {
         modal: null,
         selectedSubject: null,
@@ -1234,30 +1237,39 @@
             ].filter(s => window.KumonSubjects[s.key]);
 
             this.modal.innerHTML = `
-                <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl text-center relative max-h-[90vh] overflow-y-auto" style="border: 2px solid var(--accent, #d97706);">
-                    <div class="w-14 h-14 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl" style="background: var(--accent-bg, #fef3c7); color: var(--accent, #d97706);">
-                        <i class="fas fa-tasks"></i>
+                <div class="bg-white rounded-3xl p-5 md:p-6 max-w-md w-full shadow-2xl text-center relative flex flex-col my-auto border-2 border-amber-400" style="max-height: 85vh;">
+                    <button type="button" id="wizardCloseBtn1" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold transition-all cursor-pointer z-10" title="Fechar">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    
+                    <div class="flex-shrink-0 mb-3">
+                        <div class="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-xl bg-amber-100 text-amber-600">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <span class="inline-block text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full mb-1 bg-amber-50 text-amber-700 border border-amber-300">Passo 1 de 3</span>
+                        <h3 class="text-xl font-black text-gray-900 mb-0.5">Escolha a Matéria</h3>
+                        <p class="text-xs text-gray-500">O que a criança vai treinar hoje?</p>
                     </div>
-                    <span class="inline-block text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full mb-1" style="background: var(--accent-bg); color: var(--accent-dark); border: 1px solid var(--accent);">Passo 1 de 3</span>
-                    <h3 class="text-xl font-black text-gray-900 mb-1">Escolha a Matéria</h3>
-                    <p class="text-xs text-gray-500 mb-5">O que a criança vai treinar hoje?</p>
 
-                    <div class="flex flex-col gap-3">
+                    <div class="flex-1 overflow-y-auto min-h-0 pr-1 flex flex-col gap-2.5" style="-webkit-overflow-scrolling: touch;">
                         ${subjects.map(s => `
-                            <button type="button" class="wizard-subject-btn w-full p-4 rounded-2xl border-2 text-left flex items-center gap-4 cursor-pointer transition-all active:scale-95 hover:shadow-md" style="background:${s.bg};border-color:${s.border};" data-subject="${s.key}">
-                                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl flex-shrink-0 shadow-sm" style="background:${s.color};color:#fff;">
+                            <button type="button" class="wizard-subject-btn w-full p-3.5 rounded-2xl border-2 text-left flex items-center gap-3.5 cursor-pointer transition-all active:scale-95 hover:shadow-md" style="background:${s.bg};border-color:${s.border};" data-subject="${s.key}">
+                                <div class="w-11 h-11 rounded-xl flex items-center justify-center text-lg flex-shrink-0 shadow-sm" style="background:${s.color};color:#fff;">
                                     <i class="fas ${s.icon}"></i>
                                 </div>
-                                <div>
-                                    <div class="font-black text-gray-900 text-base">${s.emoji} ${s.label}</div>
-                                    <div class="text-xs text-gray-500 mt-0.5">${s.desc}</div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-black text-gray-900 text-base leading-tight">${s.emoji} ${s.label}</div>
+                                    <div class="text-xs text-gray-500 mt-0.5 truncate">${s.desc}</div>
                                 </div>
-                                <i class="fas fa-chevron-right text-gray-300 ml-auto"></i>
+                                <i class="fas fa-chevron-right text-gray-300 ml-auto flex-shrink-0"></i>
                             </button>
                         `).join('')}
                     </div>
                 </div>
             `;
+
+            const closeBtn = document.getElementById('wizardCloseBtn1');
+            if (closeBtn) closeBtn.addEventListener('click', () => this.close());
 
             this.modal.querySelectorAll('.wizard-subject-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -1279,33 +1291,52 @@
             const sc = subjectColors[this.selectedSubject] || subjectColors.matematica;
 
             this.modal.innerHTML = `
-                <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl text-center relative max-h-[90vh] overflow-y-auto" style="border: 2px solid ${sc.border};">
-                    <div class="w-14 h-14 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl" style="background:${sc.bg};color:${sc.color};">
-                        <i class="fas fa-layer-group"></i>
-                    </div>
-                    <span class="inline-block text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full mb-1" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">Passo 2 de 3</span>
-                    <h3 class="text-xl font-black text-gray-900 mb-1">Escolha o Nível</h3>
-                    <p class="text-xs text-gray-500 mb-4">${sub.title} · ${sub.levels.length} níveis disponíveis</p>
-
-                    <div class="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1">
-                        ${sub.levels.map(lvl => `
-                            <button type="button" class="wizard-level-btn w-full p-3 rounded-2xl border-2 text-left flex items-center gap-3 cursor-pointer transition-all active:scale-95 hover:shadow-md" style="background:#fff;border-color:#e5e7eb;" data-level="${lvl.id}">
-                                <span class="w-9 h-9 rounded-xl font-black text-xs flex items-center justify-center flex-shrink-0 shadow-sm" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
-                                    ${lvl.id.toUpperCase()}
-                                </span>
-                                <div class="min-w-0">
-                                    <div class="font-bold text-gray-800 text-sm truncate">${lvl.title}</div>
-                                </div>
-                                <i class="fas fa-chevron-right text-gray-300 ml-auto text-xs"></i>
-                            </button>
-                        `).join('')}
-                    </div>
-
-                    <button type="button" id="wizardBackBtn" class="mt-4 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold rounded-xl transition-colors cursor-pointer">
-                        <i class="fas fa-arrow-left"></i> Voltar
+                <div class="bg-white rounded-3xl p-5 md:p-6 max-w-xl w-full shadow-2xl text-center relative flex flex-col my-auto" style="border: 2px solid ${sc.border}; max-height: 85vh;">
+                    <button type="button" id="wizardCloseBtn2" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold transition-all cursor-pointer z-10" title="Fechar">
+                        <i class="fas fa-times"></i>
                     </button>
+
+                    <div class="flex-shrink-0 mb-3">
+                        <div class="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-xl" style="background:${sc.bg};color:${sc.color};">
+                            <i class="fas fa-layer-group"></i>
+                        </div>
+                        <span class="inline-block text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full mb-1" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">Passo 2 de 3</span>
+                        <h3 class="text-xl font-black text-gray-900 mb-0.5">Escolha o Nível</h3>
+                        <p class="text-xs text-gray-500">${sub.title} · ${sub.levels.length} níveis disponíveis</p>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto min-h-0 pr-1.5" style="max-height: 50vh; scrollbar-width: thin; scrollbar-color: ${sc.color} ${sc.bg}; -webkit-overflow-scrolling: touch;">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-0.5">
+                            ${sub.levels.map(lvl => `
+                                <button type="button" class="wizard-level-btn w-full p-2.5 rounded-xl border-2 text-left flex items-center gap-2.5 cursor-pointer transition-all active:scale-95 hover:shadow-md bg-white hover:bg-slate-50" style="border-color:${sc.border};" data-level="${lvl.id}">
+                                    <span class="w-8 h-8 rounded-lg font-black text-xs flex items-center justify-center flex-shrink-0 shadow-sm" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
+                                        ${lvl.id.toUpperCase()}
+                                    </span>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="font-bold text-gray-800 text-xs sm:text-sm leading-tight truncate" title="${lvl.title}">${lvl.title}</div>
+                                    </div>
+                                    <i class="fas fa-chevron-right text-gray-300 text-[10px] ml-auto flex-shrink-0"></i>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
+                        <button type="button" id="wizardBackBtn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5">
+                            <i class="fas fa-arrow-left"></i> Voltar
+                        </button>
+                        <button type="button" id="wizardCancelBtn2" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-xl transition-colors cursor-pointer">
+                            Cancelar
+                        </button>
+                    </div>
                 </div>
             `;
+
+            const closeBtn = document.getElementById('wizardCloseBtn2');
+            if (closeBtn) closeBtn.addEventListener('click', () => this.close());
+
+            const cancelBtn = document.getElementById('wizardCancelBtn2');
+            if (cancelBtn) cancelBtn.addEventListener('click', () => this.close());
 
             this.modal.querySelectorAll('.wizard-level-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -1331,37 +1362,58 @@
             const sc = subjectColors[this.selectedSubject] || subjectColors.matematica;
 
             this.modal.innerHTML = `
-                <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl text-center relative" style="border: 2px solid ${sc.border};">
-                    <div class="w-16 h-16 rounded-full p-0.5 bg-gradient-to-tr ${mascot.ringGradient} shadow-md mx-auto mb-3">
-                        <img src="${mascot.avatar}" alt="${mascot.name}" class="w-full h-full rounded-full object-cover border-2 border-white">
-                    </div>
-                    <span class="inline-block text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full mb-2" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">Passo 3 de 3</span>
-                    <h3 class="text-xl font-black text-gray-900 mb-4">Tudo pronto!</h3>
+                <div class="bg-white rounded-3xl p-5 md:p-6 max-w-md w-full shadow-2xl text-center relative flex flex-col my-auto" style="border: 2px solid ${sc.border}; max-height: 85vh;">
+                    <button type="button" id="wizardCloseBtn3" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold transition-all cursor-pointer z-10" title="Fechar">
+                        <i class="fas fa-times"></i>
+                    </button>
 
-                    <div class="rounded-2xl p-4 mb-5 text-left" style="background:${sc.bg};border:1px solid ${sc.border};">
-                        <div class="flex items-center gap-3 mb-2">
-                            <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black" style="background:${sc.color};color:#fff;">${(this.selectedLevel || '').toUpperCase()}</span>
-                            <div>
-                                <div class="text-sm font-black text-gray-900">${sc.label}</div>
-                                <div class="text-xs text-gray-600">${level ? level.title : ''}</div>
+                    <div class="flex-shrink-0 mb-3">
+                        <div class="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr ${mascot.ringGradient} shadow-md mx-auto mb-2">
+                            <img src="${mascot.avatar}" alt="${mascot.name}" class="w-full h-full rounded-full object-cover border-2 border-white">
+                        </div>
+                        <span class="inline-block text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full mb-1" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">Passo 3 de 3</span>
+                        <h3 class="text-xl font-black text-gray-900 mb-1">Tudo pronto!</h3>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto min-h-0 pr-1">
+                        <div class="rounded-2xl p-4 mb-4 text-left" style="background:${sc.bg};border:1px solid ${sc.border};">
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black flex-shrink-0" style="background:${sc.color};color:#fff;">${(this.selectedLevel || '').toUpperCase()}</span>
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-sm font-black text-gray-900">${sc.label}</div>
+                                    <div class="text-xs text-gray-600 truncate">${level ? level.title : ''}</div>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 flex items-center gap-1.5 mt-1">
+                                <i class="fas fa-user text-gray-400"></i> ${(window.escapeHtml ? window.escapeHtml(Session.studentName) : Session.studentName)}
+                                <span class="mx-1">·</span>
+                                <img src="${mascot.avatar}" alt="${mascot.name}" class="w-4 h-4 rounded-full inline"> ${mascot.name}
                             </div>
                         </div>
-                        <div class="text-xs text-gray-500 flex items-center gap-1.5 mt-1">
-                            <i class="fas fa-user text-gray-400"></i> ${(window.escapeHtml ? window.escapeHtml(Session.studentName) : Session.studentName)}
-                            <span class="mx-1">·</span>
-                            <img src="${mascot.avatar}" alt="${mascot.name}" class="w-4 h-4 rounded-full inline"> ${mascot.name}
-                        </div>
                     </div>
 
-                    <button type="button" id="wizardStartBtn" class="w-full py-4 font-black text-base rounded-2xl shadow-lg transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2" style="background:${sc.color};color:#fff;">
-                        <i class="fas fa-play"></i> Começar Tarefa
-                    </button>
+                    <div class="flex-shrink-0 flex flex-col gap-2 mt-2">
+                        <button type="button" id="wizardStartBtn" class="w-full py-3.5 font-black text-base rounded-2xl shadow-lg transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2" style="background:${sc.color};color:#fff;">
+                            <i class="fas fa-play"></i> Começar Tarefa
+                        </button>
 
-                    <button type="button" id="wizardBack2Btn" class="mt-3 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold rounded-xl transition-colors cursor-pointer">
-                        <i class="fas fa-arrow-left"></i> Voltar
-                    </button>
+                        <div class="flex items-center justify-between gap-2 mt-1">
+                            <button type="button" id="wizardBack2Btn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5">
+                                <i class="fas fa-arrow-left"></i> Voltar
+                            </button>
+                            <button type="button" id="wizardCancelBtn3" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-xl transition-colors cursor-pointer">
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
                 </div>
             `;
+
+            const closeBtn = document.getElementById('wizardCloseBtn3');
+            if (closeBtn) closeBtn.addEventListener('click', () => this.close());
+
+            const cancelBtn = document.getElementById('wizardCancelBtn3');
+            if (cancelBtn) cancelBtn.addEventListener('click', () => this.close());
 
             const startBtn = document.getElementById('wizardStartBtn');
             if (startBtn) startBtn.addEventListener('click', () => this.confirm());
