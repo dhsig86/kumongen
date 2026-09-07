@@ -899,3 +899,102 @@ aside {
     gap: 0.25rem !important;
 }
 
+/* ============================================================
+   KUMON 4.2: WIZARD RESPONSIVO ANTI-ESTOURO & TOUCH FIRST
+   ============================================================ */
+.wizard-card-modal {
+    max-height: min(88vh, 660px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 36rem !important;
+    border-radius: 1.5rem !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    overflow: hidden !important;
+    margin: auto !important;
+    position: relative !important;
+}
+
+.wizard-level-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    padding: 2px !important;
+}
+
+@media (max-width: 440px) {
+    .wizard-level-grid {
+        grid-template-columns: 1fr !important;
+        gap: 6px !important;
+    }
+}
+
+.wizard-scroll-area {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    max-height: 52vh !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: thin !important;
+    padding-right: 4px !important;
+    padding-bottom: 8px !important;
+    position: relative !important;
+}
+
+/* Scrollbar visível e elegante para WebKit */
+.wizard-scroll-area::-webkit-scrollbar {
+    width: 6px !important;
+}
+.wizard-scroll-area::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.04) !important;
+    border-radius: 9999px !important;
+}
+.wizard-scroll-area::-webkit-scrollbar-thumb {
+    background: #cbd5e1 !important;
+    border-radius: 9999px !important;
+    border: 1px solid rgba(255, 255, 255, 0.6) !important;
+}
+.wizard-scroll-area::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8 !important;
+}
+
+/* Indicador visual inferior de rolagem contínua */
+.scroll-cue-wrapper {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    flex: 1 1 auto !important;
+}
+
+.scroll-cue-shadow {
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 18px !important;
+    background: linear-gradient(to top, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 100%) !important;
+    pointer-events: none !important;
+    z-index: 5 !important;
+    transition: opacity 0.2s ease !important;
+}
+
+/* Touch targets ergonômicos e microinterações táteis */
+.wizard-level-btn {
+    min-height: 50px !important;
+    display: flex !important;
+    align-items: center !important;
+    user-select: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease !important;
+}
+.wizard-level-btn:active {
+    transform: scale(0.97) !important;
+}
+
+.touch-target-safe {
+    min-height: 44px !important;
+    min-width: 44px !important;
+}
+
+

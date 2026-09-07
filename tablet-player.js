@@ -1311,14 +1311,39 @@
         modal: null,
         selectedSubject: null,
         selectedLevel: null,
+        currentStep: 1,
+        _eventsBound: false,
 
         show() {
             this.modal = document.getElementById('taskWizardModal');
             if (!this.modal) return;
             this.selectedSubject = null;
             this.selectedLevel = null;
+            this.bindGlobalEvents();
             this.renderStep1();
             this.modal.style.display = 'flex';
+        },
+
+        bindGlobalEvents() {
+            if (this._eventsBound || !this.modal) return;
+            // Fecha ao clicar fora do card (no backdrop escuro)
+            this.modal.addEventListener('click', (e) => {
+                if (e.target === this.modal) this.close();
+            });
+
+            // Tecla ESC para voltar um passo ou fechar
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && this.modal && this.modal.style.display === 'flex') {
+                    if (this.currentStep === 3) {
+                        this.renderStep2();
+                    } else if (this.currentStep === 2) {
+                        this.renderStep1();
+                    } else {
+                        this.close();
+                    }
+                }
+            });
+            this._eventsBound = true;
         },
 
         close() {
@@ -1327,6 +1352,7 @@
 
         renderStep1() {
             if (!window.KumonSubjects) return;
+            this.currentStep = 1;
             const subjects = [
                 { key: 'matematica', icon: 'fa-calculator', emoji: '🔢', label: 'Matemática', color: '#2563eb', bg: '#eff6ff', border: '#93c5fd', desc: 'Contagem, operações, sequências e frações' },
                 { key: 'portugues', icon: 'fa-book-open', emoji: '📖', label: 'Português', color: '#059669', bg: '#ecfdf5', border: '#6ee7b7', desc: 'Sílabas, palavras, frases e rimas' },
@@ -1334,13 +1360,13 @@
             ].filter(s => window.KumonSubjects[s.key]);
 
             this.modal.innerHTML = `
-                <div class="bg-white rounded-3xl p-5 md:p-6 max-w-md w-full shadow-2xl text-center relative flex flex-col my-auto border-2 border-amber-400" style="max-height: 85vh;">
-                    <button type="button" id="wizardCloseBtn1" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold transition-all cursor-pointer z-10" title="Fechar">
+                <div class="wizard-card-modal bg-white p-5 md:p-6 text-center border-2 border-amber-400">
+                    <button type="button" id="wizardCloseBtn1" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold transition-all cursor-pointer z-10 active:scale-90" title="Fechar (ESC)">
                         <i class="fas fa-times"></i>
                     </button>
                     
                     <div class="flex-shrink-0 mb-3">
-                        <div class="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-xl bg-amber-100 text-amber-600">
+                        <div class="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-xl bg-amber-100 text-amber-600 shadow-sm">
                             <i class="fas fa-tasks"></i>
                         </div>
                         <span class="inline-block text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full mb-1 bg-amber-50 text-amber-700 border border-amber-300">Passo 1 de 3</span>
@@ -1349,18 +1375,25 @@
                     </div>
 
                     <div class="flex-1 overflow-y-auto min-h-0 pr-1 flex flex-col gap-2.5" style="-webkit-overflow-scrolling: touch;">
-                        ${subjects.map(s => `
+                        ${subjects.map(s => {
+                            const subObj = window.KumonSubjects[s.key];
+                            const lvlCount = subObj && subObj.levels ? subObj.levels.length : 0;
+                            return `
                             <button type="button" class="wizard-subject-btn w-full p-3.5 rounded-2xl border-2 text-left flex items-center gap-3.5 cursor-pointer transition-all active:scale-95 hover:shadow-md" style="background:${s.bg};border-color:${s.border};" data-subject="${s.key}">
                                 <div class="w-11 h-11 rounded-xl flex items-center justify-center text-lg flex-shrink-0 shadow-sm" style="background:${s.color};color:#fff;">
                                     <i class="fas ${s.icon}"></i>
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <div class="font-black text-gray-900 text-base leading-tight">${s.emoji} ${s.label}</div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-black text-gray-900 text-base leading-tight">${s.emoji} ${s.label}</span>
+                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full" style="background:${s.color}18;color:${s.color};">${lvlCount} níveis</span>
+                                    </div>
                                     <div class="text-xs text-gray-500 mt-0.5 truncate">${s.desc}</div>
                                 </div>
                                 <i class="fas fa-chevron-right text-gray-300 ml-auto flex-shrink-0"></i>
                             </button>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     </div>
                 </div>
             `;
@@ -1379,6 +1412,7 @@
         renderStep2() {
             const sub = window.KumonSubjects[this.selectedSubject];
             if (!sub || !sub.levels) return;
+            this.currentStep = 2;
 
             const subjectColors = {
                 matematica: { color: '#2563eb', bg: '#eff6ff', border: '#93c5fd' },
@@ -1388,13 +1422,13 @@
             const sc = subjectColors[this.selectedSubject] || subjectColors.matematica;
 
             this.modal.innerHTML = `
-                <div class="bg-white rounded-3xl p-5 md:p-6 max-w-xl w-full shadow-2xl text-center relative flex flex-col my-auto" style="border: 2px solid ${sc.border}; max-height: 85vh;">
-                    <button type="button" id="wizardCloseBtn2" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold transition-all cursor-pointer z-10" title="Fechar">
+                <div class="wizard-card-modal bg-white p-5 md:p-6 text-center" style="border: 2px solid ${sc.border};">
+                    <button type="button" id="wizardCloseBtn2" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold transition-all cursor-pointer z-10 active:scale-90" title="Fechar (ESC)">
                         <i class="fas fa-times"></i>
                     </button>
 
                     <div class="flex-shrink-0 mb-3">
-                        <div class="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-xl" style="background:${sc.bg};color:${sc.color};">
+                        <div class="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-xl shadow-sm" style="background:${sc.bg};color:${sc.color};">
                             <i class="fas fa-layer-group"></i>
                         </div>
                         <span class="inline-block text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full mb-1" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">Passo 2 de 3</span>
@@ -1402,27 +1436,30 @@
                         <p class="text-xs text-gray-500">${sub.title} · ${sub.levels.length} níveis disponíveis</p>
                     </div>
 
-                    <div class="flex-1 overflow-y-auto min-h-0 pr-1.5" style="max-height: 50vh; scrollbar-width: thin; scrollbar-color: ${sc.color} ${sc.bg}; -webkit-overflow-scrolling: touch;">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-0.5">
-                            ${sub.levels.map(lvl => `
-                                <button type="button" class="wizard-level-btn w-full p-2.5 rounded-xl border-2 text-left flex items-center gap-2.5 cursor-pointer transition-all active:scale-95 hover:shadow-md bg-white hover:bg-slate-50" style="border-color:${sc.border};" data-level="${lvl.id}">
-                                    <span class="w-8 h-8 rounded-lg font-black text-xs flex items-center justify-center flex-shrink-0 shadow-sm" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
-                                        ${lvl.id.toUpperCase()}
-                                    </span>
-                                    <div class="min-w-0 flex-1">
-                                        <div class="font-bold text-gray-800 text-xs sm:text-sm leading-tight truncate" title="${lvl.title}">${lvl.title}</div>
-                                    </div>
-                                    <i class="fas fa-chevron-right text-gray-300 text-[10px] ml-auto flex-shrink-0"></i>
-                                </button>
-                            `).join('')}
+                    <div class="scroll-cue-wrapper">
+                        <div class="wizard-scroll-area" id="wizardScrollArea" style="scrollbar-color: ${sc.color} ${sc.bg};">
+                            <div class="wizard-level-grid">
+                                ${sub.levels.map(lvl => `
+                                    <button type="button" class="wizard-level-btn w-full p-2.5 rounded-xl border-2 text-left flex items-center gap-2.5 cursor-pointer bg-white hover:bg-slate-50 shadow-sm" style="border-color:${sc.border};" data-level="${lvl.id}">
+                                        <span class="w-8 h-8 rounded-lg font-black text-xs flex items-center justify-center flex-shrink-0 shadow-sm" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
+                                            ${lvl.id.toUpperCase()}
+                                        </span>
+                                        <div class="min-w-0 flex-1">
+                                            <div class="font-bold text-gray-800 text-xs sm:text-sm leading-tight truncate" title="${lvl.title}">${lvl.title}</div>
+                                        </div>
+                                        <i class="fas fa-chevron-right text-gray-300 text-[10px] ml-auto flex-shrink-0"></i>
+                                    </button>
+                                `).join('')}
+                            </div>
                         </div>
+                        <div class="scroll-cue-shadow" id="scrollCueShadow"></div>
                     </div>
 
                     <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
-                        <button type="button" id="wizardBackBtn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5">
+                        <button type="button" id="wizardBackBtn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 active:scale-95">
                             <i class="fas fa-arrow-left"></i> Voltar
                         </button>
-                        <button type="button" id="wizardCancelBtn2" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-xl transition-colors cursor-pointer">
+                        <button type="button" id="wizardCancelBtn2" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-xl transition-colors cursor-pointer active:scale-95">
                             Cancelar
                         </button>
                     </div>
@@ -1434,6 +1471,18 @@
 
             const cancelBtn = document.getElementById('wizardCancelBtn2');
             if (cancelBtn) cancelBtn.addEventListener('click', () => this.close());
+
+            // Gerenciamento suave do scroll cue
+            const scrollArea = document.getElementById('wizardScrollArea');
+            const cueShadow = document.getElementById('scrollCueShadow');
+            if (scrollArea && cueShadow) {
+                const updateCue = () => {
+                    const isAtBottom = scrollArea.scrollHeight - scrollArea.scrollTop <= scrollArea.clientHeight + 8;
+                    cueShadow.style.opacity = isAtBottom ? '0' : '1';
+                };
+                scrollArea.addEventListener('scroll', updateCue, { passive: true });
+                setTimeout(updateCue, 50);
+            }
 
             this.modal.querySelectorAll('.wizard-level-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -1450,6 +1499,7 @@
             const sub = window.KumonSubjects[this.selectedSubject];
             const level = sub ? sub.levels.find(l => l.id === this.selectedLevel) : null;
             const mascot = MascotEngine.getCurrent();
+            this.currentStep = 3;
 
             const subjectColors = {
                 matematica: { color: '#2563eb', bg: '#eff6ff', border: '#93c5fd', label: '🔢 Matemática' },
@@ -1459,8 +1509,8 @@
             const sc = subjectColors[this.selectedSubject] || subjectColors.matematica;
 
             this.modal.innerHTML = `
-                <div class="bg-white rounded-3xl p-5 md:p-6 max-w-md w-full shadow-2xl text-center relative flex flex-col my-auto" style="border: 2px solid ${sc.border}; max-height: 85vh;">
-                    <button type="button" id="wizardCloseBtn3" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold transition-all cursor-pointer z-10" title="Fechar">
+                <div class="wizard-card-modal bg-white p-5 md:p-6 text-center" style="border: 2px solid ${sc.border};">
+                    <button type="button" id="wizardCloseBtn3" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold transition-all cursor-pointer z-10 active:scale-90" title="Fechar (ESC)">
                         <i class="fas fa-times"></i>
                     </button>
 
@@ -1473,9 +1523,9 @@
                     </div>
 
                     <div class="flex-1 overflow-y-auto min-h-0 pr-1">
-                        <div class="rounded-2xl p-4 mb-4 text-left" style="background:${sc.bg};border:1px solid ${sc.border};">
+                        <div class="rounded-2xl p-4 mb-4 text-left shadow-sm" style="background:${sc.bg};border:1px solid ${sc.border};">
                             <div class="flex items-center gap-3 mb-2">
-                                <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black flex-shrink-0" style="background:${sc.color};color:#fff;">${(this.selectedLevel || '').toUpperCase()}</span>
+                                <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black flex-shrink-0 shadow-sm" style="background:${sc.color};color:#fff;">${(this.selectedLevel || '').toUpperCase()}</span>
                                 <div class="min-w-0 flex-1">
                                     <div class="text-sm font-black text-gray-900">${sc.label}</div>
                                     <div class="text-xs text-gray-600 truncate">${level ? level.title : ''}</div>
@@ -1495,10 +1545,10 @@
                         </button>
 
                         <div class="flex items-center justify-between gap-2 mt-1">
-                            <button type="button" id="wizardBack2Btn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5">
+                            <button type="button" id="wizardBack2Btn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 active:scale-95">
                                 <i class="fas fa-arrow-left"></i> Voltar
                             </button>
-                            <button type="button" id="wizardCancelBtn3" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-xl transition-colors cursor-pointer">
+                            <button type="button" id="wizardCancelBtn3" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-xl transition-colors cursor-pointer active:scale-95">
                                 Cancelar
                             </button>
                         </div>
@@ -1612,6 +1662,11 @@
             if (pickerModal) {
                 pickerModal.addEventListener('click', (e) => {
                     if (e.target === pickerModal) this.closeLevelPickerModal();
+                });
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && pickerModal.style.display === 'flex') {
+                        this.closeLevelPickerModal();
+                    }
                 });
             }
 
@@ -1899,7 +1954,7 @@
                     : 'bg-gray-200 text-gray-600';
 
                 return `
-                    <button type="button" class="level-card-btn w-full p-3 md:p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between text-left cursor-pointer active:scale-98 ${activeCardClasses}" data-subject="${subjectKey}" data-level-id="${lvl.id}">
+                    <button type="button" class="level-card-btn w-full p-3 md:p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between text-left cursor-pointer active:scale-98 ${activeCardClasses}" data-subject="${subjectKey}" data-level="${lvl.id}" data-level-id="${lvl.id}">
                         <div class="flex items-center gap-3 min-w-0">
                             <span class="w-9 h-9 rounded-xl font-black text-xs md:text-sm flex items-center justify-center flex-shrink-0 ${badgeClasses}">
                                 ${lvl.id.toUpperCase()}
