@@ -282,15 +282,37 @@
     const sound = new SoundEngine();
 
     // ------------------------------------------------------------
-    // Gerenciador de Síntese de Voz (Web Speech API) Robusto
+    // ------------------------------------------------------------
+    // Gerenciador de Síntese de Voz (Web Speech API) — Kumon Speech Engine v4
     // ------------------------------------------------------------
     let _cachedVoices = [];
-    let _activeUtterance = null; // Previne Garbage Collection prematuro (bug do Chromium)
+    const _utterancePool = new Set(); // Previne Garbage Collection prematuro de utterances (Chromium bug)
+    let _speechWatchdogTimer = null;
+    let _activeSpeechRequestId = 0;
+    let _cardAutoplayTimer = null;
+
+    function clearCardAutoplay() {
+        if (_cardAutoplayTimer) {
+            clearTimeout(_cardAutoplayTimer);
+            _cardAutoplayTimer = null;
+        }
+    }
+
+    function scheduleCardSpeech(fn, delay = 400) {
+        clearCardAutoplay();
+        _cardAutoplayTimer = setTimeout(() => {
+            _cardAutoplayTimer = null;
+            fn();
+        }, delay);
+    }
 
     function loadAvailableVoices() {
         if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
             try {
-                _cachedVoices = window.speechSynthesis.getVoices() || [];
+                const list = window.speechSynthesis.getVoices() || [];
+                if (list.length > 0) {
+                    _cachedVoices = list;
+                }
             } catch (e) {
                 _cachedVoices = [];
             }
@@ -300,7 +322,9 @@
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         loadAvailableVoices();
         if (window.speechSynthesis.onvoiceschanged !== undefined) {
-            window.speechSynthesis.onvoiceschanged = loadAvailableVoices;
+            window.speechSynthesis.onvoiceschanged = () => {
+                loadAvailableVoices();
+            };
         }
     }
 
@@ -339,13 +363,42 @@
         'Y': 'Letra Ípsilon', 'Z': 'Letra Zê'
     };
 
+    function startSpeechWatchdog() {
+        if (_speechWatchdogTimer) return;
+        _speechWatchdogTimer = setInterval(() => {
+            if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+                clearInterval(_speechWatchdogTimer);
+                _speechWatchdogTimer = null;
+                return;
+            }
+            if (_utterancePool.size > 0 && window.speechSynthesis.speaking) {
+                // Bug do Chromium: se ficar pausado silenciosamente, acorda
+                if (window.speechSynthesis.paused) {
+                    window.speechSynthesis.resume();
+                }
+            } else if (_utterancePool.size === 0 && !window.speechSynthesis.speaking) {
+                clearInterval(_speechWatchdogTimer);
+                _speechWatchdogTimer = null;
+            }
+        }, 1500);
+    }
+
     // Síntese de voz com afinação e velocidade acolhedoras para crianças
     function speakWord(text, lang = 'pt-BR', pitch = 1.15, rate = 0.92, btnEl = null) {
         if (!text || typeof text !== 'string') return;
         if (!('speechSynthesis' in window) || sound.muted) return;
+        clearCardAutoplay();
+
+        // Feedback sonoro tátil imediato via Web Audio API
+        sound.init();
+        if (btnEl) {
+            sound.playTone(880, 0.04, 'sine', 0.08);
+            btnEl.classList.add('ring-2', 'ring-emerald-400', 'animate-pulse');
+        }
+
+        const requestId = ++_activeSpeechRequestId;
 
         try {
-            // Destrava estado pausado (bug comum no Chrome/Edge)
             if (window.speechSynthesis.paused) {
                 window.speechSynthesis.resume();
             }
@@ -363,14 +416,15 @@
                     textToSpeak = cleanText.toLowerCase();
                 }
             } else if (lang.startsWith('en')) {
-                // Em inglês, texto todo em maiúsculo faz motores TTS soletrarem siglas (ex: C-A-T em vez de /kæt/).
-                // Converter para minúsculo garante pronúncia natural tanto para letras/palavras quanto para frases.
                 if (cleanText === cleanText.toUpperCase()) {
                     textToSpeak = cleanText.toLowerCase();
                 }
             }
 
             const executeSpeak = () => {
+                // Se uma requisição mais nova foi feita durante o delay de estabilização, descarta
+                if (requestId !== _activeSpeechRequestId) return;
+
                 try {
                     const utterance = new SpeechSynthesisUtterance(textToSpeak.slice(0, 300));
                     utterance.lang = lang;
@@ -382,46 +436,52 @@
                         utterance.voice = voice;
                     }
 
-                    if (btnEl) {
-                        btnEl.classList.add('animate-pulse');
-                    }
+                    // Proteção de Garbage Collection (V8)
+                    _utterancePool.add(utterance);
 
-                    utterance.onstart = () => {
+                    const cleanup = () => {
+                        _utterancePool.delete(utterance);
                         if (btnEl) {
-                            btnEl.classList.add('ring-2', 'ring-blue-400');
+                            btnEl.classList.remove('ring-2', 'ring-emerald-400', 'animate-pulse');
                         }
                     };
 
-                    const cleanup = () => {
+                    utterance.onstart = () => {
                         if (btnEl) {
-                            btnEl.classList.remove('animate-pulse', 'ring-2', 'ring-blue-400');
+                            btnEl.classList.add('ring-2', 'ring-emerald-400');
                         }
-                        _activeUtterance = null;
                     };
 
                     utterance.onend = cleanup;
                     utterance.onerror = (err) => {
-                        console.warn('[KumonGen Speech] Falha no utterance:', err.error || err);
                         cleanup();
+                        // Ignora erro benigno de 'interrupted'/'canceled' quando o usuário clica rápido em outra palavra
+                        if (err && err.error !== 'interrupted' && err.error !== 'canceled') {
+                            console.warn('[KumonGen Speech] Falha de síntese:', err.error || err);
+                        }
                     };
 
-                    _activeUtterance = utterance;
+                    startSpeechWatchdog();
                     window.speechSynthesis.speak(utterance);
+                    if (window.speechSynthesis.paused) {
+                        window.speechSynthesis.resume();
+                    }
                 } catch (e) {
                     console.warn('[KumonGen Speech] Erro ao sintetizar fala:', e);
-                    if (btnEl) btnEl.classList.remove('animate-pulse');
+                    if (btnEl) btnEl.classList.remove('ring-2', 'ring-emerald-400', 'animate-pulse');
                 }
             };
 
-            // Se o sintetizador já estiver ocupado, cancela com segurança e agenda o novo áudio
+            // Se o sintetizador estiver ocupado, cancela com segurança e espera 80ms para estabilizar
             if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
                 window.speechSynthesis.cancel();
-                setTimeout(executeSpeak, 60);
+                setTimeout(executeSpeak, 80);
             } else {
                 executeSpeak();
             }
         } catch (e) {
             console.warn('[KumonGen Speech] SpeechSynthesis error:', e);
+            if (btnEl) btnEl.classList.remove('ring-2', 'ring-emerald-400', 'animate-pulse');
         }
     }
 
@@ -1449,9 +1509,6 @@
                         if (window.speechSynthesis.paused) {
                             window.speechSynthesis.resume();
                         }
-                        const warmUtterance = new SpeechSynthesisUtterance('');
-                        warmUtterance.volume = 0;
-                        window.speechSynthesis.speak(warmUtterance);
                     } catch (e) {}
                 }
                 document.removeEventListener('touchstart', unlockAudio);
@@ -1952,6 +2009,7 @@
         // 7. RENDERIZAÇÃO DO CARD DE FOCO
         // ============================================================
         renderCurrentQuestion() {
+            clearCardAutoplay();
             if (typeof this.cleanupTraceCanvas === 'function') {
                 this.cleanupTraceCanvas();
             }
@@ -2454,7 +2512,7 @@
                 speakBtn.addEventListener('click', () => {
                     speakWord(spokenChar, lang, 1.15, 0.90, speakBtn);
                 });
-                setTimeout(() => speakWord(spokenChar, lang, 1.15, 0.90, speakBtn), 400);
+                scheduleCardSpeech(() => speakWord(spokenChar, lang, 1.15, 0.90, speakBtn), 400);
             }
 
             this.setupTraceCanvas();
@@ -2613,7 +2671,7 @@
             if (speakBtn) {
                 speakBtn.addEventListener('click', () => speakWord(word, lang, 1.15, 0.90, speakBtn));
                 // Pronúncia automática ao carregar o card
-                setTimeout(() => speakWord(word, lang, 1.15, 0.90, speakBtn), 400);
+                scheduleCardSpeech(() => speakWord(word, lang, 1.15, 0.90, speakBtn), 400);
             }
 
             let assembled = [];
@@ -2708,7 +2766,7 @@
             const speakBtn = document.getElementById('speakSyllableBtn');
             if (speakBtn) {
                 speakBtn.addEventListener('click', () => speakWord(targetSyl, 'pt-BR', 1.15, 0.92, speakBtn));
-                setTimeout(() => speakWord(targetSyl, 'pt-BR', 1.15, 0.92, speakBtn), 300);
+                scheduleCardSpeech(() => speakWord(targetSyl, 'pt-BR', 1.15, 0.92, speakBtn), 300);
             }
 
             container.querySelectorAll('.syl-choice-btn').forEach(btn => {
@@ -2826,7 +2884,7 @@
             const speakBtn = document.getElementById('speakRhymeBtn');
             if (speakBtn) {
                 speakBtn.addEventListener('click', () => speakWord(baseWord, 'pt-BR', 1.15, 0.92, speakBtn));
-                setTimeout(() => speakWord(baseWord, 'pt-BR', 1.15, 0.92, speakBtn), 300);
+                scheduleCardSpeech(() => speakWord(baseWord, 'pt-BR', 1.15, 0.92, speakBtn), 300);
             }
 
             container.querySelectorAll('.rhyme-choice-btn').forEach(btn => {
@@ -2894,7 +2952,7 @@
             const speakBtn = document.getElementById('speakSentenceBtn');
             if (speakBtn) {
                 speakBtn.addEventListener('click', () => speakWord(sentence, lang, 1.1, 0.88, speakBtn));
-                setTimeout(() => speakWord(sentence, lang, 1.1, 0.88, speakBtn), 400);
+                scheduleCardSpeech(() => speakWord(sentence, lang, 1.1, 0.88, speakBtn), 400);
             }
 
             let assembled = [];
@@ -2992,7 +3050,7 @@
             const speakBtn = document.getElementById('speakOppositeBtn');
             if (speakBtn) {
                 speakBtn.addEventListener('click', () => speakWord(word, 'en-US', 1.15, 0.90, speakBtn));
-                setTimeout(() => speakWord(word, 'en-US', 1.15, 0.90, speakBtn), 300);
+                scheduleCardSpeech(() => speakWord(word, 'en-US', 1.15, 0.90, speakBtn), 300);
             }
 
             container.querySelectorAll('.opposite-choice-btn').forEach(btn => {
