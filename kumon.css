@@ -1,6 +1,148 @@
 /* kumon.css — Estilos compartilhados do KumonGen (A4, exercícios, sidebar, responsivo) */
 
 /* ===========================================
+   MASCOT THEME SYSTEM — CSS Custom Properties
+   Paletas dinâmicas por mascote ativo.
+   Jade(jaguar)=Amarelo, Capi(capivara)=Laranja,
+   Finho(golfinho)=Azul, Lango(calango)=Verde.
+   =========================================== */
+:root,
+body.theme-jaguar {
+  --accent: #d97706;
+  --accent-dark: #92400e;
+  --accent-light: #fef3c7;
+  --accent-bg: #fffbeb;
+  --accent-rgb: 217, 119, 6;
+  --accent-ring-from: #fbbf24;
+  --accent-ring-to: #fde68a;
+  --header-bg: #ffffff;
+  --header-border: #e5e7eb;
+  --body-bg: #f9fafb;
+  --body-bg-tint: #fffbeb;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --card-bg: #ffffff;
+  --card-border: #e5e7eb;
+  --keypad-bg: #92400e;
+  --keypad-hover: #78350f;
+  --keypad-text: #ffffff;
+  --keypad-border: rgba(255,255,255,0.18);
+  --keypad-active-bg: var(--accent);
+  --badge-bg: rgba(217, 119, 6, 0.12);
+  --badge-border: rgba(217, 119, 6, 0.3);
+  --badge-text: #92400e;
+  --progress-bar: var(--accent);
+  --modal-overlay: rgba(0, 0, 0, 0.45);
+  --modal-bg: #ffffff;
+  --modal-border: #e5e7eb;
+  --btn-secondary-bg: #f3f4f6;
+  --btn-secondary-text: #374151;
+  --btn-secondary-border: #d1d5db;
+  --confirm-bg: #059669;
+  --confirm-text: #ffffff;
+}
+
+body.theme-capivara {
+  --accent: #ea580c;
+  --accent-dark: #9a3412;
+  --accent-light: #fed7aa;
+  --accent-bg: #fff7ed;
+  --accent-rgb: 234, 88, 12;
+  --accent-ring-from: #f97316;
+  --accent-ring-to: #fdba74;
+  --body-bg-tint: #fff7ed;
+  --keypad-bg: #9a3412;
+  --keypad-hover: #7c2d12;
+  --keypad-active-bg: var(--accent);
+  --badge-bg: rgba(234, 88, 12, 0.12);
+  --badge-border: rgba(234, 88, 12, 0.3);
+  --badge-text: #9a3412;
+}
+
+body.theme-golfinho {
+  --accent: #2563eb;
+  --accent-dark: #1e3a5f;
+  --accent-light: #dbeafe;
+  --accent-bg: #eff6ff;
+  --accent-rgb: 37, 99, 235;
+  --accent-ring-from: #3b82f6;
+  --accent-ring-to: #93c5fd;
+  --body-bg-tint: #eff6ff;
+  --keypad-bg: #1e3a5f;
+  --keypad-hover: #1e3050;
+  --keypad-active-bg: var(--accent);
+  --badge-bg: rgba(37, 99, 235, 0.12);
+  --badge-border: rgba(37, 99, 235, 0.3);
+  --badge-text: #1e3a5f;
+}
+
+body.theme-calango {
+  --accent: #059669;
+  --accent-dark: #064e3b;
+  --accent-light: #d1fae5;
+  --accent-bg: #ecfdf5;
+  --accent-rgb: 5, 150, 105;
+  --accent-ring-from: #10b981;
+  --accent-ring-to: #6ee7b7;
+  --body-bg-tint: #ecfdf5;
+  --keypad-bg: #064e3b;
+  --keypad-hover: #053f30;
+  --keypad-active-bg: var(--accent);
+  --badge-bg: rgba(5, 150, 105, 0.12);
+  --badge-border: rgba(5, 150, 105, 0.3);
+  --badge-text: #064e3b;
+}
+
+/* Utilitários do tema */
+.theme-accent-bg { background-color: var(--accent) !important; }
+.theme-accent-text { color: var(--accent) !important; }
+.theme-accent-dark-text { color: var(--accent-dark) !important; }
+.theme-accent-border { border-color: var(--accent) !important; }
+.theme-body-bg { background-color: var(--body-bg) !important; }
+.theme-card { background-color: var(--card-bg); border: 1px solid var(--card-border); }
+.theme-header {
+  background-color: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
+}
+.theme-badge {
+  background-color: var(--badge-bg);
+  border: 1px solid var(--badge-border);
+  color: var(--badge-text);
+}
+.theme-ring {
+  background: linear-gradient(135deg, var(--accent-ring-from), var(--accent-ring-to));
+}
+.theme-keypad-btn {
+  background-color: var(--keypad-bg);
+  color: var(--keypad-text);
+  border: 1px solid var(--keypad-border);
+}
+.theme-keypad-btn:hover {
+  background-color: var(--keypad-hover);
+}
+.theme-keypad-btn:active {
+  background-color: var(--keypad-active-bg);
+  transform: scale(0.92);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.5);
+}
+.theme-modal-overlay {
+  background: var(--modal-overlay);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.theme-modal {
+  background: var(--modal-bg);
+  border: 1px solid var(--modal-border);
+  color: var(--text-primary);
+}
+.theme-btn-secondary {
+  background: var(--btn-secondary-bg);
+  color: var(--btn-secondary-text);
+  border: 1px solid var(--btn-secondary-border);
+}
+
+/* ===========================================
    CLASSES TAILWIND FALTANTES NO BUILD COMPILADO
    (tailwind.min.css é um build mínimo pré-compilado)
    =========================================== */
@@ -23,6 +165,72 @@
     animation: kumon-bounce-subtle 2s ease-in-out infinite;
 }
 .opacity-30 { opacity: 0.3; }
+.opacity-40 { opacity: 0.4; }
+
+/* Classes de cor usadas nos exercícios que faltam no tailwind.min.css compilado */
+.bg-amber-100 { background-color: #fef3c7; }
+.bg-amber-500 { background-color: #f59e0b; }
+.bg-amber-50 { background-color: #fffbeb; }
+.bg-emerald-100 { background-color: #d1fae5; }
+.bg-emerald-200 { background-color: #a7f3d0; }
+.bg-emerald-50 { background-color: #ecfdf5; }
+.bg-indigo-100 { background-color: #e0e7ff; }
+.bg-indigo-200 { background-color: #c7d2fe; }
+.bg-purple-100 { background-color: #f3e8ff; }
+.bg-purple-200 { background-color: #e9d5ff; }
+.bg-orange-100 { background-color: #ffedd5; }
+.bg-orange-500 { background-color: #f97316; }
+.bg-orange-50 { background-color: #fff7ed; }
+.text-emerald-700 { color: #047857; }
+.text-emerald-800 { color: #065f46; }
+.text-indigo-700 { color: #4338ca; }
+.text-purple-700 { color: #7c3aed; }
+.text-orange-600 { color: #ea580c; }
+.border-amber-300 { border-color: #fcd34d; }
+.border-amber-400 { border-color: #fbbf24; }
+.border-amber-500 { border-color: #f59e0b; }
+.border-emerald-300 { border-color: #6ee7b7; }
+.border-emerald-400 { border-color: #34d399; }
+.border-indigo-400 { border-color: #818cf8; }
+.border-purple-400 { border-color: #a78bfa; }
+.border-orange-200 { border-color: #fed7aa; }
+.hover\:bg-emerald-50:hover { background-color: #ecfdf5; }
+.hover\:bg-emerald-200:hover { background-color: #a7f3d0; }
+.hover\:bg-indigo-200:hover { background-color: #c7d2fe; }
+.hover\:bg-purple-200:hover { background-color: #e9d5ff; }
+
+/* Cores do tema claro usadas nos cards e botões */
+.bg-gray-50 { background-color: #f9fafb; }
+.bg-gray-100 { background-color: #f3f4f6; }
+.bg-gray-200 { background-color: #e5e7eb; }
+.hover\:bg-gray-50:hover { background-color: #f9fafb; }
+.hover\:bg-gray-100:hover { background-color: #f3f4f6; }
+.hover\:bg-gray-200:hover { background-color: #e5e7eb; }
+.bg-white\/95 { background-color: rgba(255,255,255,0.95); }
+.text-gray-400 { color: #9ca3af; }
+.text-gray-500 { color: #6b7280; }
+.text-gray-600 { color: #4b5563; }
+.text-gray-700 { color: #374151; }
+.text-gray-800 { color: #1f2937; }
+.text-gray-900 { color: #111827; }
+.border-gray-100 { border-color: #f3f4f6; }
+.border-gray-200 { border-color: #e5e7eb; }
+.border-gray-300 { border-color: #d1d5db; }
+.hover\:border-gray-300:hover { border-color: #d1d5db; }
+.hover\:text-gray-800:hover { color: #1f2937; }
+.hover\:text-gray-900:hover { color: #111827; }
+.hover\:shadow-lg:hover { box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1); }
+
+/* Cores de destaque blue */
+.bg-blue-50 { background-color: #eff6ff; }
+.hover\:bg-blue-50:hover { background-color: #eff6ff; }
+.border-blue-200 { border-color: #bfdbfe; }
+.border-blue-400 { border-color: #60a5fa; }
+.hover\:border-blue-400:hover { border-color: #60a5fa; }
+.text-blue-700 { color: #1d4ed8; }
+.hover\:border-indigo-300:hover { border-color: #a5b4fc; }
+.text-rose-500 { color: #f43f5e; }
+.hover\:text-rose-400:hover { color: #fb7185; }
 .w-4 { width: 1rem; }
 .h-4 { height: 1rem; }
 .w-5 { width: 1.25rem; }

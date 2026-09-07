@@ -1560,8 +1560,13 @@ const KumonGen = (function() {
 
     window.KumonGen_showParentalControlModal = showParentalControlModal;
 
-    // Modal de tutorial interativo integrado na interface
+    // Modal de tutorial interativo integrado na interface (delega para o Guia dos Pais)
     function showTutorialModal() {
+        if (window.KumonParentGuide && typeof window.KumonParentGuide.open === 'function') {
+            window.KumonParentGuide.open('rotina');
+            return;
+        }
+
         const existing = document.getElementById('tutorial-modal');
         if (existing) existing.remove();
 
@@ -1573,75 +1578,43 @@ const KumonGen = (function() {
         modal.setAttribute('aria-label', 'Tutorial');
         modal.setAttribute('tabindex', '-1');
         modal.innerHTML = `
-            <div class="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-2xl border border-slate-100 flex flex-col text-slate-800 transition-all transform scale-100">
-                <!-- Header -->
-                <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-3xl">
+            <div class="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-2xl border border-slate-100 flex flex-col text-slate-800 transition-all">
+                <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-3xl">
                     <div class="flex items-center gap-2">
-                        <i class="fas fa-graduation-cap text-blue-600 text-2xl animate-bounce-subtle"></i>
-                        <h2 class="text-sm font-black text-slate-900 uppercase tracking-wider">Tutorial KumonGen</h2>
+                        <i class="fas fa-book-open text-blue-600 text-xl"></i>
+                        <h2 class="text-sm font-black text-slate-900 uppercase tracking-wider">Guia Rápido KumonGen</h2>
                     </div>
                     <button onclick="document.getElementById('tutorial-modal').remove()" class="text-slate-400 hover:text-slate-600 transition-colors">
                         <i class="fas fa-times text-lg"></i>
                     </button>
                 </div>
-                <!-- Body -->
                 <div class="p-6 space-y-4 text-xs md:text-sm">
-                    <p class="text-slate-600 leading-relaxed">
-                        Bem-vindo ao <strong>KumonGen</strong>! Este gerador auxilia na criação de materiais impressos estruturados para o aprendizado das crianças.
-                    </p>
-                    
                     <div class="space-y-3">
                         <div class="flex gap-3 text-left">
                             <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 font-bold text-xs flex items-center justify-center flex-shrink-0">1</div>
-                            <p class="text-slate-700 flex-1"><strong>Escolha o Nível</strong>: Na barra lateral esquerda, selecione o nível desejado (ex: quantidade, adição simples, traçado de alfabeto ou formação de palavras).</p>
+                            <p class="text-slate-700 flex-1"><strong>Escolha a Matéria e o Nível</strong>: Selecione o nível adequado na barra lateral.</p>
                         </div>
                         <div class="flex gap-3 text-left">
                             <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 font-bold text-xs flex items-center justify-center flex-shrink-0">2</div>
-                            <p class="text-slate-700 flex-1"><strong>Ajuste os Parâmetros</strong>: Altere os valores de repetições, operadores, intervalos ou adicione novas palavras na lista para personalizar os exercícios.</p>
+                            <p class="text-slate-700 flex-1"><strong>Imprima ou Pratique no Tablet</strong>: Imprima a folha A4 dobrável ou resolva diretamente na tela.</p>
                         </div>
                         <div class="flex gap-3 text-left">
                             <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 font-bold text-xs flex items-center justify-center flex-shrink-0">3</div>
-                            <p class="text-slate-700 flex-1"><strong>Folhas e Zoom</strong>: Defina a quantidade de páginas do caderno (2, 4, 6 ou 8 páginas) e quantas linhas por folha. O preview A4 se atualiza e se ajusta automaticamente para celulares e tablets.</p>
+                            <p class="text-slate-700 flex-1"><strong>Rotina de 10 a 15 Minutos</strong>: Uma folha diária com exemplo guiado na questão 1.</p>
                         </div>
-                        <div class="flex gap-3 text-left">
-                            <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 font-bold text-xs flex items-center justify-center flex-shrink-0">4</div>
-                            <p class="text-slate-700 flex-1"><strong>Gere o PDF</strong>: Clique em <strong>GERAR PDF</strong> para baixar um arquivo pronto para impressão (folha A4 paisagem, com duas páginas A5 lado a lado por folha).</p>
-                        </div>
-                    </div>
-
-                    <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-4 mt-2 text-left">
-                        <h4 class="font-black text-amber-900 flex items-center gap-1.5 mb-1 text-xs md:text-sm">
-                            <i class="fas fa-trophy text-amber-600"></i> Sistema de Conquistas (Scoreboard)
-                        </h4>
-                        <p class="text-amber-800 text-[11px] md:text-xs leading-relaxed">
-                            Crie um incentivo extra! Gerar cada PDF dá <strong>+10 pontos</strong>. Quando a criança terminar a tarefa no papel, clique na bolinha <i class="far fa-circle text-slate-400"></i> no histórico para marcar como <strong>Concluído</strong>. Isso adiciona <strong>+50 pontos</strong> adicionais e <strong>+1 estrela</strong> ao Quadro de Conquistas!
-                        </p>
                     </div>
                 </div>
-                <!-- Footer -->
                 <div class="p-5 border-t border-slate-100 bg-slate-50 flex justify-end rounded-b-3xl">
-                    <button onclick="document.getElementById('tutorial-modal').remove()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-md shadow-blue-600/10 text-xs md:text-sm">
-                        Entendi, vamos treinar!
+                    <button onclick="document.getElementById('tutorial-modal').remove()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-md text-xs md:text-sm">
+                        Entendido
                     </button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
 
-        // ESC para fechar
         const escHandler = (e) => { if (e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', escHandler); } };
         document.addEventListener('keydown', escHandler);
-
-        // Cleanup do ESC handler nos botões de fechar existentes
-        modal.querySelectorAll('button').forEach(btn => {
-            const originalOnclick = btn.getAttribute('onclick');
-            if (originalOnclick && originalOnclick.includes('remove')) {
-                btn.removeAttribute('onclick');
-                btn.addEventListener('click', () => { modal.remove(); document.removeEventListener('keydown', escHandler); });
-            }
-        });
-
-        // Focus trap: move foco para dentro do modal
         modal.focus();
     }
 
@@ -1679,7 +1652,7 @@ const KumonGen = (function() {
                 <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3">
                     <div>
                         <div class="font-bold text-slate-800 text-xs">Exemplo Guiado (#1)</div>
-                        <div class="text-[10px] text-slate-500 leading-tight">Questão 1 resolvida em traço pontilhado para servir de modelo autodidata (Kumon Model).</div>
+                        <div class="text-[10px] text-slate-500 leading-tight">Questão 1 resolvida como modelo para aprendizado autônomo.</div>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
                         <input type="checkbox" id="toggle-worked-example" ${pedagogicalConfig.workedExample ? 'checked' : ''} class="sr-only peer">
@@ -1690,7 +1663,7 @@ const KumonGen = (function() {
                 <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3">
                     <div>
                         <div class="font-bold text-slate-800 text-xs">Tempo Alvo (SCT)</div>
-                        <div class="text-[10px] text-slate-500 leading-tight">Meta de minutos no cabeçalho. Repetir o nível se passar de 1,5x o tempo sugerido.</div>
+                        <div class="text-[10px] text-slate-500 leading-tight">Tempo sugerido no cabeçalho para guiar o ritmo da folha.</div>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
                         <input type="checkbox" id="toggle-sct" ${pedagogicalConfig.sctEnabled ? 'checked' : ''} class="sr-only peer">
@@ -1701,7 +1674,7 @@ const KumonGen = (function() {
                 <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3">
                     <div>
                         <div class="font-bold text-slate-800 text-xs">Folha de Gabarito</div>
-                        <div class="text-[10px] text-slate-500 leading-tight">Gera folha final com respostas compactas para os pais conferirem tudo em 1 minuto.</div>
+                        <div class="text-[10px] text-slate-500 leading-tight">Gera folha final com respostas compactas para conferência rápida.</div>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
                         <input type="checkbox" id="toggle-answer-key" ${pedagogicalConfig.answerKey ? 'checked' : ''} class="sr-only peer">
@@ -1710,9 +1683,13 @@ const KumonGen = (function() {
                 </div>
 
                 <div class="p-2.5 bg-blue-50/60 border border-blue-100 rounded-xl text-[10px] text-blue-800 leading-relaxed">
-                    <strong class="block mb-0.5"><i class="fas fa-lightbulb"></i> Dica Pedagógica Kumon:</strong>
-                    A rotina ideal é de <strong>1 folha por dia (10 a 15 min)</strong> todos os dias. O erro deve ser corrigido no mesmo dia para não consolidar dúvidas.
+                    <strong class="block mb-0.5"><i class="fas fa-lightbulb"></i> Rotina Recomendada:</strong>
+                    <strong>1 folha por dia (10 a 15 min)</strong>. Erros devem ser corrigidos no mesmo dia para não acumular dúvidas.
                 </div>
+
+                <button type="button" onclick="if(window.KumonParentGuide)window.KumonParentGuide.open();" class="w-full py-2.5 px-3 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm">
+                    <i class="fas fa-book-open text-emerald-600"></i> Abrir Guia dos Pais & Método
+                </button>
             </div>
         `;
 

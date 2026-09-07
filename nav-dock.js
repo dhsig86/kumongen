@@ -12,6 +12,9 @@
         else if (currentPath.includes('ingles')) activePage = 'ingles';
         else if (currentPath.includes('tablet')) activePage = 'tablet';
 
+        // Nav Dock não aparece na página inicial
+        if (activePage === 'home') return;
+
         const dock = document.createElement('nav');
         dock.id = 'kumonGlobalNavDock';
         dock.className = 'no-print select-none transition-all duration-300 ease-out';
@@ -31,7 +34,7 @@
             const isActive = it.id === activePage;
             const activeClasses = isActive 
                 ? `${it.activeBg} font-black shadow-inner` 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 border-transparent';
+                : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100 border-transparent';
             
             return `
                 <a href="${it.href}" class="nav-dock-item flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 px-3 py-2 sm:py-2.5 rounded-2xl border transition-all duration-200 text-center ${activeClasses} min-w-[48px] min-h-[44px] cursor-pointer" title="${it.title}">
@@ -62,35 +65,42 @@
 
             dock.innerHTML = `
                 <div class="relative">
-                    <div id="navDockTabletFlyout" class="hidden absolute bottom-12 left-0 rounded-2xl p-2.5 shadow-2xl flex flex-col gap-1 min-w-[190px] mb-2 z-50" style="background: #0f172a; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.8); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
-                        <div class="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-800 flex items-center justify-between mb-1">
+                    <div id="navDockTabletFlyout" class="hidden absolute bottom-12 left-0 rounded-2xl p-2.5 shadow-xl flex flex-col gap-1 min-w-[190px] mb-2 z-50 bg-white border border-gray-200" style="backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
+                        <div class="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-gray-500 border-b border-gray-200 flex items-center justify-between mb-1">
                             <span>Navegação</span>
-                            <i class="fas fa-compass text-amber-400"></i>
+                            <i class="fas fa-compass text-amber-500"></i>
                         </div>
-                        <a href="index.html" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-300 hover:bg-slate-800 transition-colors" style="text-decoration: none;">
-                            <i class="fas fa-home w-4 text-amber-400"></i> <span>Início</span>
+                        <a href="index.html" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors" style="text-decoration: none;">
+                            <i class="fas fa-home w-4 text-amber-500"></i> <span>Início</span>
                         </a>
-                        <a href="matematica.html" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-blue-300 hover:bg-slate-800 transition-colors" style="text-decoration: none;">
-                            <i class="fas fa-calculator w-4 text-blue-400"></i> <span>Matemática</span>
+                        <a href="matematica.html" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors" style="text-decoration: none;">
+                            <i class="fas fa-calculator w-4 text-blue-500"></i> <span>Matemática</span>
                         </a>
-                        <a href="portugues.html" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-emerald-300 hover:bg-slate-800 transition-colors" style="text-decoration: none;">
-                            <i class="fas fa-font w-4 text-emerald-400"></i> <span>Português</span>
+                        <a href="portugues.html" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors" style="text-decoration: none;">
+                            <i class="fas fa-font w-4 text-emerald-500"></i> <span>Português</span>
                         </a>
-                        <a href="ingles.html" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-red-300 hover:bg-slate-800 transition-colors" style="text-decoration: none;">
-                            <i class="fas fa-language w-4 text-red-400"></i> <span>Inglês</span>
+                        <a href="ingles.html" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors" style="text-decoration: none;">
+                            <i class="fas fa-language w-4 text-red-500"></i> <span>Inglês</span>
                         </a>
-                        <div class="h-[1px] bg-slate-800 my-1"></div>
-                        <button type="button" id="navDockTabletEvolutionBtn" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-blue-400 hover:bg-slate-800 transition-colors text-left w-full cursor-pointer">
-                            <i class="fas fa-chart-line w-4 text-blue-400"></i> <span>Boletim de Evolução</span>
+                        <div class="h-[1px] bg-gray-200 my-1"></div>
+                        <button type="button" id="navDockTabletEvolutionBtn" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors text-left w-full cursor-pointer">
+                            <i class="fas fa-chart-line w-4 text-blue-500"></i> <span>Boletim de Evolução</span>
                         </button>
-                        <button type="button" id="navDockTabletProfileBtn" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-400 hover:bg-slate-800 transition-colors text-left w-full cursor-pointer">
-                            <i class="fas fa-users w-4 text-amber-400"></i> <span>Trocar Aluno</span>
+                        <button type="button" id="navDockTabletProfileBtn" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors text-left w-full cursor-pointer">
+                            <i class="fas fa-users w-4 text-amber-500"></i> <span>Trocar Aluno</span>
+                        </button>
+                        <div class="h-[1px] bg-gray-200 my-1"></div>
+                        <button type="button" id="navDockScreenModeBtn" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors text-left w-full cursor-pointer" title="Alternar modo de tela entre Compacto e Normal">
+                            <i class="fas fa-mobile-alt w-4 text-indigo-500" id="screenModeIcon"></i> <span id="screenModeLabel">Modo: Normal</span>
+                        </button>
+                        <button type="button" id="navDockTabletGuideBtn" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors text-left w-full cursor-pointer" title="Abrir Guia e Manual dos Pais">
+                            <i class="fas fa-book-open w-4 text-emerald-500"></i> <span>Guia dos Pais</span>
                         </button>
                     </div>
-                    <button type="button" id="navDockTabletTrigger" class="cursor-pointer transition-all active:scale-95 flex items-center gap-2" style="background: #0f172a; border: 1px solid #334155; color: #f8fafc; border-radius: 9999px; box-shadow: 0 4px 14px rgba(0,0,0,0.5); padding: 0.5rem 0.85rem;" title="Menu rápido de navegação">
-                        <i class="fas fa-compass text-amber-400 text-sm"></i>
+                    <button type="button" id="navDockTabletTrigger" class="cursor-pointer transition-all active:scale-95 flex items-center gap-2 bg-white border border-gray-200 text-gray-700 shadow-sm rounded-full px-3 py-2" title="Menu rápido de navegação">
+                        <i class="fas fa-compass text-amber-500 text-sm"></i>
                         <span class="text-xs font-black tracking-wide">Menu</span>
-                        <i class="fas fa-chevron-up text-[9px] text-slate-400 transition-transform" id="navDockTabletTriggerIcon"></i>
+                        <i class="fas fa-chevron-up text-[9px] text-gray-400 transition-transform" id="navDockTabletTriggerIcon"></i>
                     </button>
                 </div>
             `;
@@ -148,23 +158,93 @@
                 });
             }
 
+            // ── Screen Mode Toggle (Compact / Normal) ──
+            const screenModeBtn = document.getElementById('navDockScreenModeBtn');
+            const screenModeIcon = document.getElementById('screenModeIcon');
+            const screenModeLabel = document.getElementById('screenModeLabel');
+
+            function getScreenMode() {
+                try {
+                    if (window.SafeStorage) return window.SafeStorage.getItem('kumon_screen_mode') || 'normal';
+                    return localStorage.getItem('kumon_screen_mode') || 'normal';
+                } catch (e) { return 'normal'; }
+            }
+
+            function setScreenMode(mode) {
+                try {
+                    if (window.SafeStorage) window.SafeStorage.setItem('kumon_screen_mode', mode);
+                    else localStorage.setItem('kumon_screen_mode', mode);
+                } catch (e) {}
+            }
+
+            function applyScreenMode(mode) {
+                document.body.setAttribute('data-screen-mode', mode);
+                if (screenModeIcon && screenModeLabel) {
+                    if (mode === 'compact') {
+                        screenModeIcon.className = 'fas fa-compress-alt w-4 text-indigo-400';
+                        screenModeLabel.textContent = 'Modo: Compacto 📱';
+                    } else {
+                        screenModeIcon.className = 'fas fa-expand-alt w-4 text-indigo-400';
+                        screenModeLabel.textContent = 'Modo: Normal 📋';
+                    }
+                }
+            }
+
+            // Aplicar modo salvo ao carregar
+            const savedMode = getScreenMode();
+            applyScreenMode(savedMode);
+
+            if (screenModeBtn) {
+                screenModeBtn.addEventListener('click', () => {
+                    const current = getScreenMode();
+                    const next = current === 'normal' ? 'compact' : 'normal';
+                    setScreenMode(next);
+                    applyScreenMode(next);
+                    flyout.classList.add('hidden');
+                });
+            }
+
+            const tabletGuideBtn = document.getElementById('navDockTabletGuideBtn');
+            if (tabletGuideBtn) {
+                tabletGuideBtn.addEventListener('click', () => {
+                    flyout.classList.add('hidden');
+                    if (window.KumonParentGuide) {
+                        window.KumonParentGuide.open();
+                    }
+                });
+            }
+
             return;
         }
 
         dock.innerHTML = `
-            <div id="navDockInner" class="flex items-center gap-1 sm:gap-1.5 p-1.5 rounded-3xl shadow-2xl transition-all" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(51, 65, 85, 0.8);">
+            <div id="navDockInner" class="flex items-center gap-1 sm:gap-1.5 p-1.5 rounded-3xl shadow-lg transition-all" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(229, 231, 235, 1);">
                 ${itemsHtml}
-                <div class="w-[1px] h-6 bg-slate-700/80 mx-0.5"></div>
+                <div class="w-[1px] h-6 bg-gray-200 mx-0.5"></div>
                 ${profileBtnHtml}
                 <button type="button" id="navDockEvolutionBtn" class="nav-dock-item flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 px-3 py-2 sm:py-2.5 rounded-2xl border border-transparent text-blue-300/80 hover:text-blue-200 hover:bg-blue-400/10 transition-all text-center min-w-[48px] min-h-[44px] cursor-pointer" title="Boletim de Evolução & Gráficos">
                     <i class="fas fa-chart-line text-sm sm:text-base text-blue-400"></i>
                     <span class="text-[10px] sm:text-xs font-bold leading-none">Boletim</span>
+                </button>
+                <button type="button" id="navDockGuideBtn" class="nav-dock-item hidden sm:flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 px-3 py-2 sm:py-2.5 rounded-2xl border border-transparent text-emerald-300/80 hover:text-emerald-200 hover:bg-emerald-400/10 transition-all text-center min-w-[48px] min-h-[44px] cursor-pointer" title="Guia dos Pais & Método">
+                    <i class="fas fa-book-open text-sm sm:text-base text-emerald-400"></i>
+                    <span class="text-[10px] sm:text-xs font-bold leading-none">Guia</span>
                 </button>
                 ${toggleBtnHtml}
             </div>
         `;
 
         document.body.appendChild(dock);
+
+        // Ações do botão de guia dos pais
+        const guideBtn = document.getElementById('navDockGuideBtn');
+        if (guideBtn) {
+            guideBtn.addEventListener('click', () => {
+                if (window.KumonParentGuide) {
+                    window.KumonParentGuide.open();
+                }
+            });
+        }
 
         // Ações do botão de boletim de evolução
         const evoBtn = document.getElementById('navDockEvolutionBtn');

@@ -378,33 +378,46 @@
 
         // Exportação de Backup JSON
         exportBackup() {
+            const active = this.getActive();
             const data = {
                 app: 'KumonGen',
-                version: '3.8.4',
+                version: '4.4.0',
                 exportedAt: new Date().toISOString(),
-                activeStudentId: SafeStorage.getItem(STORAGE_ACTIVE_ID),
+                activeStudentId: active ? active.id : SafeStorage.getItem(STORAGE_ACTIVE_ID),
                 students: this.getAll()
             };
 
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            const dateStr = new Date().toISOString().slice(0, 10);
-            a.href = url;
-            a.download = `kumongen_backup_${dateStr}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            const jsonStr = JSON.stringify(data, null, 2);
+            if (typeof document !== 'undefined' && typeof Blob !== 'undefined' && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+                const blob = new Blob([jsonStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const dateStr = new Date().toISOString().slice(0, 10);
+                a.href = url;
+                a.download = `kumongen_backup_${dateStr}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+            return data;
         },
 
         // Importação e Restauração Segura de Backup JSON com Validação Estrita de Schema
-        importBackup(jsonString) {
+        importBackup(jsonInput) {
             try {
-                if (!jsonString || typeof jsonString !== 'string') {
+                if (!jsonInput) {
                     return { success: false, error: 'Arquivo inválido ou vazio.' };
                 }
-                const data = JSON.parse(jsonString);
+                let data = null;
+                if (typeof jsonInput === 'string') {
+                    data = JSON.parse(jsonInput);
+                } else if (typeof jsonInput === 'object') {
+                    data = jsonInput;
+                } else {
+                    return { success: false, error: 'Formato de backup inválido.' };
+                }
+
                 if (!data || typeof data !== 'object') {
                     return { success: false, error: 'Estrutura JSON inválida.' };
                 }
@@ -1154,7 +1167,7 @@
             // Modal backdrop com overflow-y: auto para nunca cortar em telas pequenas
             const modal = document.createElement('div');
             modal.id = 'studentProfileManagerModal';
-            modal.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(2,6,23,0.85);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);overflow-y:auto;touch-action:manipulation;box-sizing:border-box;';
+            modal.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);overflow-y:auto;touch-action:manipulation;box-sizing:border-box;';
 
             const closeModal = () => {
                 document.removeEventListener('keydown', escListener);

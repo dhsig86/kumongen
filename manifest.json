@@ -8,8 +8,8 @@
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "any",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#f9fafb",
+  "theme_color": "#f9fafb",
   "lang": "pt-BR",
   "categories": ["education", "kids", "games"],
   "icons": [

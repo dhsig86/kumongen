@@ -1,0 +1,390 @@
+{
+  "metadata": {
+    "title": "KumonGen UX/UI Audit Results",
+    "generatedAt": "2026-09-07T11:49:55.017Z",
+    "viewportsTested": 6,
+    "pagesTested": 5,
+    "scenariosTested": 11
+  },
+  "summary": {
+    "total": 90,
+    "passed": 90,
+    "failed": 0,
+    "warnings": 2,
+    "passRate": "100.0%"
+  },
+  "bugs": [],
+  "consoleErrors": [],
+  "assertions": [
+    {
+      "status": "PASS",
+      "message": "[Mobile Retrato (iPhone 12)] Nav Dock NÃO sobrepõe botão OK/Enter do teclado"
+    },
+    {
+      "status": "PASS",
+      "message": "[Mobile Retrato (iPhone 12)] Última fileira do teclado (0, backspace, OK) totalmente visível"
+    },
+    {
+      "status": "PASS",
+      "message": "[Mobile Paisagem] Nav Dock NÃO sobrepõe botão OK/Enter do teclado"
+    },
+    {
+      "status": "PASS",
+      "message": "[Mobile Paisagem] Última fileira do teclado (0, backspace, OK) totalmente visível"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet Retrato (iPad)] Nav Dock NÃO sobrepõe botão OK/Enter do teclado"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet Retrato (iPad)] Última fileira do teclado (0, backspace, OK) totalmente visível"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet Paisagem (iPad)] Nav Dock NÃO sobrepõe botão OK/Enter do teclado"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet Paisagem (iPad)] Última fileira do teclado (0, backspace, OK) totalmente visível"
+    },
+    {
+      "status": "PASS",
+      "message": "[Desktop 1280×800] Nav Dock NÃO sobrepõe botão OK/Enter do teclado"
+    },
+    {
+      "status": "PASS",
+      "message": "[Desktop 1280×800] Última fileira do teclado (0, backspace, OK) totalmente visível"
+    },
+    {
+      "status": "PASS",
+      "message": "[Desktop Full HD] Nav Dock NÃO sobrepõe botão OK/Enter do teclado"
+    },
+    {
+      "status": "PASS",
+      "message": "[Desktop Full HD] Última fileira do teclado (0, backspace, OK) totalmente visível"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet Paisagem] playerWorkspace usa flex-direction: row"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet Retrato] playerWorkspace usa flex-direction: column"
+    },
+    {
+      "status": "PASS",
+      "message": "[Mobile Paisagem ≤480px alt] Mascote oculto para economizar espaço"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet Paisagem] FocusCard e Keypad estão lado a lado (2 colunas)"
+    },
+    {
+      "status": "PASS",
+      "message": "[Matemática][Desktop] Sidebar e preview lado a lado (flex-row)"
+    },
+    {
+      "status": "PASS",
+      "message": "[Matemática][Mobile] Sidebar e preview empilhados (flex-column)"
+    },
+    {
+      "status": "PASS",
+      "message": "[Matemática][Mobile] Preview A4 não excede largura do viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[Matemática][Mobile] Botão \"Ver Preview\" sticky visível"
+    },
+    {
+      "status": "PASS",
+      "message": "[Português][Desktop] Sidebar e preview lado a lado (flex-row)"
+    },
+    {
+      "status": "PASS",
+      "message": "[Português][Mobile] Sidebar e preview empilhados (flex-column)"
+    },
+    {
+      "status": "PASS",
+      "message": "[Português][Mobile] Preview A4 não excede largura do viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[Português][Mobile] Botão \"Ver Preview\" sticky visível"
+    },
+    {
+      "status": "PASS",
+      "message": "[Inglês][Desktop] Sidebar e preview lado a lado (flex-row)"
+    },
+    {
+      "status": "PASS",
+      "message": "[Inglês][Mobile] Sidebar e preview empilhados (flex-column)"
+    },
+    {
+      "status": "PASS",
+      "message": "[Inglês][Mobile] Preview A4 não excede largura do viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[Inglês][Mobile] Botão \"Ver Preview\" sticky visível"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html][Mobile Retrato (iPhone 12)] Card do aluno cabe no viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html][Mobile Retrato (iPhone 12)] 4 atalhos de navegação presentes"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html][Mobile Paisagem] Card do aluno cabe no viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html][Mobile Paisagem] 4 atalhos de navegação presentes"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html][Tablet Retrato (iPad)] Card do aluno cabe no viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html][Tablet Retrato (iPad)] 4 atalhos de navegação presentes"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html][Tablet Paisagem (iPad)] Card do aluno cabe no viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html][Tablet Paisagem (iPad)] 4 atalhos de navegação presentes"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html][Desktop 1280×800] Card do aluno cabe no viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html][Desktop 1280×800] 4 atalhos de navegação presentes"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html][Desktop Full HD] Card do aluno cabe no viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html][Desktop Full HD] 4 atalhos de navegação presentes"
+    },
+    {
+      "status": "PASS",
+      "message": "[Mobile Retrato (iPhone 12)] Level Picker não excede largura do viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[Mobile Retrato (iPhone 12)] Level Picker não excede altura do viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet Retrato (iPad)] Level Picker não excede largura do viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet Retrato (iPad)] Level Picker não excede altura do viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet Paisagem (iPad)] Level Picker não excede largura do viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet Paisagem (iPad)] Level Picker não excede altura do viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[Desktop 1280×800] Level Picker não excede largura do viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[Desktop 1280×800] Level Picker não excede altura do viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html][Mobile Retrato (iPhone 12)] Sem scroll horizontal indesejado"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html][Tablet Retrato (iPad)] Sem scroll horizontal indesejado"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html][Tablet Paisagem (iPad)] Sem scroll horizontal indesejado"
+    },
+    {
+      "status": "PASS",
+      "message": "[matematica.html][Mobile Retrato (iPhone 12)] Sem scroll horizontal indesejado"
+    },
+    {
+      "status": "PASS",
+      "message": "[matematica.html][Tablet Retrato (iPad)] Sem scroll horizontal indesejado"
+    },
+    {
+      "status": "PASS",
+      "message": "[matematica.html][Tablet Paisagem (iPad)] Sem scroll horizontal indesejado"
+    },
+    {
+      "status": "PASS",
+      "message": "[portugues.html][Mobile Retrato (iPhone 12)] Sem scroll horizontal indesejado"
+    },
+    {
+      "status": "PASS",
+      "message": "[portugues.html][Tablet Retrato (iPad)] Sem scroll horizontal indesejado"
+    },
+    {
+      "status": "PASS",
+      "message": "[portugues.html][Tablet Paisagem (iPad)] Sem scroll horizontal indesejado"
+    },
+    {
+      "status": "PASS",
+      "message": "[ingles.html][Mobile Retrato (iPhone 12)] Sem scroll horizontal indesejado"
+    },
+    {
+      "status": "PASS",
+      "message": "[ingles.html][Tablet Retrato (iPad)] Sem scroll horizontal indesejado"
+    },
+    {
+      "status": "PASS",
+      "message": "[ingles.html][Tablet Paisagem (iPad)] Sem scroll horizontal indesejado"
+    },
+    {
+      "status": "PASS",
+      "message": "[tablet.html][Mobile Retrato (iPhone 12)] Sem scroll horizontal indesejado"
+    },
+    {
+      "status": "PASS",
+      "message": "[tablet.html][Tablet Retrato (iPad)] Sem scroll horizontal indesejado"
+    },
+    {
+      "status": "PASS",
+      "message": "[tablet.html][Tablet Paisagem (iPad)] Sem scroll horizontal indesejado"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet] Header z-index adequado (50)"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet] Confetti canvas z-index >= 50 (50)"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet] Level Picker z-index >= 60 (60)"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet] Gauntlet z-index (42) >= Worked Example (40)"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html] Meta viewport com width=device-width"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html] <html lang=\"pt-BR\"> presente"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html] Todos os botões acessíveis (com texto ou title)"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html] Todas as imagens com atributo alt"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html] Regra CSS :focus-visible presente"
+    },
+    {
+      "status": "PASS",
+      "message": "[tablet.html] Meta viewport com width=device-width"
+    },
+    {
+      "status": "PASS",
+      "message": "[tablet.html] <html lang=\"pt-BR\"> presente"
+    },
+    {
+      "status": "WARN",
+      "message": "[tablet.html] 1 botão(ões) sem texto/aria-label/title",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "[tablet.html] Todas as imagens com atributo alt"
+    },
+    {
+      "status": "PASS",
+      "message": "[tablet.html] Regra CSS :focus-visible presente"
+    },
+    {
+      "status": "PASS",
+      "message": "[matematica.html] Meta viewport com width=device-width"
+    },
+    {
+      "status": "PASS",
+      "message": "[matematica.html] <html lang=\"pt-BR\"> presente"
+    },
+    {
+      "status": "PASS",
+      "message": "[matematica.html] Todos os botões acessíveis (com texto ou title)"
+    },
+    {
+      "status": "PASS",
+      "message": "[matematica.html] Todas as imagens com atributo alt"
+    },
+    {
+      "status": "PASS",
+      "message": "[matematica.html] Regra CSS :focus-visible presente"
+    },
+    {
+      "status": "PASS",
+      "message": "[Mobile Retrato (iPhone 12)] Header do tablet ≤80px de altura"
+    },
+    {
+      "status": "PASS",
+      "message": "[Mobile Retrato (iPhone 12)] Header não excede largura do viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[Mobile Retrato (iPhone 12)] Nome do aluno truncado no mobile"
+    },
+    {
+      "status": "PASS",
+      "message": "[Mobile Paisagem] Header do tablet ≤80px de altura"
+    },
+    {
+      "status": "PASS",
+      "message": "[Mobile Paisagem] Header não excede largura do viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet Retrato (iPad)] Header do tablet ≤80px de altura"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet Retrato (iPad)] Header não excede largura do viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "Zero erros de console durante navegação por 5 páginas"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet Retrato] Teclado virtual visível na carga inicial (exercício numérico M1)"
+    },
+    {
+      "status": "WARN",
+      "message": "[Tablet] #activeAnswerBox não renderizado — exercício pode ser de tipo seleção/arrasto",
+      "details": ""
+    }
+  ]
+}

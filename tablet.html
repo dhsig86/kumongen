@@ -11,7 +11,7 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#f9fafb">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -37,6 +37,13 @@
             50% { transform: translateY(-4px); }
         }
         .animate-bounce-subtle { animation: bounceSoft 2s ease-in-out infinite; }
+        @keyframes modalEnter {
+            from { opacity: 0; transform: scale(0.97) translateY(4px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .modal-enter {
+            animation: modalEnter 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
         .opacity-30 { opacity: 0.3; }
 
         /* Otimizações táteis para iPad e tablets */
@@ -75,20 +82,23 @@
             justify-content: center;
             font-size: 1.5rem;
             font-weight: 800;
-            background-color: #1e293b;
-            color: #f8fafc;
-            border: 1px solid #334155;
+            background-color: var(--keypad-bg);
+            color: var(--keypad-text);
+            border: 1px solid var(--keypad-border);
             border-radius: 1rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
             transition: all 0.1s ease;
+        }
+
+        .keypad-btn:hover {
+            background-color: var(--keypad-hover);
         }
 
         .keypad-btn:active {
             transform: scale(0.92);
-            background-color: #3b82f6;
+            background-color: var(--keypad-active-bg);
             color: #ffffff;
-            border-color: #60a5fa;
-            box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+            box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.5);
         }
 
         /* Caixa de resposta com foco e pulso suave */
@@ -202,52 +212,183 @@
                 border-radius: 0.6rem !important;
             }
         }
+
+        /* ── RESPONSIVO: SMARTPHONES ≤ 640px ── */
+        @media (max-width: 640px) {
+            /* Header: overflow safety net + compactar */
+            header {
+                overflow-x: hidden !important;
+                padding-left: 0.5rem !important;
+                padding-right: 0.5rem !important;
+                padding-top: 0.35rem !important;
+                padding-bottom: 0.35rem !important;
+                gap: 0.25rem !important;
+            }
+            header > div {
+                gap: 0.25rem !important;
+            }
+            /* Ocultar elementos secundários do header */
+            .tablet-hide-sm {
+                display: none !important;
+            }
+            /* Compactar level picker */
+            #pickerLevelTitle {
+                max-width: 80px !important;
+                font-size: 0.65rem !important;
+            }
+            #openLevelPickerBtn {
+                padding: 0.25rem 0.4rem !important;
+                min-height: 32px !important;
+                font-size: 0.65rem !important;
+            }
+            /* Compactar aluno */
+            #studentNameDisplay {
+                max-width: 50px !important;
+                font-size: 0.6rem !important;
+            }
+            #studentNameBtn {
+                padding-left: 0.2rem !important;
+                padding-right: 0.35rem !important;
+                padding-top: 0.15rem !important;
+                padding-bottom: 0.15rem !important;
+            }
+            #studentNameBtn .w-5 { width: 1rem !important; height: 1rem !important; }
+            /* Compactar gamificação */
+            #headerStarsCount, #headerStreakCount {
+                font-size: 0.6rem !important;
+            }
+            header .fas {
+                font-size: 0.7rem !important;
+            }
+            header button.p-2, header a.p-2 {
+                padding: 0.3rem !important;
+            }
+            /* SCT Timer compacto */
+            #sctTimerDisplay {
+                padding: 0.15rem 0.35rem !important;
+                font-size: 0.6rem !important;
+            }
+            /* Estrelas e streak: somente ícone */
+            .gamif-label-sm {
+                display: none !important;
+            }
+        }
+
+        /* ── RESPONSIVO: SMARTPHONES MUITO PEQUENOS ≤ 480px ── */
+        @media (max-width: 480px) {
+            /* Ocultar streak, add profile, cronômetro */
+            .tablet-hide-xs {
+                display: none !important;
+            }
+            /* Level picker ultra-compacto */
+            #pickerLevelTitle {
+                max-width: 60px !important;
+            }
+            /* Keypad adaptado */
+            .keypad-btn {
+                height: 44px !important;
+                font-size: 1.15rem !important;
+                border-radius: 0.7rem !important;
+            }
+            #keypadWrapper {
+                margin-bottom: 0.5rem !important;
+            }
+            /* FocusCard menor padding */
+            #focusCard {
+                padding: 0.75rem !important;
+                border-width: 3px !important;
+            }
+        }
+
+        /* ── SCREEN MODE SYSTEM: COMPACT / NORMAL ── */
+
+        /* Modo Compacto (forçado pelo usuário ou auto em ≤ 640px) */
+        body[data-screen-mode="compact"] header {
+            padding: 0.3rem 0.5rem !important;
+        }
+        body[data-screen-mode="compact"] .tablet-hide-compact {
+            display: none !important;
+        }
+        body[data-screen-mode="compact"] #pickerLevelTitle {
+            max-width: 70px !important;
+            font-size: 0.65rem !important;
+        }
+        body[data-screen-mode="compact"] #studentNameDisplay {
+            max-width: 50px !important;
+        }
+        body[data-screen-mode="compact"] .keypad-btn {
+            height: 48px !important;
+            font-size: 1.25rem !important;
+        }
+        body[data-screen-mode="compact"] #focusCard {
+            padding: 1rem !important;
+        }
+        body[data-screen-mode="compact"] #sctTimerDisplay {
+            padding: 0.15rem 0.35rem !important;
+            font-size: 0.6rem !important;
+        }
+        body[data-screen-mode="compact"] header .fas {
+            font-size: 0.75rem !important;
+        }
+        body[data-screen-mode="compact"] header button.p-2,
+        body[data-screen-mode="compact"] header a.p-2 {
+            padding: 0.3rem !important;
+        }
+
+        /* Modo Normal não precisa de override (é o default) */
+
     </style>
+
 </head>
-<body class="bg-slate-950 text-slate-100 flex flex-col h-full overflow-hidden font-sans antialiased select-none">
+<body class="theme-jaguar flex flex-col h-full overflow-hidden font-sans antialiased select-none" style="background: var(--body-bg); color: var(--text-primary);">
 
     <!-- Canvas para Efeito de Confetes na Conclusão -->
     <canvas id="confettiCanvas" style="pointer-events:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:50"></canvas>
 
+    <!-- MODAL: WIZARD DE CONFIGURAÇÃO DE TAREFA -->
+    <div id="taskWizardModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:55;background:var(--modal-overlay);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:1rem">
+        <!-- Injetado dinamicamente via JS -->
+    </div>
+
     <!-- MODAL: EXEMPLO GUIADO KUMON (Worked Example no início da rodada) -->
-    <div id="workedExampleModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:40;background:rgba(2,6,23,0.8);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);justify-content:center;align-items:center;padding:1rem">
+    <div id="workedExampleModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:40;background:var(--modal-overlay);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:1rem">
         <!-- Injetado dinamicamente via JS -->
     </div>
 
     <!-- MODAL: GAUNTLET KUMON (MAESTRIA 100% E RECUPERAÇÃO DE ERROS) -->
-    <div id="gauntletModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:42;background:rgba(2,6,23,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);justify-content:center;align-items:center;padding:1rem">
+    <div id="gauntletModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:42;background:var(--modal-overlay);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:1rem">
         <!-- Injetado dinamicamente via JS -->
     </div>
 
     <!-- MODAL: RODADA CONCLUÍDA & EMISSÃO DE CERTIFICADO -->
-    <div id="roundFinishedModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:40;background:rgba(2,6,23,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);justify-content:center;align-items:center;padding:1rem">
+    <div id="roundFinishedModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:40;background:var(--modal-overlay);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:1rem">
         <!-- Injetado dinamicamente via JS -->
     </div>
 
     <!-- MODAL: CONQUISTAS E TROFÉUS -->
-    <div id="badgesModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:40;background:rgba(2,6,23,0.8);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);justify-content:center;align-items:center;padding:1rem">
+    <div id="badgesModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:40;background:var(--modal-overlay);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:1rem">
         <!-- Injetado dinamicamente via JS -->
     </div>
 
     <!-- MODAL: ESCOLHA DO MASCOTE COMPANHEIRO -->
-    <div id="mascotPickerModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:45;background:rgba(2,6,23,0.85);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:1rem">
+    <div id="mascotPickerModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:45;background:var(--modal-overlay);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:1rem">
         <!-- Injetado dinamicamente via JS -->
     </div>
 
     <!-- MODAL: SELETOR VISUAL TOUCH-FIRST DE NÍVEIS -->
-    <div id="levelPickerModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:60;background:rgba(2,6,23,0.85);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:1rem">
-        <div class="bg-slate-900 border-2 border-slate-700 rounded-3xl max-w-lg w-full p-5 md:p-6 shadow-2xl flex flex-col max-h-[85vh] text-white">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4 flex-shrink-0">
+    <div id="levelPickerModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:60;background:var(--modal-overlay);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:1rem">
+        <div class="rounded-3xl max-w-lg w-full p-5 md:p-6 shadow-2xl flex flex-col max-h-[85vh]" style="background: var(--modal-bg); border: 2px solid var(--modal-border); color: var(--text-primary);">
+            <div class="flex items-center justify-between border-b border-gray-200 pb-3 mb-4 flex-shrink-0">
                 <div class="flex items-center gap-2.5">
                     <div class="w-10 h-10 rounded-2xl bg-blue-600/20 text-blue-400 flex items-center justify-center text-lg shadow-inner">
                         <i class="fas fa-layer-group"></i>
                     </div>
                     <div>
-                        <h3 class="font-black text-white text-base leading-tight">Escolha o Desafio</h3>
-                        <p class="text-[11px] text-slate-400">25 Níveis Curriculares Kumon</p>
+                        <h3 class="font-black text-gray-900 text-base leading-tight">Escolha o Desafio</h3>
+                        <p class="text-[11px] text-gray-500">25 Níveis Curriculares Kumon</p>
                     </div>
                 </div>
-                <button id="closeLevelPickerBtn" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer">
+                <button id="closeLevelPickerBtn" class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-400 hover:text-gray-700 flex items-center justify-center transition-colors cursor-pointer">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -257,10 +398,10 @@
                 <button type="button" class="level-tab-btn py-2.5 rounded-2xl font-black text-xs md:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-blue-600 text-white shadow" data-subject="matematica">
                     <span>Matemática</span>
                 </button>
-                <button type="button" class="level-tab-btn py-2.5 rounded-2xl font-black text-xs md:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-slate-800 text-slate-400 hover:bg-slate-700" data-subject="portugues">
+                <button type="button" class="level-tab-btn py-2.5 rounded-2xl font-black text-xs md:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-gray-100 text-gray-500 hover:bg-gray-200" data-subject="portugues">
                     <span>Português</span>
                 </button>
-                <button type="button" class="level-tab-btn py-2.5 rounded-2xl font-black text-xs md:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-slate-800 text-slate-400 hover:bg-slate-700" data-subject="ingles">
+                <button type="button" class="level-tab-btn py-2.5 rounded-2xl font-black text-xs md:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-gray-100 text-gray-500 hover:bg-gray-200" data-subject="ingles">
                     <span>Inglês</span>
                 </button>
             </div>
@@ -272,10 +413,10 @@
         </div>
     </div>
 
-    <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 px-3 md:px-6 py-2.5 flex items-center justify-between flex-shrink-0 z-50">
+    <header class="backdrop-blur px-3 md:px-6 py-2.5 flex items-center justify-between flex-shrink-0 z-50" style="background: var(--header-bg); border-bottom: 1px solid var(--header-border);">
         <!-- Lado Esquerdo: Voltar + Seletor de Matéria e Nível -->
         <div class="flex items-center gap-2 md:gap-3">
-            <a href="index.html" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors" title="Voltar ao início">
+            <a href="index.html" class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900 transition-colors" title="Voltar ao início">
                 <i class="fas fa-arrow-left text-sm"></i>
             </a>
 
@@ -285,10 +426,10 @@
                 </span>
 
                 <!-- Botão Seletor Visual de Nível Touch-First -->
-                <button type="button" id="openLevelPickerBtn" class="bg-slate-800 hover:bg-slate-700/90 border border-slate-700 hover:border-blue-500/60 text-white text-xs md:text-sm font-bold rounded-xl px-2.5 md:px-3 py-1.5 flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95">
+                <button type="button" id="openLevelPickerBtn" class="bg-gray-100 hover:bg-gray-200 border border-gray-300 hover:border-blue-400 text-gray-800 text-xs md:text-sm font-bold rounded-xl px-2.5 md:px-3 py-1.5 flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95">
                     <span id="pickerSubjectDot" class="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm flex-shrink-0"></span>
-                    <span id="pickerLevelTitle" class="truncate max-w-[120px] sm:max-w-[160px] md:max-w-[200px] text-slate-100 font-black">M1 · Quantidade</span>
-                    <i class="fas fa-chevron-down text-[9px] text-slate-400"></i>
+                    <span id="pickerLevelTitle" class="truncate max-w-[120px] sm:max-w-[160px] md:max-w-[200px] text-gray-800 font-black">M1 · Quantidade</span>
+                    <i class="fas fa-chevron-down text-[9px] text-gray-400"></i>
                 </button>
 
                 <!-- Selects nativos mantidos ocultos/sincronizados para compatibilidade de automação -->
@@ -301,27 +442,33 @@
                     <select id="levelSelect"></select>
                 </div>
             </div>
+
+            <!-- Botão Nova Tarefa (abre o wizard) -->
+            <button type="button" id="newTaskBtn" class="bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-600 text-xs font-bold rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95" title="Configurar nova tarefa">
+                <i class="fas fa-plus-circle text-sm" style="color: var(--accent);"></i>
+                <span class="hidden sm:inline">Nova Tarefa</span>
+            </button>
         </div>
 
         <!-- Centro: Aluno & Cronômetro SCT -->
         <div class="flex items-center gap-2 md:gap-4">
             <!-- Pílula do Aluno Ativo com Troca Rápida -->
-            <button id="studentNameBtn" class="bg-slate-800/90 hover:bg-slate-700/90 border border-amber-500/40 hover:border-amber-400 text-slate-200 text-xs font-bold pl-1.5 pr-2.5 py-1 rounded-full flex items-center gap-1.5 transition-all shadow-sm cursor-pointer" title="Trocar ou gerenciar perfil do aluno">
+            <button id="studentNameBtn" class="text-gray-800 hover:bg-opacity-80 text-xs font-bold pl-1.5 pr-2.5 py-1 rounded-full flex items-center gap-1.5 transition-all shadow-sm cursor-pointer" style="background: var(--badge-bg); border: 1px solid var(--badge-border);" title="Trocar ou gerenciar perfil do aluno">
                 <div class="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-400 to-yellow-500 p-0.5 shadow flex-shrink-0 overflow-hidden">
                     <img id="studentMascotAvatar" src="assets/mascotes/jaguar_avatar.png" alt="Mascote" class="w-full h-full rounded-full object-cover">
                 </div>
-                <span id="studentNameDisplay" class="max-w-[80px] md:max-w-[120px] truncate font-black text-amber-300">Super Aluno</span>
-                <i class="fas fa-chevron-down text-[8px] text-slate-400"></i>
+                <span id="studentNameDisplay" class="max-w-[80px] md:max-w-[120px] truncate font-black" style="color: var(--accent-dark);">Super Aluno</span>
+                <i class="fas fa-chevron-down text-[8px] text-gray-400"></i>
             </button>
 
             <!-- Botão Explícito: Cadastrar Outro Perfil / Criança -->
-            <button id="headerAddProfileBtn" class="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 transition-all shadow-sm cursor-pointer" title="Cadastrar outra criança / novo perfil">
-                <i class="fas fa-user-plus text-[10px] text-amber-400"></i>
+            <button id="headerAddProfileBtn" class="tablet-hide-xs tablet-hide-compact text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 transition-all shadow-sm cursor-pointer" style="background: var(--badge-bg); border: 1px solid var(--badge-border); color: var(--badge-text);" title="Cadastrar outra criança / novo perfil">
+                <i class="fas fa-user-plus text-[10px]"></i>
                 <span class="hidden sm:inline font-black">+ Perfil</span>
             </button>
 
             <!-- Cronômetro SCT Kumon -->
-            <div id="sctTimerDisplay" class="bg-slate-900 border border-slate-800 px-3 py-1 rounded-xl text-xs md:text-sm font-mono font-bold flex items-center gap-1.5">
+            <div id="sctTimerDisplay" class="tablet-hide-xs tablet-hide-compact bg-gray-100 border border-gray-200 text-gray-700 px-3 py-1 rounded-xl text-xs md:text-sm font-mono font-bold flex items-center gap-1.5">
                 <i class="fas fa-stopwatch text-blue-400"></i>
                 <span>00:00</span>
             </div>
@@ -330,29 +477,29 @@
         <!-- Lado Direito: Gamificação & Controles -->
         <div class="flex items-center gap-2 md:gap-3">
             <!-- Contador de Estrelas -->
-            <div class="bg-amber-500/10 border border-amber-500/30 text-amber-400 px-2.5 py-1 rounded-xl text-xs md:text-sm font-black flex items-center gap-1">
+            <div class="px-2.5 py-1 rounded-xl text-xs md:text-sm font-black flex items-center gap-1" style="background: var(--badge-bg); border: 1px solid var(--badge-border); color: var(--badge-text);">
                 <i class="fas fa-star text-amber-400"></i>
                 <span id="headerStarsCount">0</span>
             </div>
 
             <!-- Streak Atual -->
-            <div class="bg-orange-500/10 border border-orange-500/30 text-orange-400 px-2.5 py-1 rounded-xl text-xs md:text-sm font-black flex items-center gap-1" title="Sequência de acertos seguidos">
+            <div class="tablet-hide-sm tablet-hide-compact bg-orange-50 border border-orange-200 text-orange-600 px-2.5 py-1 rounded-xl text-xs md:text-sm font-black flex items-center gap-1" title="Sequência de acertos seguidos">
                 <i class="fas fa-fire text-orange-500"></i>
                 <span id="headerStreakCount">0</span>
             </div>
 
             <!-- Botão de Troféus / Conquistas -->
-            <button id="trophyBtn" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 transition-colors cursor-pointer" title="Ver Conquistas e Troféus">
+            <button id="trophyBtn" class="tablet-hide-sm tablet-hide-compact p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-amber-400 hover:text-amber-300 transition-colors cursor-pointer" title="Ver Conquistas e Troféus">
                 <i class="fas fa-trophy text-sm"></i>
             </button>
 
             <!-- Botão de Boletim de Evolução & Gráficos -->
-            <button id="headerEvolutionBtn" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-blue-300 transition-colors cursor-pointer" title="Ver Boletim de Evolução & Histórico">
+            <button id="headerEvolutionBtn" class="tablet-hide-sm tablet-hide-compact p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-blue-400 hover:text-blue-300 transition-colors cursor-pointer" title="Ver Boletim de Evolução & Histórico">
                 <i class="fas fa-chart-line text-sm"></i>
             </button>
 
             <!-- Botão de Trocar Mascote no Header -->
-            <button id="headerMascotBtn" class="flex items-center gap-1.5 p-1.5 md:px-2.5 md:py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors" title="Escolher Mascote Companheiro">
+            <button id="headerMascotBtn" class="tablet-hide-sm tablet-hide-compact flex items-center gap-1.5 p-1.5 md:px-2.5 md:py-1 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors" title="Escolher Mascote Companheiro">
                 <img id="headerMascotImg" src="assets/mascotes/jaguar_avatar.png" alt="Mascote" class="w-6 h-6 rounded-full object-cover border-2 border-amber-400">
                 <span id="headerMascotName" class="hidden md:inline text-xs font-bold text-amber-400">Jade</span>
             </button>
@@ -364,30 +511,30 @@
             </button>
 
             <!-- Botão de Som Mudo / Ativo -->
-            <button id="soundToggleBtn" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors" title="Alternar som">
+            <button id="soundToggleBtn" class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors" title="Alternar som">
                 <i class="fas fa-volume-up text-sm"></i>
             </button>
         </div>
     </header>
 
     <!-- BARRA DE PROGRESSO DA RODADA -->
-    <div class="w-full bg-slate-900 h-1.5 md:h-2 overflow-hidden flex-shrink-0">
-        <div id="roundProgressBar" class="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 transition-all duration-400 w-0"></div>
+    <div class="w-full bg-gray-200 h-1.5 md:h-2 overflow-hidden flex-shrink-0">
+        <div id="roundProgressBar" class="h-full transition-all duration-400 w-0" style="background: var(--progress-bar);"></div>
     </div>
 
     <!-- ÁREA PRINCIPAL DO PLAYER DE EXERCÍCIOS -->
     <main class="flex-1 flex flex-col items-center justify-between p-3 md:p-6 overflow-y-auto max-w-5xl mx-auto w-full tablet-main-safe">
         <!-- Cabeçalho do Card (Instrução e Questão Atual) -->
-        <div class="w-full flex items-center justify-between text-xs text-slate-400 font-bold mb-2 px-2 flex-shrink-0">
-            <span id="roundProgressText" class="bg-slate-800 px-2.5 py-1 rounded-lg text-blue-400 border border-slate-700">Questão 1 de 10</span>
-            <span id="exerciseInstruction" class="text-slate-300 text-right truncate max-w-xs md:max-w-md">Resolva com atenção</span>
+        <div class="w-full flex items-center justify-between text-xs text-gray-500 font-semibold mb-2 px-2 flex-shrink-0">
+            <span id="roundProgressText" class="bg-gray-100 px-3 py-1 rounded-xl text-blue-400 border border-gray-200 text-[11px] font-bold tracking-wide">Questão 1 de 10</span>
+            <span id="exerciseInstruction" class="text-gray-500 text-right truncate max-w-xs md:max-w-md text-[11px]">Resolva com atenção</span>
         </div>
 
         <!-- ESPAÇO DE TRABALHO RESPONSIVO (RETRATO: VERTICAL | PAISAGEM: 2 COLUNAS) -->
         <div id="playerWorkspace" class="w-full flex-1 flex flex-col items-center justify-center gap-3 md:gap-6 my-auto min-h-0">
             <!-- COLUNA DO EXERCÍCIO & MASCOTE -->
             <div id="exerciseArea" class="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-6 w-full max-w-md">
-                <div id="focusCard" class="w-full max-w-md bg-white rounded-3xl p-5 md:p-8 shadow-2xl border-4 border-slate-200 transition-all duration-200">
+                <div id="focusCard" class="w-full max-w-md bg-white rounded-3xl p-5 md:p-8 shadow-2xl border border-slate-200 transition-all duration-200">
                     <div id="focusCardContainer">
                         <!-- O conteúdo do exercício ativo é injetado dinamicamente aqui -->
                     </div>
@@ -396,7 +543,7 @@
                 <!-- COMPANHEIRO MASCOTE VIVO -->
                 <div id="mascotCompanionWrapper" class="flex flex-row md:flex-col items-center justify-center gap-2 md:gap-3 select-none flex-shrink-0">
                     <!-- Balão de Fala do Mascote -->
-                    <div id="mascotSpeechBubble" class="relative bg-white text-slate-800 text-xs md:text-sm font-bold px-3.5 py-2 md:py-2.5 rounded-2xl shadow-xl border-2 border-slate-200 max-w-[200px] md:max-w-[220px] text-center transition-all duration-300 transform scale-100">
+                    <div id="mascotSpeechBubble" class="relative bg-white text-slate-800 text-xs md:text-sm font-semibold px-3.5 py-2 md:py-2.5 rounded-2xl shadow-lg border border-slate-200 max-w-[200px] md:max-w-[220px] text-center transition-all duration-200">
                         <span id="mascotSpeechText">Vamos começar! Estou com você!</span>
                         <!-- Setinha do balão -->
                         <div class="hidden md:block absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[10px] border-t-white"></div>
@@ -407,7 +554,7 @@
                         <div id="mascotAvatarRing" class="w-14 h-14 md:w-20 md:h-20 rounded-full p-1 bg-gradient-to-tr from-amber-400 to-yellow-300 shadow-xl transition-all duration-300 group-hover:scale-105 group-active:scale-95 animate-bounce-subtle">
                             <img id="mascotAvatarImg" src="assets/mascotes/jaguar_avatar.png" alt="Mascote" class="w-full h-full rounded-full object-cover border-2 border-white shadow-inner">
                         </div>
-                        <span id="mascotNameBadge" class="mt-1 text-[10px] md:text-xs font-black text-amber-400 uppercase tracking-wider bg-slate-900/90 px-2 py-0.5 rounded-full border border-slate-700 shadow">
+                        <span id="mascotNameBadge" class="mt-1 text-[10px] md:text-xs font-black text-amber-400 uppercase tracking-wider bg-white px-2 py-0.5 rounded-full border border-gray-200 shadow-sm">
                             Jade 🐾
                         </span>
                     </button>
@@ -429,11 +576,11 @@
                     <button class="keypad-btn" data-key="8">8</button>
                     <button class="keypad-btn" data-key="9">9</button>
 
-                    <button class="keypad-btn text-rose-400 hover:text-rose-300 text-xl md:text-2xl" data-key="backspace" title="Apagar">
+                    <button class="keypad-btn text-rose-500 hover:text-rose-400 text-xl md:text-2xl" data-key="backspace" title="Apagar">
                         <i class="fas fa-backspace"></i>
                     </button>
                     <button class="keypad-btn" data-key="0">0</button>
-                    <button class="keypad-btn bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white text-xl md:text-2xl font-black" data-key="enter" title="Confirmar Resposta">
+                    <button class="keypad-btn text-xl md:text-2xl font-black" style="background: var(--confirm-bg); color: var(--confirm-text); border-color: var(--confirm-bg);" data-key="enter" title="Confirmar Resposta">
                         <i class="fas fa-check"></i>
                     </button>
                 </div>
@@ -450,6 +597,7 @@
     <script src="portugues.js?v=3.9.0"></script>
     <script src="ingles.js?v=3.9.0"></script>
     <script src="tablet-player.js?v=3.9.0"></script>
+    <script src="parent-guide.js?v=4.3.0"></script>
     <script src="nav-dock.js?v=3.9.0"></script>
     <script src="pwa-manager.js?v=4.2.0"></script>
 

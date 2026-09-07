@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-06T23:59:22.449Z",
+  "timestamp": "2026-09-07T14:01:13.507Z",
   "totalTests": 33,
   "passed": 33,
   "failed": 0,
@@ -91,7 +91,7 @@
         {
           "name": "Entrada do antecessor registrada corretamente em Session.currentInput",
           "passed": true,
-          "details": "currentInput=\"6\", esperado=\"6\""
+          "details": "currentInput=\"41\", esperado=\"41\""
         },
         {
           "name": "Submissão via teclado virtual no nível M7 ativa trava de transição com sucesso",
@@ -138,7 +138,7 @@
         {
           "name": "startRound cancela qualquer síntese de voz ativa no navegador",
           "passed": true,
-          "details": "speechSynthesis.cancelledCount=4"
+          "details": "speechSynthesis.cancelledCount=3"
         }
       ],
       "passed": true
@@ -155,7 +155,7 @@
         {
           "name": "speechSynthesis.cancel() foi invocado durante os ciclos de mute",
           "passed": true,
-          "details": "cancelamentos=301"
+          "details": "cancelamentos=300"
         },
         {
           "name": "SoundEngine mantém estado consistente de mute",
@@ -220,6 +220,6 @@
       "passed": true
     }
   ],
-  "durationMs": 4021,
+  "durationMs": 3927.63,
   "status": "PASSED"
 }

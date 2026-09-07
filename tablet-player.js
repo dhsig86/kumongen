@@ -16,7 +16,123 @@
     'use strict';
 
     // ============================================================
-    // 1. MOTOR DE ÁUDIO SINTETIZADO (Web Audio API)
+    // 1. MOTOR HÁPTICO NATIVO (Vibration API)
+    // ============================================================
+    class HapticEngine {
+        constructor() {
+            this.enabled = true;
+        }
+
+        isSupported() {
+            return typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
+        }
+
+        vibrate(pattern) {
+            if (!this.enabled || !this.isSupported()) return false;
+            try {
+                return navigator.vibrate(pattern);
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // Toque tátil sutil de 12ms no teclado virtual e opções
+        lightClick() {
+            return this.vibrate(12);
+        }
+
+        // Duplo pulso suave de validação positiva [15ms vibra, 35ms pausa, 25ms vibra]
+        success() {
+            return this.vibrate([15, 35, 25]);
+        }
+
+        // Feedback de progresso conforme streak aumenta
+        streak(count = 1) {
+            if (count >= 10) return this.vibrate([25, 30, 25, 30, 35, 30, 45]);
+            if (count >= 5) return this.vibrate([20, 35, 25, 35, 35]);
+            return this.vibrate([18, 30, 25]);
+        }
+
+        // Pulso duplo suave para erro (não punitivo) [35ms, 30ms pausa, 35ms]
+        wrong() {
+            return this.vibrate([35, 30, 35]);
+        }
+
+        // Fanfarra comemorativa de conclusão de rodada / maestria
+        fanfare() {
+            return this.vibrate([30, 50, 40, 50, 60, 60, 80]);
+        }
+    }
+
+    const haptic = new HapticEngine();
+
+    // ============================================================
+    // 1.1 MOTOR DE CONTROLE DE TELA (Screen Wake Lock API)
+    // ============================================================
+    class WakeLockEngine {
+        constructor() {
+            this.sentinel = null;
+            this.isActive = false;
+            this.isRoundRunning = false;
+            this.boundVisibilityHandler = null;
+        }
+
+        isSupported() {
+            return typeof navigator !== 'undefined' && 'wakeLock' in navigator && typeof navigator.wakeLock.request === 'function';
+        }
+
+        async request() {
+            this.isRoundRunning = true;
+            if (!this.isSupported()) return false;
+            try {
+                if (!this.sentinel) {
+                    this.sentinel = await navigator.wakeLock.request('screen');
+                    this.isActive = true;
+                    this.sentinel.addEventListener('release', () => {
+                        this.isActive = false;
+                        this.sentinel = null;
+                    });
+                }
+                return true;
+            } catch (e) {
+                this.isActive = false;
+                this.sentinel = null;
+                return false;
+            }
+        }
+
+        async release() {
+            this.isRoundRunning = false;
+            if (this.sentinel) {
+                try {
+                    await this.sentinel.release();
+                } catch (e) {}
+                this.sentinel = null;
+                this.isActive = false;
+            }
+        }
+
+        init() {
+            if (typeof document !== 'undefined' && !this.boundVisibilityHandler) {
+                this.boundVisibilityHandler = async () => {
+                    if (document.visibilityState === 'visible' && this.isRoundRunning) {
+                        await this.request();
+                    }
+                };
+                document.addEventListener('visibilitychange', this.boundVisibilityHandler);
+            }
+            if (typeof window !== 'undefined') {
+                window.addEventListener('beforeunload', () => {
+                    this.release();
+                });
+            }
+        }
+    }
+
+    const wakeLock = new WakeLockEngine();
+
+    // ============================================================
+    // 1.2 MOTOR DE ÁUDIO SINTETIZADO (Web Audio API)
     // ============================================================
     class SoundEngine {
         constructor() {
@@ -76,6 +192,7 @@
 
         // Acorde alegre de acerto (C5 - E5 - G5 - C6)
         playSuccess() {
+            haptic.success();
             if (this.muted) return;
             this.playTone(523.25, 0.14, 'triangle', 0.22, 0);
             this.playTone(659.25, 0.14, 'triangle', 0.22, 0.08);
@@ -85,6 +202,7 @@
 
         // Arpeggios progressivos por sequência (Streak)
         playStreakChord(streakCount) {
+            haptic.streak(streakCount);
             if (this.muted) return;
             if (streakCount >= 10) {
                 // Fanfarra triunfal completa (6 notas ascendentes)
@@ -106,6 +224,7 @@
 
         // Transição motivadora para o modo Gauntlet Kumon
         playGauntletTransition() {
+            haptic.streak(5);
             if (this.muted) return;
             const notes = [
                 { f: 293.66, d: 0.16, t: 0 },    // D4
@@ -118,6 +237,7 @@
 
         // Fanfarra de Maestria 100% Conquistada
         playMasteryFanfare() {
+            haptic.fanfare();
             if (this.muted) return;
             const notes = [
                 { f: 523.25, d: 0.14, t: 0 },
@@ -131,6 +251,7 @@
 
         // Boop suave e acolhedor (não punitivo)
         playWrong() {
+            haptic.wrong();
             if (this.muted) return;
             this.playTone(260, 0.14, 'sine', 0.15, 0);
             this.playTone(196, 0.22, 'sine', 0.18, 0.1);
@@ -138,6 +259,7 @@
 
         // Fanfarra de comemoração de final de rodada
         playFanfare() {
+            haptic.fanfare();
             if (this.muted) return;
             const notes = [
                 { f: 392.00, d: 0.15, t: 0 },
@@ -151,6 +273,7 @@
 
         // Clique tátil no teclado
         playClick() {
+            haptic.lightClick();
             if (this.muted) return;
             this.playTone(700, 0.03, 'sine', 0.06, 0);
         }
@@ -158,19 +281,119 @@
 
     const sound = new SoundEngine();
 
+    // ------------------------------------------------------------
+    // Gerenciador de Síntese de Voz (Web Speech API) Robusto
+    // ------------------------------------------------------------
+    let _cachedVoices = [];
+    let _activeUtterance = null; // Previne Garbage Collection prematuro (bug do Chromium)
+
+    function loadAvailableVoices() {
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            try {
+                _cachedVoices = window.speechSynthesis.getVoices() || [];
+            } catch (e) {
+                _cachedVoices = [];
+            }
+        }
+    }
+
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        loadAvailableVoices();
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = loadAvailableVoices;
+        }
+    }
+
+    function findBestVoice(lang = 'pt-BR') {
+        if (!_cachedVoices.length) loadAvailableVoices();
+        if (!_cachedVoices.length) return null;
+
+        const target = (lang || 'pt-BR').toLowerCase().replace('_', '-');
+        const langPrefix = target.split('-')[0];
+
+        // 1. Busca exata (ex: pt-BR ou en-US)
+        let match = _cachedVoices.find(v => (v.lang || '').toLowerCase().replace('_', '-') === target);
+        if (match) return match;
+
+        // 2. Busca por prefixo regional (qualquer voz pt-* ou en-*)
+        match = _cachedVoices.find(v => (v.lang || '').toLowerCase().startsWith(langPrefix));
+        if (match) return match;
+
+        // 3. Fallback para voz padrão se for compatível
+        const defaultVoice = _cachedVoices.find(v => v.default);
+        if (defaultVoice && (defaultVoice.lang || '').toLowerCase().startsWith(langPrefix)) {
+            return defaultVoice;
+        }
+
+        return null;
+    }
+
     // Síntese de voz com afinação e velocidade acolhedoras para crianças
-    function speakWord(text, lang = 'pt-BR', pitch = 1.15, rate = 0.92) {
+    function speakWord(text, lang = 'pt-BR', pitch = 1.15, rate = 0.92, btnEl = null) {
         if (!text || typeof text !== 'string') return;
         if (!('speechSynthesis' in window) || sound.muted) return;
+
         try {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text.slice(0, 300));
-            utterance.lang = lang;
-            utterance.pitch = pitch;
-            utterance.rate = rate;
-            window.speechSynthesis.speak(utterance);
+            // Destrava estado pausado (bug comum no Chrome/Edge)
+            if (window.speechSynthesis.paused) {
+                window.speechSynthesis.resume();
+            }
+
+            const cleanText = text.trim();
+            if (!cleanText) return;
+
+            const executeSpeak = () => {
+                try {
+                    const utterance = new SpeechSynthesisUtterance(cleanText.slice(0, 300));
+                    utterance.lang = lang;
+                    utterance.pitch = pitch;
+                    utterance.rate = rate;
+
+                    const voice = findBestVoice(lang);
+                    if (voice) {
+                        utterance.voice = voice;
+                    }
+
+                    if (btnEl) {
+                        btnEl.classList.add('animate-pulse');
+                    }
+
+                    utterance.onstart = () => {
+                        if (btnEl) {
+                            btnEl.classList.add('ring-2', 'ring-blue-400');
+                        }
+                    };
+
+                    const cleanup = () => {
+                        if (btnEl) {
+                            btnEl.classList.remove('animate-pulse', 'ring-2', 'ring-blue-400');
+                        }
+                        _activeUtterance = null;
+                    };
+
+                    utterance.onend = cleanup;
+                    utterance.onerror = (err) => {
+                        console.warn('[KumonGen Speech] Falha no utterance:', err.error || err);
+                        cleanup();
+                    };
+
+                    _activeUtterance = utterance;
+                    window.speechSynthesis.speak(utterance);
+                } catch (e) {
+                    console.warn('[KumonGen Speech] Erro ao sintetizar fala:', e);
+                    if (btnEl) btnEl.classList.remove('animate-pulse');
+                }
+            };
+
+            // Se o sintetizador já estiver ocupado, cancela com segurança e agenda o novo áudio
+            if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+                window.speechSynthesis.cancel();
+                setTimeout(executeSpeak, 60);
+            } else {
+                executeSpeak();
+            }
         } catch (e) {
-            console.warn('SpeechSynthesis error', e);
+            console.warn('[KumonGen Speech] SpeechSynthesis error:', e);
         }
     }
 
@@ -646,6 +869,7 @@
             icon: '🐾',
             avatar: 'assets/mascotes/jaguar_avatar.png',
             fullImg: 'assets/mascotes/jaguar.png',
+            themeClass: 'theme-jaguar',
             ringGradient: 'from-amber-400 to-yellow-300',
             textColor: 'text-amber-400',
             borderColor: 'border-amber-400',
@@ -678,6 +902,7 @@
             icon: '🧢',
             avatar: 'assets/mascotes/capivara_avatar.png',
             fullImg: 'assets/mascotes/capivara.png',
+            themeClass: 'theme-capivara',
             ringGradient: 'from-orange-500 to-amber-400',
             textColor: 'text-orange-400',
             borderColor: 'border-orange-400',
@@ -709,6 +934,7 @@
             icon: '🦎',
             avatar: 'assets/mascotes/calango_avatar.png',
             fullImg: 'assets/mascotes/calango.png',
+            themeClass: 'theme-calango',
             ringGradient: 'from-emerald-500 to-teal-400',
             textColor: 'text-emerald-400',
             borderColor: 'border-emerald-400',
@@ -740,6 +966,7 @@
             icon: '🐬',
             avatar: 'assets/mascotes/golfinho_avatar.png',
             fullImg: 'assets/mascotes/golfinho.png',
+            themeClass: 'theme-golfinho',
             ringGradient: 'from-blue-500 to-cyan-400',
             textColor: 'text-blue-400',
             borderColor: 'border-blue-400',
@@ -784,6 +1011,10 @@
         updateUI() {
             const m = this.getCurrent();
 
+            // Aplica tema de cores do mascote no body (CSS variables)
+            document.body.classList.remove('theme-jaguar', 'theme-capivara', 'theme-golfinho', 'theme-calango');
+            document.body.classList.add(m.themeClass);
+
             // Atualiza componente principal ao lado do card
             const avatarImg = document.getElementById('mascotAvatarImg');
             if (avatarImg) avatarImg.src = m.avatar;
@@ -791,24 +1022,40 @@
             const nameBadge = document.getElementById('mascotNameBadge');
             if (nameBadge) {
                 nameBadge.innerHTML = `${m.name} ${m.icon}`;
-                nameBadge.className = `mt-1 text-[10px] md:text-xs font-black ${m.textColor} uppercase tracking-wider bg-slate-900/90 px-2.5 py-0.5 rounded-full border border-slate-700 shadow`;
+                nameBadge.className = `mt-1 text-[10px] md:text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm`;
+                nameBadge.style.cssText = `background: var(--accent-light); color: var(--accent-dark); border: 1px solid var(--accent);`;
             }
 
             const ring = document.getElementById('mascotAvatarRing');
             if (ring) {
-                ring.className = `w-14 h-14 md:w-20 md:h-20 rounded-full p-1 bg-gradient-to-tr ${m.ringGradient} shadow-xl transition-all duration-300 group-hover:scale-105 group-active:scale-95`;
+                ring.className = `w-14 h-14 md:w-20 md:h-20 rounded-full p-1 theme-ring shadow-xl transition-all duration-300 group-hover:scale-105 group-active:scale-95`;
             }
 
             // Atualiza botão do header
             const headerImg = document.getElementById('headerMascotImg');
             if (headerImg) {
                 headerImg.src = m.avatar;
-                headerImg.className = `w-6 h-6 rounded-full object-cover border-2 ${m.borderColor}`;
+                headerImg.className = `w-6 h-6 rounded-full object-cover border-2`;
+                headerImg.style.borderColor = `var(--accent)`;
             }
             const headerName = document.getElementById('headerMascotName');
             if (headerName) {
                 headerName.innerText = m.name;
-                headerName.className = `hidden md:inline text-xs font-bold ${m.textColor}`;
+                headerName.className = `hidden md:inline text-xs font-bold`;
+                headerName.style.color = `var(--accent-dark)`;
+            }
+
+            // Atualiza badges dinâmicos do header com CSS vars
+            const starsSpan = document.getElementById('headerStarsCount');
+            const starsDiv = starsSpan ? starsSpan.parentElement : null;
+            if (starsDiv) {
+                starsDiv.style.cssText = `background: var(--badge-bg); border: 1px solid var(--badge-border); color: var(--badge-text);`;
+            }
+
+            // Atualiza student name display com cor do tema
+            const studentName = document.getElementById('studentNameDisplay');
+            if (studentName) {
+                studentName.style.color = `var(--accent-dark)`;
             }
         },
 
@@ -930,13 +1177,203 @@
     };
 
     // ============================================================
+    // 5b. WIZARD DE CONFIGURAÇÃO DE TAREFA (PAI → CRIANÇA)
+    // ============================================================
+    const TaskWizard = {
+        modal: null,
+        selectedSubject: null,
+        selectedLevel: null,
+
+        show() {
+            this.modal = document.getElementById('taskWizardModal');
+            if (!this.modal) return;
+            this.selectedSubject = null;
+            this.selectedLevel = null;
+            this.renderStep1();
+            this.modal.style.display = 'flex';
+        },
+
+        close() {
+            if (this.modal) this.modal.style.display = 'none';
+        },
+
+        renderStep1() {
+            if (!window.KumonSubjects) return;
+            const subjects = [
+                { key: 'matematica', icon: 'fa-calculator', emoji: '🔢', label: 'Matemática', color: '#2563eb', bg: '#eff6ff', border: '#93c5fd', desc: 'Contagem, operações, sequências e frações' },
+                { key: 'portugues', icon: 'fa-book-open', emoji: '📖', label: 'Português', color: '#059669', bg: '#ecfdf5', border: '#6ee7b7', desc: 'Sílabas, palavras, frases e rimas' },
+                { key: 'ingles', icon: 'fa-globe-americas', emoji: '🇬🇧', label: 'Inglês', color: '#dc2626', bg: '#fef2f2', border: '#fca5a5', desc: 'Words, opposites, sentences' }
+            ].filter(s => window.KumonSubjects[s.key]);
+
+            this.modal.innerHTML = `
+                <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl text-center relative max-h-[90vh] overflow-y-auto" style="border: 2px solid var(--accent, #d97706);">
+                    <div class="w-14 h-14 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl" style="background: var(--accent-bg, #fef3c7); color: var(--accent, #d97706);">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <span class="inline-block text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full mb-1" style="background: var(--accent-bg); color: var(--accent-dark); border: 1px solid var(--accent);">Passo 1 de 3</span>
+                    <h3 class="text-xl font-black text-gray-900 mb-1">Escolha a Matéria</h3>
+                    <p class="text-xs text-gray-500 mb-5">O que a criança vai treinar hoje?</p>
+
+                    <div class="flex flex-col gap-3">
+                        ${subjects.map(s => `
+                            <button type="button" class="wizard-subject-btn w-full p-4 rounded-2xl border-2 text-left flex items-center gap-4 cursor-pointer transition-all active:scale-95 hover:shadow-md" style="background:${s.bg};border-color:${s.border};" data-subject="${s.key}">
+                                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl flex-shrink-0 shadow-sm" style="background:${s.color};color:#fff;">
+                                    <i class="fas ${s.icon}"></i>
+                                </div>
+                                <div>
+                                    <div class="font-black text-gray-900 text-base">${s.emoji} ${s.label}</div>
+                                    <div class="text-xs text-gray-500 mt-0.5">${s.desc}</div>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-300 ml-auto"></i>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+            this.modal.querySelectorAll('.wizard-subject-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    this.selectedSubject = btn.getAttribute('data-subject');
+                    this.renderStep2();
+                });
+            });
+        },
+
+        renderStep2() {
+            const sub = window.KumonSubjects[this.selectedSubject];
+            if (!sub || !sub.levels) return;
+
+            const subjectColors = {
+                matematica: { color: '#2563eb', bg: '#eff6ff', border: '#93c5fd' },
+                portugues: { color: '#059669', bg: '#ecfdf5', border: '#6ee7b7' },
+                ingles: { color: '#dc2626', bg: '#fef2f2', border: '#fca5a5' }
+            };
+            const sc = subjectColors[this.selectedSubject] || subjectColors.matematica;
+
+            this.modal.innerHTML = `
+                <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl text-center relative max-h-[90vh] overflow-y-auto" style="border: 2px solid ${sc.border};">
+                    <div class="w-14 h-14 rounded-full mx-auto mb-3 flex items-center justify-center text-2xl" style="background:${sc.bg};color:${sc.color};">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <span class="inline-block text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full mb-1" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">Passo 2 de 3</span>
+                    <h3 class="text-xl font-black text-gray-900 mb-1">Escolha o Nível</h3>
+                    <p class="text-xs text-gray-500 mb-4">${sub.title} · ${sub.levels.length} níveis disponíveis</p>
+
+                    <div class="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1">
+                        ${sub.levels.map(lvl => `
+                            <button type="button" class="wizard-level-btn w-full p-3 rounded-2xl border-2 text-left flex items-center gap-3 cursor-pointer transition-all active:scale-95 hover:shadow-md" style="background:#fff;border-color:#e5e7eb;" data-level="${lvl.id}">
+                                <span class="w-9 h-9 rounded-xl font-black text-xs flex items-center justify-center flex-shrink-0 shadow-sm" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
+                                    ${lvl.id.toUpperCase()}
+                                </span>
+                                <div class="min-w-0">
+                                    <div class="font-bold text-gray-800 text-sm truncate">${lvl.title}</div>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-300 ml-auto text-xs"></i>
+                            </button>
+                        `).join('')}
+                    </div>
+
+                    <button type="button" id="wizardBackBtn" class="mt-4 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold rounded-xl transition-colors cursor-pointer">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </button>
+                </div>
+            `;
+
+            this.modal.querySelectorAll('.wizard-level-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    this.selectedLevel = btn.getAttribute('data-level');
+                    this.renderStep3();
+                });
+            });
+
+            const backBtn = document.getElementById('wizardBackBtn');
+            if (backBtn) backBtn.addEventListener('click', () => this.renderStep1());
+        },
+
+        renderStep3() {
+            const sub = window.KumonSubjects[this.selectedSubject];
+            const level = sub ? sub.levels.find(l => l.id === this.selectedLevel) : null;
+            const mascot = MascotEngine.getCurrent();
+
+            const subjectColors = {
+                matematica: { color: '#2563eb', bg: '#eff6ff', border: '#93c5fd', label: '🔢 Matemática' },
+                portugues: { color: '#059669', bg: '#ecfdf5', border: '#6ee7b7', label: '📖 Português' },
+                ingles: { color: '#dc2626', bg: '#fef2f2', border: '#fca5a5', label: '🇬🇧 Inglês' }
+            };
+            const sc = subjectColors[this.selectedSubject] || subjectColors.matematica;
+
+            this.modal.innerHTML = `
+                <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl text-center relative" style="border: 2px solid ${sc.border};">
+                    <div class="w-16 h-16 rounded-full p-0.5 bg-gradient-to-tr ${mascot.ringGradient} shadow-md mx-auto mb-3">
+                        <img src="${mascot.avatar}" alt="${mascot.name}" class="w-full h-full rounded-full object-cover border-2 border-white">
+                    </div>
+                    <span class="inline-block text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full mb-2" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">Passo 3 de 3</span>
+                    <h3 class="text-xl font-black text-gray-900 mb-4">Tudo pronto!</h3>
+
+                    <div class="rounded-2xl p-4 mb-5 text-left" style="background:${sc.bg};border:1px solid ${sc.border};">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black" style="background:${sc.color};color:#fff;">${(this.selectedLevel || '').toUpperCase()}</span>
+                            <div>
+                                <div class="text-sm font-black text-gray-900">${sc.label}</div>
+                                <div class="text-xs text-gray-600">${level ? level.title : ''}</div>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-500 flex items-center gap-1.5 mt-1">
+                            <i class="fas fa-user text-gray-400"></i> ${(window.escapeHtml ? window.escapeHtml(Session.studentName) : Session.studentName)}
+                            <span class="mx-1">·</span>
+                            <img src="${mascot.avatar}" alt="${mascot.name}" class="w-4 h-4 rounded-full inline"> ${mascot.name}
+                        </div>
+                    </div>
+
+                    <button type="button" id="wizardStartBtn" class="w-full py-4 font-black text-base rounded-2xl shadow-lg transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2" style="background:${sc.color};color:#fff;">
+                        <i class="fas fa-play"></i> Começar Tarefa
+                    </button>
+
+                    <button type="button" id="wizardBack2Btn" class="mt-3 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold rounded-xl transition-colors cursor-pointer">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </button>
+                </div>
+            `;
+
+            const startBtn = document.getElementById('wizardStartBtn');
+            if (startBtn) startBtn.addEventListener('click', () => this.confirm());
+
+            const backBtn = document.getElementById('wizardBack2Btn');
+            if (backBtn) backBtn.addEventListener('click', () => this.renderStep2());
+        },
+
+        confirm() {
+            Session.subjectKey = this.selectedSubject;
+            Session.levelId = this.selectedLevel;
+            localStorage.setItem('kumongen-wizard-done', 'true');
+            this.close();
+            TabletPlayer.populateSubjects();
+            TabletPlayer.populateLevels();
+            TabletPlayer.startRound();
+        }
+    };
+
+    // ============================================================
     // 6. MOTOR DO JOGO E CONTROLE DE TELAS
     // ============================================================
     const TabletPlayer = {
         init() {
-            // Desbloqueia Web Audio no primeiro toque do usuário (iPad / iOS / Android)
+            wakeLock.init();
+
+            // Desbloqueia Web Audio e Síntese de Voz no primeiro toque do usuário (iPad / iOS / Android / Desktop)
             const unlockAudio = () => {
                 sound.init();
+                if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                    try {
+                        loadAvailableVoices();
+                        if (window.speechSynthesis.paused) {
+                            window.speechSynthesis.resume();
+                        }
+                        const warmUtterance = new SpeechSynthesisUtterance('');
+                        warmUtterance.volume = 0;
+                        window.speechSynthesis.speak(warmUtterance);
+                    } catch (e) {}
+                }
                 document.removeEventListener('touchstart', unlockAudio);
                 document.removeEventListener('click', unlockAudio);
             };
@@ -959,6 +1396,12 @@
             const headerMascotBtn = document.getElementById('headerMascotBtn');
             if (headerMascotBtn) {
                 headerMascotBtn.addEventListener('click', () => MascotEngine.showPickerModal());
+            }
+
+            // Botão Nova Tarefa (abre wizard)
+            const newTaskBtn = document.getElementById('newTaskBtn');
+            if (newTaskBtn) {
+                newTaskBtn.addEventListener('click', () => TaskWizard.show());
             }
 
             // Seletor de matéria
@@ -1151,6 +1594,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             const qSub = urlParams.get('subject');
             const qLvl = urlParams.get('level');
+            const hasUrlParams = !!(qSub || qLvl);
 
             if (qSub && window.KumonSubjects && window.KumonSubjects[qSub]) {
                 Session.subjectKey = qSub;
@@ -1171,7 +1615,14 @@
 
             this.populateSubjects();
             this.populateLevels();
-            this.startRound();
+
+            // Primeira abertura ou sem sessão salva: mostra wizard
+            const wizardDone = localStorage.getItem('kumongen-wizard-done');
+            if (!wizardDone && !hasUrlParams) {
+                TaskWizard.show();
+            } else {
+                this.startRound();
+            }
         },
 
         populateSubjects() {
@@ -1246,11 +1697,11 @@
                 const isCurrent = btn.getAttribute('data-subject') === subjectKey;
                 if (isCurrent) {
                     let activeBg = 'bg-blue-600 text-white shadow';
-                    if (subjectKey === 'portugues') activeBg = 'bg-emerald-600 text-white shadow';
+                    if (subjectKey === 'portugues') activeBg = 'bg-emerald-700 text-white shadow';
                     else if (subjectKey === 'ingles') activeBg = 'bg-red-600 text-white shadow';
                     btn.className = `level-tab-btn py-2.5 rounded-2xl font-black text-xs md:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer ${activeBg}`;
                 } else {
-                    btn.className = 'level-tab-btn py-2.5 rounded-2xl font-black text-xs md:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-slate-800 text-slate-400 hover:bg-slate-700';
+                    btn.className = 'level-tab-btn py-2.5 rounded-2xl font-black text-xs md:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-gray-100 text-gray-500 hover:bg-gray-200';
                 }
             });
 
@@ -1267,11 +1718,11 @@
             grid.innerHTML = sub.levels.map(lvl => {
                 const isSelected = (subjectKey === Session.subjectKey && lvl.id === Session.levelId);
                 const activeCardClasses = isSelected
-                    ? 'bg-blue-600/25 border-blue-500 text-white shadow-md'
-                    : 'bg-slate-800/60 border-slate-700/60 hover:bg-slate-800 text-slate-300';
+                    ? 'bg-blue-50 border-blue-500 text-gray-900 shadow-md'
+                    : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700';
                 const badgeClasses = isSelected
                     ? 'bg-blue-500 text-white shadow'
-                    : 'bg-slate-700 text-slate-300';
+                    : 'bg-gray-200 text-gray-600';
 
                 return `
                     <button type="button" class="level-card-btn w-full p-3 md:p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between text-left cursor-pointer active:scale-98 ${activeCardClasses}" data-subject="${subjectKey}" data-level-id="${lvl.id}">
@@ -1313,6 +1764,8 @@
         },
 
         startRound() {
+            wakeLock.request();
+
             // Limpa qualquer timer pendente de transição e reseta trava
             if (Session.transitionTimeout) {
                 clearTimeout(Session.transitionTimeout);
@@ -1574,22 +2027,22 @@
             }
 
             modal.innerHTML = `
-                <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl text-center border-4 border-blue-400 relative animate-bounce-subtle">
+                <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl text-center border border-slate-200/90 relative modal-enter">
                     <div class="flex items-center justify-center gap-3 mb-3">
-                        <div class="w-14 h-14 rounded-full p-1 bg-gradient-to-tr ${MascotEngine.getCurrent().ringGradient} shadow-md flex-shrink-0">
+                        <div class="w-12 h-12 rounded-full p-0.5 bg-gradient-to-tr ${MascotEngine.getCurrent().ringGradient} shadow-sm flex-shrink-0">
                             <img src="${MascotEngine.getCurrent().avatar}" alt="${MascotEngine.getCurrent().name}" class="w-full h-full rounded-full object-cover border-2 border-white shadow-inner">
                         </div>
                         <div class="text-left">
-                            <span class="inline-block bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full mb-0.5">Exemplo Guiado</span>
-                            <h3 class="text-lg font-black text-slate-900">${MascotEngine.getCurrent().name} te ensina:</h3>
+                            <span class="inline-block bg-blue-600 text-white text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full mb-0.5">Exemplo Guiado</span>
+                            <h3 class="text-base font-bold text-slate-900">${MascotEngine.getCurrent().name} mostra o modelo:</h3>
                         </div>
                     </div>
-                    <p class="text-xs text-slate-500 mt-1">${level ? level.instruction : 'Observe o modelo resolvido com calma:'}</p>
+                    <p class="text-xs text-slate-500 mt-1">${level ? level.instruction : 'Observe o modelo resolvido antes de começar:'}</p>
                     
                     ${exampleHtml}
 
-                    <button id="dismissExampleBtn" class="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-lg rounded-2xl shadow-lg transition-transform transform active:scale-95 flex items-center justify-center gap-2">
-                        <i class="fas fa-play"></i> Entendi! Começar Desafio
+                    <button id="dismissExampleBtn" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base rounded-2xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fas fa-play text-sm"></i> Começar Exercícios
                     </button>
                 </div>
             `;
@@ -1658,14 +2111,14 @@
             let circlesHtml = '';
             for (let i = 0; i < item.value; i++) {
                 circlesHtml += `
-                    <div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-400 border-2 border-white shadow-md transform hover:scale-110 transition-transform"></div>
+                    <div class="w-10 h-10 md:w-12 md:h-12 rounded-full shadow-md transform hover:scale-110 transition-transform" style="background:linear-gradient(to top right,#f59e0b,#fbbf24);border:2px solid #d97706;"></div>
                 `;
             }
 
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-2">
                     <div class="text-sm font-bold text-slate-500 mb-3">Conte quantas bolinhas amarelas há no quadro:</div>
-                    <div class="bg-amber-50/70 border-2 border-amber-200 rounded-2xl p-5 flex flex-wrap items-center justify-center gap-3 max-w-sm shadow-inner min-h-[120px]">
+                    <div class="rounded-2xl p-5 flex flex-wrap items-center justify-center gap-3 max-w-sm shadow-inner min-h-[120px]" style="background-color:#fef3c7;border:2px solid #fcd34d;">
                         ${circlesHtml}
                     </div>
                     <div class="mt-4 flex items-center gap-3">
@@ -1840,7 +2293,7 @@
             const speakBtn = document.getElementById('speakTraceBtn');
             if (speakBtn) {
                 speakBtn.addEventListener('click', () => {
-                    speakWord(char, lang);
+                    speakWord(char, lang, 1.15, 0.92, speakBtn);
                 });
             }
 
@@ -1976,9 +2429,9 @@
 
             const speakBtn = document.getElementById('speakWordBtn');
             if (speakBtn) {
-                speakBtn.addEventListener('click', () => speakWord(word, lang));
+                speakBtn.addEventListener('click', () => speakWord(word, lang, 1.15, 0.92, speakBtn));
                 // Pronúncia automática ao carregar o card
-                setTimeout(() => speakWord(word, lang), 400);
+                setTimeout(() => speakWord(word, lang, 1.15, 0.92, speakBtn), 400);
             }
 
             let assembled = [];
@@ -1990,7 +2443,7 @@
                     slotsContainer.innerHTML = '<span class="text-slate-400 text-sm font-medium">Toque nas sílabas abaixo...</span>';
                 } else {
                     slotsContainer.innerHTML = assembled.map(s => `
-                        <div class="px-4 py-2 bg-emerald-600 text-white rounded-xl font-black text-2xl shadow">
+                        <div class="px-4 py-2 rounded-xl font-black text-2xl shadow" style="background-color:#059669;color:#ffffff;">
                             ${s}
                         </div>
                     `).join('');
@@ -2004,7 +2457,7 @@
                     sound.playClick();
                     const syl = btn.getAttribute('data-syllable');
                     assembled.push(syl);
-                    btn.classList.add('opacity-30', 'pointer-events-none');
+                    btn.classList.add('opacity-40', 'pointer-events-none');
                     updateSlots();
 
                     // Se juntou as sílabas necessárias
@@ -2019,7 +2472,7 @@
                                 assembled = [];
                                 updateSlots();
                                 chipsWrapper.querySelectorAll('.syllable-chip').forEach(b => {
-                                    b.classList.remove('opacity-30', 'pointer-events-none');
+                                    b.classList.remove('opacity-40', 'pointer-events-none');
                                 });
                             }, 700);
                         }
@@ -2033,7 +2486,7 @@
                     assembled = [];
                     updateSlots();
                     chipsWrapper.querySelectorAll('.syllable-chip').forEach(b => {
-                        b.classList.remove('opacity-30', 'pointer-events-none');
+                        b.classList.remove('opacity-40', 'pointer-events-none');
                     });
                 });
             }
@@ -2070,8 +2523,8 @@
 
             const speakBtn = document.getElementById('speakSyllableBtn');
             if (speakBtn) {
-                speakBtn.addEventListener('click', () => speakWord(targetSyl, 'pt-BR'));
-                setTimeout(() => speakWord(targetSyl, 'pt-BR'), 300);
+                speakBtn.addEventListener('click', () => speakWord(targetSyl, 'pt-BR', 1.15, 0.92, speakBtn));
+                setTimeout(() => speakWord(targetSyl, 'pt-BR', 1.15, 0.92, speakBtn), 300);
             }
 
             container.querySelectorAll('.syl-choice-btn').forEach(btn => {
@@ -2188,8 +2641,8 @@
 
             const speakBtn = document.getElementById('speakRhymeBtn');
             if (speakBtn) {
-                speakBtn.addEventListener('click', () => speakWord(baseWord, 'pt-BR'));
-                setTimeout(() => speakWord(baseWord, 'pt-BR'), 300);
+                speakBtn.addEventListener('click', () => speakWord(baseWord, 'pt-BR', 1.15, 0.92, speakBtn));
+                setTimeout(() => speakWord(baseWord, 'pt-BR', 1.15, 0.92, speakBtn), 300);
             }
 
             container.querySelectorAll('.rhyme-choice-btn').forEach(btn => {
@@ -2244,8 +2697,8 @@
 
             const speakBtn = document.getElementById('speakSentenceBtn');
             if (speakBtn) {
-                speakBtn.addEventListener('click', () => speakWord(sentence, lang));
-                setTimeout(() => speakWord(sentence, lang), 400);
+                speakBtn.addEventListener('click', () => speakWord(sentence, lang, 1.1, 0.9, speakBtn));
+                setTimeout(() => speakWord(sentence, lang, 1.1, 0.9, speakBtn), 400);
             }
 
             let assembled = [];
@@ -2257,7 +2710,7 @@
                     slotsContainer.innerHTML = '<span class="text-slate-400 text-xs md:text-sm font-medium">Toque nos blocos abaixo...</span>';
                 } else {
                     slotsContainer.innerHTML = assembled.map(s => `
-                        <div class="px-3 py-1.5 bg-emerald-600 text-white rounded-xl font-black text-sm md:text-base shadow">
+                        <div class="px-3 py-1.5 rounded-xl font-black text-sm md:text-base shadow" style="background-color:#059669;color:#ffffff;">
                             ${s}
                         </div>
                     `).join('');
@@ -2271,7 +2724,7 @@
                     sound.playClick();
                     const chipVal = btn.getAttribute('data-chip');
                     assembled.push(chipVal);
-                    btn.classList.add('opacity-30', 'pointer-events-none');
+                    btn.classList.add('opacity-40', 'pointer-events-none');
                     updateSlots();
 
                     if (assembled.length === parts.length) {
@@ -2286,7 +2739,7 @@
                                 assembled = [];
                                 updateSlots();
                                 chipsWrapper.querySelectorAll('.sentence-chip').forEach(b => {
-                                    b.classList.remove('opacity-30', 'pointer-events-none');
+                                    b.classList.remove('opacity-40', 'pointer-events-none');
                                 });
                             }, 700);
                         }
@@ -2300,7 +2753,7 @@
                     assembled = [];
                     updateSlots();
                     chipsWrapper.querySelectorAll('.sentence-chip').forEach(b => {
-                        b.classList.remove('opacity-30', 'pointer-events-none');
+                        b.classList.remove('opacity-40', 'pointer-events-none');
                     });
                 });
             }
@@ -2340,8 +2793,8 @@
 
             const speakBtn = document.getElementById('speakOppositeBtn');
             if (speakBtn) {
-                speakBtn.addEventListener('click', () => speakWord(word, 'en-US'));
-                setTimeout(() => speakWord(word, 'en-US'), 300);
+                speakBtn.addEventListener('click', () => speakWord(word, 'en-US', 1.15, 0.92, speakBtn));
+                setTimeout(() => speakWord(word, 'en-US', 1.15, 0.92, speakBtn), 300);
             }
 
             container.querySelectorAll('.opposite-choice-btn').forEach(btn => {
@@ -2579,37 +3032,37 @@
                 : `Faltam apenas ${count} exercícios para você alcançar a maestria completa de 100%!`;
 
             modal.innerHTML = `
-                <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl text-center border-4 border-amber-400 relative animate-bounce-subtle max-h-[90vh] overflow-y-auto">
+                <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl text-center border border-amber-300/80 relative modal-enter max-h-[90vh] overflow-y-auto">
                     <div class="flex items-center justify-center gap-3 mb-2">
-                        <div class="w-16 h-16 rounded-full p-1 bg-gradient-to-tr ${m.ringGradient} shadow-md flex-shrink-0">
+                        <div class="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr ${m.ringGradient} shadow-sm flex-shrink-0">
                             <img src="${m.avatar}" alt="${m.name}" class="w-full h-full rounded-full object-cover border-2 border-white shadow-inner">
                         </div>
-                        <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-3xl shadow-inner flex-shrink-0">
+                        <div class="w-14 h-14 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-2xl shadow-inner flex-shrink-0">
                             <i class="fas fa-shield-alt text-amber-500"></i>
                         </div>
                     </div>
                     <div>
-                        <span class="inline-block bg-amber-500 text-white text-[11px] font-black uppercase tracking-wider px-3.5 py-1 rounded-full mb-1">
-                            Loop de Maestria Kumon
+                        <span class="inline-block bg-amber-500/10 text-amber-800 border border-amber-300/60 text-[11px] font-bold uppercase tracking-wider px-3 py-0.5 rounded-full mb-1">
+                            Revisão Final
                         </span>
-                        <h3 class="text-2xl font-black text-slate-900 mt-1">Rumo aos 100%!</h3>
+                        <h3 class="text-xl font-bold text-slate-900 mt-1">Completar a Rodada</h3>
                     </div>
                     
-                    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 my-3 text-left">
-                        <div class="text-xs font-black text-amber-800 uppercase tracking-wide flex items-center gap-1.5 mb-1">
-                            <i class="fas fa-comment-dots text-amber-600"></i> Mensagem da ${m.name}
+                    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 my-3 text-left">
+                        <div class="text-xs font-bold text-amber-800 flex items-center gap-1.5 mb-1">
+                            <i class="fas fa-comment-dots text-amber-600"></i> ${m.name}:
                         </div>
-                        <p class="text-xs font-bold text-amber-900 leading-relaxed">
-                            "${speech} No método Kumon, não deixamos dúvidas para trás. Vamos revisar juntos!"
+                        <p class="text-xs font-semibold text-amber-900 leading-relaxed">
+                            "${speech} Vamos resolver as pendências com calma para concluir!"
                         </p>
                     </div>
 
                     <p class="text-[11px] text-slate-500 mb-4">
-                        Resolva ${count === 1 ? 'o exercício pendente' : 'os exercícios pendentes'} com calma para conquistar sua medalha de Persistência de Aço!
+                        Resolva ${count === 1 ? 'o exercício pendente' : 'os exercícios pendentes'} para fechar 100% de acerto.
                     </p>
 
-                    <button id="btnStartGauntletNow" class="w-full py-4 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-black text-base rounded-2xl shadow-lg transition-transform transform active:scale-95 flex items-center justify-center gap-2 mt-2 mb-1">
-                        <i class="fas fa-fire-alt text-amber-900"></i> Dominar Agora (${count})
+                    <button id="btnStartGauntletNow" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-bold text-base rounded-2xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 mt-2 mb-1 cursor-pointer">
+                        <i class="fas fa-arrow-right text-slate-950"></i> Continuar (${count})
                     </button>
                 </div>
             `;
@@ -2644,6 +3097,8 @@
         // 9. CONCLUSÃO DA RODADA & CELEBRAÇÃO
         // ============================================================
         finishRound() {
+            wakeLock.release();
+
             if (Session.transitionTimeout) {
                 clearTimeout(Session.transitionTimeout);
                 Session.transitionTimeout = null;
@@ -2766,6 +3221,8 @@
         },
 
         showRoundSummaryModal(res) {
+            wakeLock.release();
+
             const modal = document.getElementById('roundFinishedModal');
             if (!modal) return;
 
@@ -2805,42 +3262,42 @@
             }
 
             const headerBadgeText = res.isGauntletMastered
-                ? '🎯 100% Maestria Kumon Alcançada!'
-                : (res.accuracy === 100 ? '🏆 100% Perfeição de Primeira!' : 'Rodada Concluída!');
+                ? '🎯 Todas Concluídas!'
+                : (res.accuracy === 100 ? '🏆 100% de Acerto de Primeira!' : 'Rodada Concluída!');
 
             modal.innerHTML = `
-                <div class="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl text-center border-4 ${res.isGauntletMastered ? 'border-amber-400' : 'border-emerald-400'} relative animate-bounce-subtle max-h-[90vh] overflow-y-auto">
+                <div class="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl text-center border border-slate-200/90 relative modal-enter max-h-[90vh] overflow-y-auto">
                     <div class="flex items-center justify-center gap-3 mb-3">
-                        <div class="w-16 h-16 rounded-full p-1 bg-gradient-to-tr ${MascotEngine.getCurrent().ringGradient} shadow-md flex-shrink-0">
+                        <div class="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr ${MascotEngine.getCurrent().ringGradient} shadow-sm flex-shrink-0">
                             <img src="${MascotEngine.getCurrent().avatar}" alt="${MascotEngine.getCurrent().name}" class="w-full h-full rounded-full object-cover border-2 border-white shadow-inner">
                         </div>
-                        <div class="w-16 h-16 ${res.isGauntletMastered ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'} rounded-full flex items-center justify-center text-3xl shadow-inner flex-shrink-0">
+                        <div class="w-14 h-14 ${res.isGauntletMastered ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'} rounded-full flex items-center justify-center text-2xl shadow-inner flex-shrink-0">
                             <i class="fas ${res.isGauntletMastered ? 'fa-shield-alt text-amber-500' : 'fa-trophy text-amber-500'}"></i>
                         </div>
                     </div>
-                    <span class="inline-block ${res.isGauntletMastered ? 'bg-amber-500' : 'bg-emerald-600'} text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full mb-1">
+                    <span class="inline-block ${res.isGauntletMastered ? 'bg-amber-500/15 text-amber-800 border border-amber-300' : 'bg-emerald-500/15 text-emerald-800 border border-emerald-300'} text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-1">
                         ${headerBadgeText}
                     </span>
-                    <h3 class="text-2xl font-black text-slate-900">Parabéns, ${(window.escapeHtml ? window.escapeHtml(Session.studentName) : Session.studentName)}!</h3>
+                    <h3 class="text-xl font-bold text-slate-900">Parabéns, ${(window.escapeHtml ? window.escapeHtml(Session.studentName) : Session.studentName)}!</h3>
                     <p class="text-xs text-slate-500 mt-0.5">${level ? level.title : ''} · ${sub ? sub.title : ''}</p>
-                    <div class="${res.isGauntletMastered ? 'bg-amber-50 border border-amber-200 text-amber-900' : 'bg-emerald-50 border border-emerald-200 text-emerald-800'} rounded-xl px-3 py-1.5 text-xs font-bold my-2.5">
-                        "${res.isGauntletMastered ? 'Sua persistência valeu ouro! Você dominou todas as questões!' : MascotEngine.getCurrent().cheerFinish}"
+                    <div class="${res.isGauntletMastered ? 'bg-amber-50 border border-amber-200 text-amber-900' : 'bg-emerald-50 border border-emerald-200 text-emerald-800'} rounded-xl px-3 py-2 text-xs font-semibold my-2.5">
+                        "${res.isGauntletMastered ? 'Parabéns pela persistência! Você concluiu todas as questões!' : MascotEngine.getCurrent().cheerFinish}"
                     </div>
 
                     <!-- Painel de Métricas -->
-                    <div class="grid grid-cols-3 gap-3 my-5">
+                    <div class="grid grid-cols-3 gap-3 my-4">
                         <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-center">
                             <span class="text-2xl font-black ${res.isGauntletMastered ? 'text-amber-500' : 'text-blue-600'}">
                                 ${res.isGauntletMastered ? '100%' : `${res.accuracy}%`}
                             </span>
                             <span class="block text-[10px] font-bold text-slate-400 uppercase mt-1">
-                                ${res.isGauntletMastered ? 'Maestria Total' : 'Precisão'}
+                                ${res.isGauntletMastered ? 'Conclusão' : 'Precisão'}
                             </span>
                             ${res.isGauntletMastered ? `<span class="block text-[9px] text-slate-400">1ª tent: ${res.accuracy}%</span>` : ''}
                         </div>
                         <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-center">
                             <span class="text-2xl font-black ${beatSCT ? 'text-emerald-600' : 'text-slate-700'}">${timeFormatted}</span>
-                            <span class="block text-[10px] font-bold text-slate-400 uppercase mt-1">Tempo SCT</span>
+                            <span class="block text-[10px] font-bold text-slate-400 uppercase mt-1">Tempo Real</span>
                         </div>
                         <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-center">
                             <span class="text-2xl font-black text-amber-500">+${res.bonusStars + Session.roundCorrectFirstAttempt} ★</span>
@@ -2849,31 +3306,31 @@
                     </div>
 
                     ${beatSCT ? `
-                        <div class="bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 text-xs font-bold text-emerald-700 flex items-center justify-center gap-2 mb-4">
-                            <i class="fas fa-bolt text-emerald-500"></i> Superou o tempo padrão de fluência Kumon!
+                        <div class="bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 text-xs font-bold text-emerald-700 flex items-center justify-center gap-2 mb-3">
+                            <i class="fas fa-bolt text-emerald-500"></i> Concluído dentro da meta de tempo sugerida!
                         </div>
                     ` : ''}
 
                     ${badgesHtml}
 
                     <!-- Ações Principais -->
-                    <div class="flex flex-col gap-2.5 mt-4">
-                        <button id="downloadCertBtn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-black text-base rounded-2xl shadow-lg transition-transform transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
-                            <i class="fas fa-certificate text-lg"></i> Baixar Certificado Oficial (PDF)
-                        </button>
-
-                        <button id="summaryEvolutionBtn" type="button" class="w-full py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer">
-                            <i class="fas fa-chart-line text-blue-600 text-sm"></i> Ver Boletim de Evolução & Histórico
+                    <div class="flex flex-col gap-3 mt-5">
+                        <button id="downloadCertBtn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-bold text-sm rounded-2xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fas fa-certificate text-base"></i> Baixar Certificado (PDF)
                         </button>
 
                         <div class="grid grid-cols-2 gap-3">
-                            <button id="playAgainBtn" class="py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow transition-colors flex items-center justify-center gap-1.5 cursor-pointer">
+                            <button id="playAgainBtn" class="py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-95">
                                 <i class="fas fa-redo"></i> Jogar Novamente
                             </button>
-                            <a href="index.html" class="py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition-colors flex items-center justify-center gap-1.5" style="text-decoration:none;">
-                                <i class="fas fa-home"></i> Sair do Modo
-                            </a>
+                            <button id="newTaskSummaryBtn" type="button" class="py-3 font-bold text-sm rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-95" style="background: var(--accent); color: #fff;">
+                                <i class="fas fa-plus-circle"></i> Nova Tarefa
+                            </button>
                         </div>
+
+                        <button id="closeSummaryBtn" type="button" class="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer">
+                            <i class="fas fa-times"></i> Fechar
+                        </button>
                     </div>
                 </div>
             `;
@@ -2897,12 +3354,11 @@
                 });
             }
 
-            const evoBtn = document.getElementById('summaryEvolutionBtn');
+            const evoBtn = document.getElementById('newTaskSummaryBtn');
             if (evoBtn) {
                 evoBtn.addEventListener('click', () => {
-                    if (window.StudentProfileEngine) {
-                        window.StudentProfileEngine.showEvolutionModal();
-                    }
+                    modal.style.display = 'none';
+                    TaskWizard.show();
                 });
             }
 
@@ -2912,6 +3368,35 @@
                     modal.style.display = 'none';
                     this.startRound();
                 });
+            }
+
+            const closeBtn = document.getElementById('closeSummaryBtn');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    modal.style.display = 'none';
+                    this.showIdleState();
+                });
+            }
+        },
+
+        // ============================================================
+        // 9b. ESTADO IDLE PÓS-TAREFA
+        // ============================================================
+        showIdleState() {
+            const container = document.getElementById('exerciseCard');
+            if (container) {
+                container.innerHTML = `
+                    <div class="text-center py-10 px-6">
+                        <div class="text-5xl mb-4">✅</div>
+                        <h3 class="font-black text-lg text-gray-800 mb-2">Tarefa concluída!</h3>
+                        <p class="text-sm text-gray-500 mb-6">Toque em "Nova Tarefa" para treinar outro nível.</p>
+                        <button type="button" id="idleNewTaskBtn" class="px-6 py-3 font-bold text-sm rounded-2xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2 mx-auto" style="background: var(--accent); color: #fff;">
+                            <i class="fas fa-plus-circle"></i> Nova Tarefa
+                        </button>
+                    </div>
+                `;
+                const btn = document.getElementById('idleNewTaskBtn');
+                if (btn) btn.addEventListener('click', () => TaskWizard.show());
             }
         },
 
@@ -2992,6 +3477,8 @@
     TabletPlayer.sound = sound;
     TabletPlayer.Gamification = Gamification;
     TabletPlayer.MascotEngine = MascotEngine;
+    TabletPlayer.HapticEngine = haptic;
+    TabletPlayer.WakeLockEngine = wakeLock;
     TabletPlayer.renderCard = function() {
         Session.isTransitionLocked = false;
         return this.renderCurrentQuestion();
