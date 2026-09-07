@@ -630,9 +630,9 @@ const KumonGen = (function() {
                     break;
                 case 'trace':
                     if (isWorkedExample) {
-                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-3xl font-black text-slate-400 border-2 border-dashed border-slate-300 px-1">${item.char}</span> <span class="flex-1 border-b-2 border-dotted border-slate-300 mx-1"></span> <span class="trace-cell flex items-center justify-center font-black text-slate-600 text-sm">${item.char}</span>`;
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-3xl font-black text-slate-500 border-2 border-dashed border-slate-400 px-1.5">${item.char}</span> <span class="flex-1 border-b-2 border-dotted border-slate-400 mx-1"></span> <span class="trace-cell flex items-center justify-center font-black text-slate-700 text-sm">${item.char}</span>`;
                     } else {
-                        content.innerHTML = `<span class="text-3xl font-black text-slate-300 border-2 border-dashed border-slate-300 px-1">${item.char}</span> <span class="flex-1 border-b-2 border-dotted border-slate-300 mx-1"></span> <span class="trace-cell"></span>`;
+                        content.innerHTML = `<span class="text-3xl font-black text-slate-400 border-2 border-dashed border-slate-400 px-1.5">${item.char}</span> <span class="flex-1 border-b-2 border-dotted border-slate-400 mx-1"></span> <span class="trace-cell"></span>`;
                     }
                     break;
                 case 'syllable':

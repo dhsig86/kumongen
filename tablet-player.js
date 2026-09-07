@@ -1811,8 +1811,8 @@
                                 ${lvl.id.toUpperCase()}
                             </span>
                             <div class="min-w-0">
-                                <div class="font-black text-xs md:text-sm text-white truncate">${lvl.title}</div>
-                                <div class="text-[10px] md:text-[11px] text-slate-400 truncate">${lvl.instruction}</div>
+                                <div class="font-black text-xs md:text-sm ${isSelected ? 'text-blue-900' : 'text-gray-900'} truncate">${lvl.title}</div>
+                                <div class="text-[10px] md:text-[11px] ${isSelected ? 'text-blue-700 font-semibold' : 'text-slate-500'} truncate">${lvl.instruction}</div>
                             </div>
                         </div>
                         <div class="flex items-center gap-2 flex-shrink-0 ml-2">
@@ -1845,6 +1845,17 @@
 
         startRound() {
             wakeLock.request();
+
+            // Sincroniza controles de nível no header
+            const subSelect = document.getElementById('subjectSelect');
+            if (subSelect && subSelect.value !== Session.subjectKey) {
+                subSelect.value = Session.subjectKey;
+            }
+            this.populateLevels();
+            const lvlSelect = document.getElementById('levelSelect');
+            if (lvlSelect && lvlSelect.value !== Session.levelId) {
+                lvlSelect.value = Session.levelId;
+            }
 
             // Limpa qualquer timer pendente de transição e reseta trava
             if (Session.transitionTimeout) {
@@ -2252,14 +2263,14 @@
             let circlesHtml = '';
             for (let i = 0; i < item.value; i++) {
                 circlesHtml += `
-                    <div class="w-10 h-10 md:w-12 md:h-12 rounded-full shadow-md transform hover:scale-110 transition-transform" style="background:linear-gradient(to top right,#f59e0b,#fbbf24);border:2px solid #d97706;"></div>
+                    <div class="w-10 h-10 md:w-12 md:h-12 rounded-full shadow-md transform hover:scale-110 transition-transform" style="background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);border:2.5px solid #92400e;box-shadow:0 3px 6px rgba(180,83,9,0.3);"></div>
                 `;
             }
 
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-2">
-                    <div class="text-sm font-bold text-slate-500 mb-3">Conte quantas bolinhas amarelas há no quadro:</div>
-                    <div class="rounded-2xl p-5 flex flex-wrap items-center justify-center gap-3 max-w-sm shadow-inner min-h-[120px]" style="background-color:#fef3c7;border:2px solid #fcd34d;">
+                    <div class="text-sm font-bold text-slate-700 mb-3">Conte quantas bolinhas amarelas há no quadro:</div>
+                    <div class="rounded-2xl p-5 flex flex-wrap items-center justify-center gap-3 max-w-sm shadow-inner min-h-[120px]" style="background-color:#ffffff;border:2px solid #cbd5e1;box-shadow:inset 0 2px 4px rgba(0,0,0,0.06);">
                         ${circlesHtml}
                     </div>
                     <div class="mt-4 flex items-center gap-3">
@@ -2411,15 +2422,20 @@
                         </button>
                     </div>
 
-                    <!-- Área de Traçado com Letra Guia de Fundo -->
-                    <div class="relative w-64 h-64 md:w-80 md:h-80 bg-slate-50 border-4 border-dashed border-blue-400 rounded-3xl shadow-inner flex items-center justify-center overflow-hidden my-2">
-                        <!-- Letra de fundo pontilhada / cinza claro -->
-                        <span class="absolute text-slate-200 font-serif font-black text-[150px] md:text-[190px] select-none pointer-events-none tracking-tighter">
+                    <!-- Área de Traçado com Letra Guia de Fundo e Pautas -->
+                    <div class="relative bg-white rounded-3xl shadow-inner flex items-center justify-center overflow-hidden my-3" style="width: 280px; height: 280px; max-width: 90vw; border: 4px dashed #3b82f6; box-shadow: inset 0 2px 6px rgba(0,0,0,0.06);">
+                        <!-- Pautas caligráficas pontilhadas de referência -->
+                        <div style="position: absolute; left: 16px; right: 16px; top: 25%; border-bottom: 1.5px dashed #cbd5e1; pointer-events: none;"></div>
+                        <div style="position: absolute; left: 16px; right: 16px; top: 50%; border-bottom: 2px dashed #93c5fd; pointer-events: none;"></div>
+                        <div style="position: absolute; left: 16px; right: 16px; top: 75%; border-bottom: 1.5px dashed #cbd5e1; pointer-events: none;"></div>
+
+                        <!-- Letra de modelo visível com alto contraste -->
+                        <span class="select-none pointer-events-none" style="position: absolute; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 150px; font-weight: 900; color: #93c5fd; opacity: 0.85; line-height: 1; user-select: none;">
                             ${char}
                         </span>
 
                         <!-- Canvas transparente para captura do traço -->
-                        <canvas id="traceCanvas" class="absolute inset-0 w-full h-full cursor-crosshair z-10 touch-none"></canvas>
+                        <canvas id="traceCanvas" class="cursor-crosshair z-10 touch-none" style="position: absolute; inset: 0; width: 100%; height: 100%;"></canvas>
                     </div>
 
                     <div class="flex items-center gap-4 mt-3">
@@ -2558,16 +2574,22 @@
 
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-2">
-                    <div class="flex items-center gap-3 mb-3">
+                    <div class="flex items-center gap-3 mb-2">
                         <span class="text-sm font-bold text-slate-600">${instructionText}</span>
-                        <button id="speakWordBtn" class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full font-bold text-xs flex items-center gap-1.5 hover:bg-emerald-200 transition-colors">
+                        <button id="speakWordBtn" class="px-3.5 py-1.5 bg-emerald-600 text-white rounded-full font-bold text-xs flex items-center gap-1.5 hover:bg-emerald-700 shadow-sm transition-colors cursor-pointer">
                             <i class="fas fa-volume-up"></i> ${listenBtnText}
                         </button>
                     </div>
 
+                    <!-- Contexto da Palavra Alvo com Alto Contraste -->
+                    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100/90 border border-emerald-300 text-emerald-950 font-bold text-sm mb-3 shadow-sm">
+                        <span class="text-emerald-700 font-medium">${isEng ? 'Target Word:' : 'Palavra Alvo:'}</span>
+                        <span class="text-emerald-950 font-black tracking-wide text-base uppercase">${word}</span>
+                    </div>
+
                     <!-- Palavra sendo montada -->
-                    <div id="wordTargetSlots" class="min-w-[200px] h-20 bg-slate-50 border-3 border-dashed border-emerald-400 rounded-2xl flex items-center justify-center gap-2 px-4 shadow-inner mb-6">
-                        <span class="text-slate-400 text-sm font-medium">${placeholderText}</span>
+                    <div id="wordTargetSlots" class="min-w-[220px] h-20 bg-white border-2 border-dashed border-emerald-500 rounded-2xl flex items-center justify-center gap-2 px-4 shadow-inner mb-5">
+                        <span class="text-slate-500 text-sm font-semibold">${placeholderText}</span>
                     </div>
 
                     <!-- Sílabas disponíveis como botões táteis -->
@@ -2600,7 +2622,7 @@
 
             const updateSlots = () => {
                 if (assembled.length === 0) {
-                    slotsContainer.innerHTML = `<span class="text-slate-400 text-sm font-medium">${placeholderText}</span>`;
+                    slotsContainer.innerHTML = `<span class="text-slate-500 text-sm font-semibold">${placeholderText}</span>`;
                 } else {
                     slotsContainer.innerHTML = assembled.map(s => `
                         <div class="px-4 py-2 rounded-xl font-black text-2xl shadow" style="background-color:#059669;color:#ffffff;">
@@ -2786,7 +2808,7 @@
                         </button>
                     </div>
 
-                    <div class="text-3xl md:text-4xl font-black text-indigo-900 bg-indigo-50 border-3 border-indigo-300 px-8 py-4 rounded-3xl shadow-inner mb-6 tracking-wide">
+                    <div class="text-3xl md:text-4xl font-black text-indigo-900 bg-indigo-50 border-2 border-indigo-300 px-8 py-4 rounded-3xl shadow-inner mb-6 tracking-wide">
                         ${baseWord}
                     </div>
 
@@ -2836,15 +2858,21 @@
 
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-2">
-                    <div class="flex items-center gap-3 mb-3">
+                    <div class="flex items-center gap-3 mb-2">
                         <span class="text-sm font-bold text-slate-600">${instructionText}</span>
-                        <button id="speakSentenceBtn" class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full font-bold text-xs flex items-center gap-1.5 hover:bg-emerald-200 transition-colors">
+                        <button id="speakSentenceBtn" class="px-3.5 py-1.5 bg-emerald-600 text-white rounded-full font-bold text-xs flex items-center gap-1.5 hover:bg-emerald-700 shadow-sm transition-colors cursor-pointer">
                             <i class="fas fa-volume-up"></i> ${listenBtnText}
                         </button>
                     </div>
 
-                    <div id="sentenceTargetSlots" class="w-full max-w-md min-h-[70px] bg-slate-50 border-3 border-dashed border-emerald-400 rounded-2xl flex flex-wrap items-center justify-center gap-2 p-3 shadow-inner mb-5">
-                        <span class="text-slate-400 text-xs md:text-sm font-medium">${placeholderText}</span>
+                    <!-- Contexto da Frase Modelo com Alto Contraste -->
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-100/90 border border-emerald-300 text-emerald-950 font-bold text-sm md:text-base mb-3 shadow-sm max-w-md text-center">
+                        <span class="text-emerald-700 font-medium whitespace-nowrap">${isEng ? 'Target Sentence:' : 'Frase Modelo:'}</span>
+                        <span class="text-emerald-950 font-black tracking-wide">${sentence}</span>
+                    </div>
+
+                    <div id="sentenceTargetSlots" class="w-full max-w-md min-h-[70px] bg-white border-2 border-dashed border-emerald-500 rounded-2xl flex flex-wrap items-center justify-center gap-2 p-3 shadow-inner mb-5">
+                        <span class="text-slate-500 text-xs md:text-sm font-semibold">${placeholderText}</span>
                     </div>
 
                     <div id="sentenceChipsWrapper" class="flex flex-wrap items-center justify-center gap-2.5 max-w-md">
@@ -2875,7 +2903,7 @@
 
             const updateSlots = () => {
                 if (assembled.length === 0) {
-                    slotsContainer.innerHTML = `<span class="text-slate-400 text-xs md:text-sm font-medium">${placeholderText}</span>`;
+                    slotsContainer.innerHTML = `<span class="text-slate-500 text-xs md:text-sm font-semibold">${placeholderText}</span>`;
                 } else {
                     slotsContainer.innerHTML = assembled.map(s => `
                         <div class="px-3 py-1.5 rounded-xl font-black text-sm md:text-base shadow" style="background-color:#059669;color:#ffffff;">
@@ -2945,7 +2973,7 @@
                         </button>
                     </div>
 
-                    <div class="flex items-center gap-3 bg-purple-50 border-3 border-purple-300 px-8 py-4 rounded-3xl shadow-inner mb-6">
+                    <div class="flex items-center gap-3 bg-purple-50 border-2 border-purple-300 px-8 py-4 rounded-3xl shadow-inner mb-6">
                         <span class="text-2xl">${icon}</span>
                         <span class="text-3xl md:text-4xl font-black text-purple-900 tracking-wider">${word}</span>
                     </div>
@@ -3554,16 +3582,23 @@
         // 9b. ESTADO IDLE PÓS-TAREFA
         // ============================================================
         showIdleState() {
-            const container = document.getElementById('exerciseCard');
+            const container = document.getElementById('focusCardContainer') || document.getElementById('focusCard');
+            const keypad = document.getElementById('keypadWrapper');
+            if (keypad) keypad.style.display = 'none';
             if (container) {
                 container.innerHTML = `
                     <div class="text-center py-10 px-6">
                         <div class="text-5xl mb-4">✅</div>
-                        <h3 class="font-black text-lg text-gray-800 mb-2">Tarefa concluída!</h3>
-                        <p class="text-sm text-gray-500 mb-6">Toque em "Nova Tarefa" para treinar outro nível.</p>
-                        <button type="button" id="idleNewTaskBtn" class="px-6 py-3 font-bold text-sm rounded-2xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2 mx-auto" style="background: var(--accent); color: #fff;">
-                            <i class="fas fa-plus-circle"></i> Nova Tarefa
-                        </button>
+                        <h3 class="font-black text-xl text-gray-900 mb-2">Tarefa concluída com sucesso!</h3>
+                        <p class="text-sm text-gray-600 mb-6 max-w-sm mx-auto">Escolha o que deseja fazer a seguir:</p>
+                        <div class="flex flex-wrap items-center justify-center gap-3 max-w-md mx-auto">
+                            <button type="button" id="idleNewTaskBtn" class="px-6 py-3.5 font-bold text-sm rounded-2xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2" style="background: var(--accent); color: #fff;">
+                                <i class="fas fa-plus-circle"></i> Nova Tarefa
+                            </button>
+                            <a href="index.html" class="px-6 py-3.5 font-bold text-sm rounded-2xl border-2 border-slate-300 bg-white text-slate-700 hover:bg-slate-50 shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2">
+                                <i class="fas fa-home"></i> Voltar ao Início
+                            </a>
+                        </div>
                     </div>
                 `;
                 const btn = document.getElementById('idleNewTaskBtn');
