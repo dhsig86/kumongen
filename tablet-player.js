@@ -1040,6 +1040,16 @@
                 });
             }
 
+            // Botão Direto para Boletim de Evolução & Gráficos
+            const evoBtn = document.getElementById('headerEvolutionBtn');
+            if (evoBtn) {
+                evoBtn.addEventListener('click', () => {
+                    if (window.StudentProfileEngine) {
+                        window.StudentProfileEngine.showEvolutionModal();
+                    }
+                });
+            }
+
             // Escuta trocas de aluno originadas em qualquer parte da aplicação
             window.addEventListener('kumongen:student_changed', (e) => {
                 if (e.detail && e.detail.student) {
@@ -1596,16 +1606,44 @@
 
         // Renderizador: MATEMÁTICA
         renderMathCard(item, container) {
+            const calcRes = item.result !== undefined ? item.result : (item.operator === '+' ? item.operand1 + item.operand2 : item.operator === '-' ? item.operand1 - item.operand2 : item.operator === '×' || item.operator === '*' ? item.operand1 * item.operand2 : (item.operand2 !== 0 ? Math.floor(item.operand1 / item.operand2) : 0));
+            let formulaHtml = '';
+            if (item.missingPos === 'op1') {
+                formulaHtml = `
+                    <div id="activeAnswerBox" class="w-20 md:w-28 h-18 md:h-22 bg-blue-50 border-4 border-blue-400 rounded-2xl flex items-center justify-center text-blue-700 font-black shadow-inner text-4xl md:text-5xl answer-box-focused">
+                        <span class="text-blue-300 font-light text-2xl">?</span>
+                    </div>
+                    <span class="text-blue-600 font-bold">${item.operator}</span>
+                    <span class="text-slate-900">${item.operand2}</span>
+                    <span class="text-slate-400">=</span>
+                    <span class="text-slate-900">${calcRes}</span>
+                `;
+            } else if (item.missingPos === 'op2') {
+                formulaHtml = `
+                    <span class="text-slate-900">${item.operand1}</span>
+                    <span class="text-blue-600 font-bold">${item.operator}</span>
+                    <div id="activeAnswerBox" class="w-20 md:w-28 h-18 md:h-22 bg-blue-50 border-4 border-blue-400 rounded-2xl flex items-center justify-center text-blue-700 font-black shadow-inner text-4xl md:text-5xl answer-box-focused">
+                        <span class="text-blue-300 font-light text-2xl">?</span>
+                    </div>
+                    <span class="text-slate-400">=</span>
+                    <span class="text-slate-900">${calcRes}</span>
+                `;
+            } else {
+                formulaHtml = `
+                    <span class="text-slate-900">${item.operand1}</span>
+                    <span class="text-blue-600 font-bold">${item.operator}</span>
+                    <span class="text-slate-900">${item.operand2}</span>
+                    <span class="text-slate-400">=</span>
+                    <div id="activeAnswerBox" class="w-24 md:w-32 h-20 md:h-24 bg-blue-50 border-4 border-blue-400 rounded-2xl flex items-center justify-center text-blue-700 font-black shadow-inner text-4xl md:text-5xl answer-box-focused">
+                        <span class="text-blue-300 font-light text-2xl">?</span>
+                    </div>
+                `;
+            }
+
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-4">
-                    <div class="text-5xl md:text-7xl font-black text-slate-800 flex items-center justify-center gap-4 select-none tracking-wider">
-                        <span class="text-slate-900">${item.operand1}</span>
-                        <span class="text-blue-600 font-bold">${item.operator}</span>
-                        <span class="text-slate-900">${item.operand2}</span>
-                        <span class="text-slate-400">=</span>
-                        <div id="activeAnswerBox" class="w-24 md:w-32 h-20 md:h-24 bg-blue-50 border-4 border-blue-400 rounded-2xl flex items-center justify-center text-blue-700 font-black shadow-inner text-4xl md:text-5xl answer-box-focused">
-                            <span class="text-blue-300 font-light text-2xl">?</span>
-                        </div>
+                    <div class="text-4xl sm:text-5xl md:text-7xl font-black text-slate-800 flex items-center justify-center gap-3 sm:gap-4 select-none tracking-wider flex-wrap">
+                        ${formulaHtml}
                     </div>
                     <div id="cardFeedbackMsg" class="h-6 mt-4 text-xs font-bold text-slate-400">Digite a resposta no teclado abaixo</div>
                 </div>
@@ -2063,18 +2101,17 @@
                 `;
             }
 
-            const d1Num = Math.max(1, num === 1 ? 2 : num - 1);
-            const d2Den = den === 2 ? 3 : den === 4 ? 3 : den + 1;
-            const options = [
-                correctFraction,
-                `${d1Num}/${den}`,
-                `${num}/${d2Den}`
-            ].filter((v, idx, self) => self.indexOf(v) === idx);
-
-            while (options.length < 3) {
-                options.push(`${(num % den) + 1}/${den + 1}`);
+            const distractors = [];
+            for (let d = 1; d < den; d++) {
+                if (d !== num) distractors.push(`${d}/${den}`);
             }
-            options.sort(() => Math.random() - 0.5);
+            if (distractors.length < 2) {
+                distractors.push(`${num}/${den + 1}`);
+                if (den > 2) distractors.push(`${num}/${den - 1}`);
+                else distractors.push(`${num + 1}/${den + 1}`);
+            }
+            const chosenDistractors = distractors.sort(() => Math.random() - 0.5).slice(0, 2);
+            const options = [correctFraction, ...chosenDistractors].sort(() => Math.random() - 0.5);
 
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-3">
@@ -2363,10 +2400,16 @@
 
             let expected = null;
             if (item.type === 'math') {
-                if (item.operator === '+') expected = item.operand1 + item.operand2;
-                if (item.operator === '-') expected = item.operand1 - item.operand2;
-                if (item.operator === '×' || item.operator === '*') expected = item.operand1 * item.operand2;
-                if (item.operator === '÷' || item.operator === '/') expected = item.operand2 !== 0 ? Math.floor(item.operand1 / item.operand2) : 0;
+                if (item.missingPos === 'op1') {
+                    expected = item.operand1;
+                } else if (item.missingPos === 'op2') {
+                    expected = item.operand2;
+                } else {
+                    if (item.operator === '+') expected = item.operand1 + item.operand2;
+                    if (item.operator === '-') expected = item.operand1 - item.operand2;
+                    if (item.operator === '×' || item.operator === '*') expected = item.operand1 * item.operand2;
+                    if (item.operator === '÷' || item.operator === '/') expected = item.operand2 !== 0 ? Math.floor(item.operand1 / item.operand2) : 0;
+                }
             } else if (item.type === 'quantity') {
                 expected = item.value;
             } else if (item.type === 'sequence') {
@@ -2662,21 +2705,47 @@
                 console.warn('Erro ao registrar maestria no StudentProfileEngine', e);
             }
 
-            // Registra no histórico geral do KumonGen (Scoreboard e Controle dos Pais)
+            // Registra no histórico analítico e geral do KumonGen (Scoreboard, Evolução e Controle dos Pais)
             try {
+                const sub = window.KumonSubjects[Session.subjectKey];
+                const level = sub && sub.levels ? sub.levels.find(l => l.id === Session.levelId) : null;
+                const suffix = isGauntletMastered ? ' · 100% Maestria' : ' · 100% Perfeição';
+                const now = new Date();
+                const sessionDetails = {
+                    type: 'tablet_round',
+                    timestamp: now.toISOString(),
+                    timeStr: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                    subjectKey: Session.subjectKey,
+                    levelId: Session.levelId,
+                    accuracy: accuracy,
+                    timeSec: timeSec,
+                    targetSec: targetSec,
+                    totalItems: total,
+                    firstAttemptCorrect: Session.roundCorrectFirstAttempt,
+                    isGauntletMastered: isGauntletMastered,
+                    starsEarned: bonusStars + total
+                };
+
                 if (window.KumonGen && window.KumonGen.saveHistory) {
-                    const sub = window.KumonSubjects[Session.subjectKey];
-                    const level = sub && sub.levels ? sub.levels.find(l => l.id === Session.levelId) : null;
-                    const suffix = isGauntletMastered ? ' · 100% Maestria' : ' · 100% Perfeição';
                     window.KumonGen.saveHistory(
                         sub ? sub.title : 'Matemática',
                         `${level ? level.title : 'Nível'} · Tablet${suffix}`,
                         `${total} exer.`,
-                        true
+                        true,
+                        sessionDetails
                     );
+                } else if (window.StudentProfileEngine && window.StudentProfileEngine.addActiveHistoryItem) {
+                    window.StudentProfileEngine.addActiveHistoryItem(Object.assign({
+                        id: 'hist_' + Date.now(),
+                        date: now.toLocaleDateString('pt-BR'),
+                        subject: sub ? sub.title : 'Matemática',
+                        levelTitle: `${level ? level.title : 'Nível'} · Tablet${suffix}`,
+                        pages: `${total} exer.`,
+                        completed: true
+                    }, sessionDetails));
                 }
             } catch (e) {
-                console.warn('Erro ao integrar histórico com KumonGen', e);
+                console.warn('Erro ao integrar histórico analítico com KumonGen', e);
             }
 
             this.updateGamificationHeader();
@@ -2785,16 +2854,20 @@
                     ${badgesHtml}
 
                     <!-- Ações Principais -->
-                    <div class="flex flex-col gap-3 mt-4">
-                        <button id="downloadCertBtn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-black text-base rounded-2xl shadow-lg transition-transform transform active:scale-95 flex items-center justify-center gap-2">
+                    <div class="flex flex-col gap-2.5 mt-4">
+                        <button id="downloadCertBtn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 font-black text-base rounded-2xl shadow-lg transition-transform transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
                             <i class="fas fa-certificate text-lg"></i> Baixar Certificado Oficial (PDF)
                         </button>
 
+                        <button id="summaryEvolutionBtn" type="button" class="w-full py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fas fa-chart-line text-blue-600 text-sm"></i> Ver Boletim de Evolução & Histórico
+                        </button>
+
                         <div class="grid grid-cols-2 gap-3">
-                            <button id="playAgainBtn" class="py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow transition-colors flex items-center justify-center gap-1.5">
+                            <button id="playAgainBtn" class="py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow transition-colors flex items-center justify-center gap-1.5 cursor-pointer">
                                 <i class="fas fa-redo"></i> Jogar Novamente
                             </button>
-                            <a href="index.html" class="py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition-colors flex items-center justify-center gap-1.5">
+                            <a href="index.html" class="py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition-colors flex items-center justify-center gap-1.5" style="text-decoration:none;">
                                 <i class="fas fa-home"></i> Sair do Modo
                             </a>
                         </div>
@@ -2818,6 +2891,15 @@
                         targetFormatted,
                         starsEarned: res.bonusStars + Session.roundCorrectFirstAttempt
                     });
+                });
+            }
+
+            const evoBtn = document.getElementById('summaryEvolutionBtn');
+            if (evoBtn) {
+                evoBtn.addEventListener('click', () => {
+                    if (window.StudentProfileEngine) {
+                        window.StudentProfileEngine.showEvolutionModal();
+                    }
                 });
             }
 

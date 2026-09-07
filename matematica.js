@@ -12,7 +12,7 @@
             { id: 'm7', title: 'M7 · Vizinhos', type: 'neighbors', centers: [3,5,7,10,12,15,18,20,25,30,42,50], instruction: 'Escreva o antes e depois.' },
             { id: 'm8', title: 'M8 · Multiplicação', type: 'math', operator: '×', operand: 2, range: [1,10], instruction: 'Resolva as multiplicações.' },
             { id: 'm9', title: 'M9 · Divisão', type: 'math', operator: '÷', operand: 2, range: [2,20], instruction: 'Resolva as divisões exatas.' },
-            { id: 'm10', title: 'M10 · Frações', type: 'fraction', fractions: [[1,2],[1,3],[2,3],[1,4],[2,4],[3,4],[1,5],[2,5],[3,5],[4,5]], instruction: 'Identifique a fração correspondente.' }
+            { id: 'm10', title: 'M10 · Frações', type: 'fraction', fractions: [[1,2],[1,3],[2,3],[1,4],[2,4],[3,4],[1,5],[2,5],[3,5],[4,5],[1,6],[2,6],[3,6],[4,6],[5,6],[1,8],[2,8],[3,8],[4,8],[5,8],[6,8],[7,8],[1,10],[3,10],[5,10],[7,10],[9,10]], instruction: 'Identifique a fração correspondente.' }
         ]
     };
 
@@ -33,13 +33,15 @@
         min: 1,
         max: 9,
         allowNegative: false,
+        mathMissingHole: false, // Kumon: se true, esconde um dos operandos (__ + b = c ou a + __ = c)
+        mathMixedTables: false, // M8/M9: se true, alterna tabuadas mistas entre 2 e 9
         seqFixed: true,
         seqStep: 1,
         seqLength: 5,
         seqCount: 4,
-        seqHoles: 1, // novo: número de lacunas
-        tensDezena: 1, // novo: dezena (ex: 1 para 10-19)
-        tensSequencial: true, // novo: se true, ordem crescente; se false, aleatório
+        seqHoles: 1, // número de lacunas
+        tensDezena: 1, // dezena (ex: 1 para 10-19)
+        tensSequencial: true, // ordem crescente ou aleatório
         compPairs: [[3,5],[7,2],[4,4],[6,9],[1,8],[5,5],[10,3],[2,7],[8,6],[9,1],[3,3],[6,4]],
         compRandom: false,
         compMin: 1,
@@ -93,24 +95,31 @@
                 });
                 break;
 
-            case 'math':
+            case 'math': {
                 const isLevelActive = (currentLevelId === level.id);
                 const op = (isLevelActive && customParams.operator) ? customParams.operator : (level.operator || '+');
                 const op2 = (isLevelActive && customParams.operand !== undefined) ? customParams.operand : ((level.operand !== undefined) ? level.operand : 1);
                 const minVal = (isLevelActive && customParams.min !== undefined) ? customParams.min : ((level.range && level.range[0] !== undefined) ? level.range[0] : 1);
                 const maxVal = (isLevelActive && customParams.max !== undefined) ? customParams.max : ((level.range && level.range[1] !== undefined) ? level.range[1] : 10);
+                const isMissingHole = !!(isLevelActive && customParams.mathMissingHole);
+                const isMixed = !!(isLevelActive && customParams.mathMixedTables);
 
                 if (op === '÷' || op === '/') {
-                    const divisor = Math.max(1, op2 || 2);
                     for (let i = 0; i < target; i++) {
+                        const effectiveDivisor = isMixed ? (Math.floor(Math.random() * 8) + 2) : Math.max(1, op2 || 2);
                         const quotient = Math.floor(Math.random() * 10) + 1;
-                        const dividend = divisor * quotient;
-                        baseItems.push({
+                        const dividend = effectiveDivisor * quotient;
+                        const itemObj = {
                             type: 'math',
                             operand1: dividend,
                             operator: '÷',
-                            operand2: divisor
-                        });
+                            operand2: effectiveDivisor,
+                            result: quotient
+                        };
+                        if (isMissingHole) {
+                            itemObj.missingPos = Math.random() < 0.5 ? 'op1' : 'op2';
+                        }
+                        baseItems.push(itemObj);
                     }
                     return baseItems;
                 }
@@ -127,28 +136,47 @@
                     
                     lastA = a;
                     let displayA = a;
+                    const effectiveOp2 = (isMixed && (op === '×' || op === '*')) ? (Math.floor(Math.random() * 8) + 2) : op2;
                     if (op === '-' && !customParams.allowNegative) {
-                        displayA = Math.max(a, op2);
+                        displayA = Math.max(a, effectiveOp2);
                     }
-                    baseItems.push({
+
+                    let resVal = 0;
+                    if (op === '+') resVal = displayA + effectiveOp2;
+                    else if (op === '-') resVal = displayA - effectiveOp2;
+                    else if (op === '×' || op === '*') resVal = displayA * effectiveOp2;
+
+                    const itemObj = {
                         type: 'math',
                         operand1: displayA,
                         operator: op,
-                        operand2: op2
-                    });
+                        operand2: effectiveOp2,
+                        result: resVal
+                    };
+                    if (isMissingHole) {
+                        itemObj.missingPos = Math.random() < 0.5 ? 'op1' : 'op2';
+                    }
+                    baseItems.push(itemObj);
                 }
                 return baseItems;
+            }
 
             case 'fraction': {
-                const fractionPool = level.fractions || [[1,2],[1,3],[2,3],[1,4],[2,4],[3,4],[1,5],[2,5],[3,5],[4,5]];
-                fractionPool.forEach(fr => {
-                    baseItems.push({
-                        type: 'fraction',
-                        numerator: fr[0],
-                        denominator: fr[1]
-                    });
-                });
-                break;
+                const fractionPool = (level && level.fractions && level.fractions.length > 0)
+                    ? level.fractions
+                    : [[1,2],[1,3],[2,3],[1,4],[2,4],[3,4],[1,5],[2,5],[3,5],[4,5],[1,6],[2,6],[3,6],[4,6],[5,6],[1,8],[2,8],[3,8],[4,8],[5,8],[6,8],[7,8],[1,10],[3,10],[5,10],[7,10],[9,10]];
+                
+                const poolShuffled = [...fractionPool].sort(() => Math.random() - 0.5);
+                while (baseItems.length < target) {
+                    for (let i = 0; i < poolShuffled.length && baseItems.length < target; i++) {
+                        baseItems.push({
+                            type: 'fraction',
+                            numerator: poolShuffled[i][0],
+                            denominator: poolShuffled[i][1]
+                        });
+                    }
+                }
+                return baseItems;
             }
 
             case 'sequence':
@@ -296,6 +324,8 @@
                 <div class="param-row"><label>Mínimo:</label><input type="number" id="mathMin" value="${customParams.min}" min="1" max="50"></div>
                 <div class="param-row"><label>Máximo:</label><input type="number" id="mathMax" value="${customParams.max}" min="1" max="50"></div>
                 <div class="param-row checkbox-row"><label>Permitir negativo?</label><input type="checkbox" id="mathAllowNegative" ${customParams.allowNegative ? 'checked' : ''}></div>
+                <div class="param-row checkbox-row"><label>Incógnita Kumon (__ + b = c)</label><input type="checkbox" id="mathMissingHole" ${customParams.mathMissingHole ? 'checked' : ''}></div>
+                <div class="param-row checkbox-row"><label>Tabuadas mistas (2 a 9)</label><input type="checkbox" id="mathMixedTables" ${customParams.mathMixedTables ? 'checked' : ''}></div>
             </div>
         `;
     }
@@ -359,11 +389,15 @@
                 const min = document.getElementById('mathMin');
                 const max = document.getElementById('mathMax');
                 const allowNeg = document.getElementById('mathAllowNegative');
+                const missingHole = document.getElementById('mathMissingHole');
+                const mixedTabs = document.getElementById('mathMixedTables');
                 if (op) op.addEventListener('change', (e) => { customParams.operator = e.target.value; saveState(); refreshPreview(); });
                 if (operand) operand.addEventListener('change', (e) => { customParams.operand = parseInt(e.target.value) || 1; saveState(); refreshPreview(); });
                 if (min) min.addEventListener('change', (e) => { customParams.min = parseInt(e.target.value) || 1; saveState(); refreshPreview(); });
                 if (max) max.addEventListener('change', (e) => { customParams.max = parseInt(e.target.value) || 1; saveState(); refreshPreview(); });
                 if (allowNeg) allowNeg.addEventListener('change', (e) => { customParams.allowNegative = e.target.checked; saveState(); refreshPreview(); });
+                if (missingHole) missingHole.addEventListener('change', (e) => { customParams.mathMissingHole = e.target.checked; saveState(); refreshPreview(); });
+                if (mixedTabs) mixedTabs.addEventListener('change', (e) => { customParams.mathMixedTables = e.target.checked; saveState(); refreshPreview(); });
             }
             if (type === 'sequence') {
                 const fixed = document.getElementById('seqFixed');
@@ -580,6 +614,11 @@
     window.selectWizardGoal = selectWizardGoal;
     window.selectWizardPace = selectWizardPace;
     
+    window.printSheet = () => {
+        const level = LevelLibrary.matematica.find(l => l.id === currentLevelId);
+        KumonGen.printSheet('Matemática', level ? level.title : '');
+    };
+
     window.generatePDF = () => {
         const level = LevelLibrary.matematica.find(l => l.id === currentLevelId);
         if (!level) return;

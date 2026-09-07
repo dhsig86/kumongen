@@ -117,7 +117,27 @@
         { word: 'POT', parts: ['P','O','T'] },
         { word: 'BUG', parts: ['B','U','G'] },
         { word: 'VAN', parts: ['V','A','N'] },
-        { word: 'ZIP', parts: ['Z','I','P'] }
+        { word: 'ZIP', parts: ['Z','I','P'] },
+        { word: 'RED', parts: ['R','E','D'] },
+        { word: 'SIT', parts: ['S','I','T'] },
+        { word: 'POP', parts: ['P','O','P'] },
+        { word: 'LID', parts: ['L','I','D'] },
+        { word: 'WAG', parts: ['W','A','G'] },
+        { word: 'HUG', parts: ['H','U','G'] },
+        { word: 'YAM', parts: ['Y','A','M'] },
+        { word: 'COD', parts: ['C','O','D'] },
+        { word: 'KID', parts: ['K','I','D'] },
+        { word: 'DAD', parts: ['D','A','D'] },
+        { word: 'MOM', parts: ['M','O','M'] },
+        { word: 'WIG', parts: ['W','I','G'] },
+        { word: 'SIP', parts: ['S','I','P'] },
+        { word: 'DIM', parts: ['D','I','M'] },
+        { word: 'GAS', parts: ['G','A','S'] },
+        { word: 'TAG', parts: ['T','A','G'] },
+        { word: 'NUT', parts: ['N','U','T'] },
+        { word: 'ROD', parts: ['R','O','D'] },
+        { word: 'TUG', parts: ['T','U','G'] },
+        { word: 'LOG', parts: ['L','O','G'] }
     ];
 
     const DEFAULT_WORDS_I3 = [
@@ -150,7 +170,25 @@
         { word: 'CRAB', parts: ['C','R','A','B'] },
         { word: 'SNAIL', parts: ['S','N','AI','L'] },
         { word: 'PLANT', parts: ['P','L','A','N','T'] },
-        { word: 'CLOUD', parts: ['C','L','OU','D'] }
+        { word: 'CLOUD', parts: ['C','L','OU','D'] },
+        { word: 'BATH', parts: ['B','A','TH'] },
+        { word: 'MATH', parts: ['M','A','TH'] },
+        { word: 'CASH', parts: ['C','A','SH'] },
+        { word: 'WISH', parts: ['W','I','SH'] },
+        { word: 'RUSH', parts: ['R','U','SH'] },
+        { word: 'SUCH', parts: ['S','U','CH'] },
+        { word: 'MUCH', parts: ['M','U','CH'] },
+        { word: 'RICH', parts: ['R','I','CH'] },
+        { word: 'LOCK', parts: ['L','O','CK'] },
+        { word: 'KICK', parts: ['K','I','CK'] },
+        { word: 'SONG', parts: ['S','O','NG'] },
+        { word: 'LONG', parts: ['L','O','NG'] },
+        { word: 'SING', parts: ['S','I','NG'] },
+        { word: 'WING', parts: ['W','I','NG'] },
+        { word: 'WELL', parts: ['W','E','LL'] },
+        { word: 'TALL', parts: ['T','A','LL'] },
+        { word: 'FALL', parts: ['F','A','LL'] },
+        { word: 'STOP', parts: ['S','T','O','P'] }
     ];
 
     const DEFAULT_WORDS_I4 = [
@@ -183,7 +221,27 @@
         { word: 'COME', parts: ['C','O','ME'] },
         { word: 'LOOK', parts: ['L','OO','K'] },
         { word: 'SAID', parts: ['S','AI','D'] },
-        { word: 'PLAY', parts: ['P','L','AY'] }
+        { word: 'PLAY', parts: ['P','L','AY'] },
+        { word: 'THEY', parts: ['TH','EY'] },
+        { word: 'THIS', parts: ['TH','I','S'] },
+        { word: 'THAT', parts: ['TH','A','T'] },
+        { word: 'THEM', parts: ['TH','E','M'] },
+        { word: 'THEN', parts: ['TH','E','N'] },
+        { word: 'WITH', parts: ['W','I','TH'] },
+        { word: 'WHEN', parts: ['WH','E','N'] },
+        { word: 'WHAT', parts: ['WH','A','T'] },
+        { word: 'WILL', parts: ['W','I','LL'] },
+        { word: 'DOWN', parts: ['D','OW','N'] },
+        { word: 'EACH', parts: ['EA','CH'] },
+        { word: 'FROM', parts: ['F','R','O','M'] },
+        { word: 'HAVE', parts: ['H','A','VE'] },
+        { word: 'BEEN', parts: ['B','EE','N'] },
+        { word: 'SOME', parts: ['S','O','ME'] },
+        { word: 'JUST', parts: ['J','U','S','T'] },
+        { word: 'VERY', parts: ['V','ER','Y'] },
+        { word: 'OVER', parts: ['O','V','ER'] },
+        { word: 'INTO', parts: ['IN','TO'] },
+        { word: 'GOOD', parts: ['G','OO','D'] }
     ];
 
     const DEFAULT_WORDS_I5 = [
@@ -211,7 +269,28 @@
         { word: 'FIRE', parts: ['F','I','RE'] },
         { word: 'NOTE', parts: ['N','O','TE'] },
         { word: 'CUBE', parts: ['C','U','BE'] },
-        { word: 'MADE', parts: ['M','A','DE'] }
+        { word: 'MADE', parts: ['M','A','DE'] },
+        { word: 'BAKE', parts: ['B','A','KE'] },
+        { word: 'CAPE', parts: ['C','A','PE'] },
+        { word: 'DIME', parts: ['D','I','ME'] },
+        { word: 'DIVE', parts: ['D','I','VE'] },
+        { word: 'FIVE', parts: ['F','I','VE'] },
+        { word: 'GAME', parts: ['G','A','ME'] },
+        { word: 'GLOBE', parts: ['G','LO','BE'] },
+        { word: 'GRADE', parts: ['G','RA','DE'] },
+        { word: 'HIDE', parts: ['H','I','DE'] },
+        { word: 'HOPE', parts: ['H','O','PE'] },
+        { word: 'JOKE', parts: ['J','O','KE'] },
+        { word: 'LIFE', parts: ['L','I','FE'] },
+        { word: 'MANE', parts: ['M','A','NE'] },
+        { word: 'NAME', parts: ['N','A','ME'] },
+        { word: 'NINE', parts: ['N','I','NE'] },
+        { word: 'PRIZE', parts: ['P','RI','ZE'] },
+        { word: 'SAFE', parts: ['S','A','FE'] },
+        { word: 'SIDE', parts: ['S','I','DE'] },
+        { word: 'SNAKE', parts: ['S','NA','KE'] },
+        { word: 'STONE', parts: ['S','TO','NE'] },
+        { word: 'TIME', parts: ['T','I','ME'] }
     ];
 
     const DEFAULT_SENTENCES_I6 = [
@@ -224,7 +303,21 @@
         { sentence: 'HE CAN RUN FAST', parts: ['HE CAN', 'RUN', 'FAST'] },
         { sentence: 'THE BIRD CAN FLY', parts: ['THE BIRD', 'CAN', 'FLY'] },
         { sentence: 'LOOK AT THE MOON', parts: ['LOOK AT', 'THE', 'MOON'] },
-        { sentence: 'THIS IS MY BOOK', parts: ['THIS IS', 'MY', 'BOOK'] }
+        { sentence: 'THIS IS MY BOOK', parts: ['THIS IS', 'MY', 'BOOK'] },
+        { sentence: 'THE FISH CAN SWIM', parts: ['THE FISH', 'CAN', 'SWIM'] },
+        { sentence: 'I LOVE MY FAMILY', parts: ['I LOVE', 'MY', 'FAMILY'] },
+        { sentence: 'THE SKY IS BLUE', parts: ['THE SKY', 'IS', 'BLUE'] },
+        { sentence: 'SHE READS A GOOD BOOK', parts: ['SHE READS', 'A GOOD', 'BOOK'] },
+        { sentence: 'WE EAT SWEET FRUIT', parts: ['WE EAT', 'SWEET', 'FRUIT'] },
+        { sentence: 'THE GREEN FROG JUMPS', parts: ['THE GREEN FROG', 'JUMPS'] },
+        { sentence: 'I HAVE TWO HANDS', parts: ['I HAVE', 'TWO', 'HANDS'] },
+        { sentence: 'THE CAR IS VERY FAST', parts: ['THE CAR', 'IS VERY', 'FAST'] },
+        { sentence: 'HE DRINKS COLD MILK', parts: ['HE DRINKS', 'COLD', 'MILK'] },
+        { sentence: 'THE FLOWERS ARE PRETTY', parts: ['THE FLOWERS', 'ARE', 'PRETTY'] },
+        { sentence: 'I CAN JUMP HIGH', parts: ['I CAN', 'JUMP', 'HIGH'] },
+        { sentence: 'THE RABBIT IS WHITE', parts: ['THE RABBIT', 'IS', 'WHITE'] },
+        { sentence: 'OPEN THE BIG DOOR', parts: ['OPEN', 'THE BIG', 'DOOR'] },
+        { sentence: 'THE STARS SHINE AT NIGHT', parts: ['THE STARS', 'SHINE', 'AT NIGHT'] }
     ];
 
     const DEFAULT_OPPOSITES_I7 = [
@@ -237,7 +330,21 @@
         { word: 'OPEN', target: 'CLOSED', options: ['CLOSED', 'BOX', 'DOOR'], icon: '📖 / 📕' },
         { word: 'IN', target: 'OUT', options: ['OUT', 'ON', 'OFF'], icon: '📥 / 📤' },
         { word: 'HARD', target: 'SOFT', options: ['SOFT', 'ROCK', 'TALL'], icon: '🪨 / 🧸' },
-        { word: 'TALL', target: 'SHORT', options: ['SHORT', 'LITTLE', 'TREE'], icon: '🦒 / 🦔' }
+        { word: 'TALL', target: 'SHORT', options: ['SHORT', 'LITTLE', 'TREE'], icon: '🦒 / 🦔' },
+        { word: 'HEAVY', target: 'LIGHT', options: ['LIGHT', 'STRONG', 'BIG'], icon: '🐘 / 🪶' },
+        { word: 'WET', target: 'DRY', options: ['DRY', 'WATER', 'RAIN'], icon: '🌧️ / 🌵' },
+        { word: 'CLEAN', target: 'DIRTY', options: ['DIRTY', 'FRESH', 'SHINY'], icon: '✨ / 🧼' },
+        { word: 'FULL', target: 'EMPTY', options: ['EMPTY', 'CUP', 'PLENTY'], icon: '🥛 / 🫙' },
+        { word: 'NEAR', target: 'FAR', options: ['FAR', 'CLOSE', 'HERE'], icon: '📍 / 🔭' },
+        { word: 'EARLY', target: 'LATE', options: ['LATE', 'FIRST', 'CLOCK'], icon: '⏰ / 🌙' },
+        { word: 'STRONG', target: 'WEAK', options: ['WEAK', 'BOLD', 'FAST'], icon: '💪 / 🍃' },
+        { word: 'OLD', target: 'YOUNG', options: ['YOUNG', 'TIME', 'WISE'], icon: '👴 / 👶' },
+        { word: 'DARK', target: 'LIGHT', options: ['LIGHT', 'SHADOW', 'SUN'], icon: '🌑 / 💡' },
+        { word: 'FRONT', target: 'BACK', options: ['BACK', 'DOOR', 'SIDE'], icon: '🚪 / 🔙' },
+        { word: 'QUIET', target: 'LOUD', options: ['LOUD', 'NOISE', 'CALM'], icon: '🤫 / 📢' },
+        { word: 'SWEET', target: 'SOUR', options: ['SOUR', 'SUGAR', 'CANDY'], icon: '🍭 / 🍋' },
+        { word: 'GOOD', target: 'BAD', options: ['BAD', 'GREAT', 'NICE'], icon: '👍 / 👎' },
+        { word: 'RICH', target: 'POOR', options: ['POOR', 'GOLD', 'COIN'], icon: '💎 / 🪙' }
     ];
 
     let customParams = {
@@ -295,26 +402,34 @@
             }
 
             case 'sentence': {
-                DEFAULT_SENTENCES_I6.forEach(st => {
-                    baseItems.push({
-                        type: 'sentence',
-                        sentence: st.sentence,
-                        parts: [...st.parts]
-                    });
-                });
+                const pool = [...DEFAULT_SENTENCES_I6].sort(() => Math.random() - 0.5);
+                while (baseItems.length < target) {
+                    for (let i = 0; i < pool.length && baseItems.length < target; i++) {
+                        const st = pool[i];
+                        baseItems.push({
+                            type: 'sentence',
+                            sentence: st.sentence,
+                            parts: [...st.parts]
+                        });
+                    }
+                }
                 break;
             }
 
             case 'opposite': {
-                DEFAULT_OPPOSITES_I7.forEach(op => {
-                    baseItems.push({
-                        type: 'opposite',
-                        word: op.word,
-                        target: op.target,
-                        options: [...op.options],
-                        icon: op.icon
-                    });
-                });
+                const pool = [...DEFAULT_OPPOSITES_I7].sort(() => Math.random() - 0.5);
+                while (baseItems.length < target) {
+                    for (let i = 0; i < pool.length && baseItems.length < target; i++) {
+                        const op = pool[i];
+                        baseItems.push({
+                            type: 'opposite',
+                            word: op.word,
+                            target: op.target,
+                            options: [...op.options],
+                            icon: op.icon
+                        });
+                    }
+                }
                 break;
             }
 
@@ -847,6 +962,11 @@
     window.selectEngWizardGoal = selectEngWizardGoal;
     window.selectEngWizardPace = selectEngWizardPace;
     
+    window.printSheet = () => {
+        const level = LevelLibrary.ingles.find(l => l.id === currentLevelId);
+        KumonGen.printSheet('Inglês', level ? level.title : '');
+    };
+
     window.generatePDF = () => {
         const level = LevelLibrary.ingles.find(l => l.id === currentLevelId);
         if (!level) return;

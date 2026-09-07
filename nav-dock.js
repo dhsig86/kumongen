@@ -80,6 +80,9 @@
                             <i class="fas fa-language w-4 text-red-400"></i> <span>Inglês</span>
                         </a>
                         <div class="h-[1px] bg-slate-800 my-1"></div>
+                        <button type="button" id="navDockTabletEvolutionBtn" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-blue-400 hover:bg-slate-800 transition-colors text-left w-full cursor-pointer">
+                            <i class="fas fa-chart-line w-4 text-blue-400"></i> <span>Boletim de Evolução</span>
+                        </button>
                         <button type="button" id="navDockTabletProfileBtn" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-400 hover:bg-slate-800 transition-colors text-left w-full cursor-pointer">
                             <i class="fas fa-users w-4 text-amber-400"></i> <span>Trocar Aluno</span>
                         </button>
@@ -119,6 +122,16 @@
                 });
             }
 
+            const tabletEvoBtn = document.getElementById('navDockTabletEvolutionBtn');
+            if (tabletEvoBtn) {
+                tabletEvoBtn.addEventListener('click', () => {
+                    flyout.classList.add('hidden');
+                    if (window.StudentProfileEngine) {
+                        window.StudentProfileEngine.showEvolutionModal();
+                    }
+                });
+            }
+
             const tabletProfBtn = document.getElementById('navDockTabletProfileBtn');
             if (tabletProfBtn) {
                 tabletProfBtn.addEventListener('click', () => {
@@ -143,11 +156,25 @@
                 ${itemsHtml}
                 <div class="w-[1px] h-6 bg-slate-700/80 mx-0.5"></div>
                 ${profileBtnHtml}
+                <button type="button" id="navDockEvolutionBtn" class="nav-dock-item flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 px-3 py-2 sm:py-2.5 rounded-2xl border border-transparent text-blue-300/80 hover:text-blue-200 hover:bg-blue-400/10 transition-all text-center min-w-[48px] min-h-[44px] cursor-pointer" title="Boletim de Evolução & Gráficos">
+                    <i class="fas fa-chart-line text-sm sm:text-base text-blue-400"></i>
+                    <span class="text-[10px] sm:text-xs font-bold leading-none">Boletim</span>
+                </button>
                 ${toggleBtnHtml}
             </div>
         `;
 
         document.body.appendChild(dock);
+
+        // Ações do botão de boletim de evolução
+        const evoBtn = document.getElementById('navDockEvolutionBtn');
+        if (evoBtn) {
+            evoBtn.addEventListener('click', () => {
+                if (window.StudentProfileEngine) {
+                    window.StudentProfileEngine.showEvolutionModal();
+                }
+            });
+        }
 
         // Ações do botão de perfis
         const profBtn = document.getElementById('navDockProfileBtn');

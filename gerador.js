@@ -73,11 +73,13 @@ const KumonGen = (function() {
         if (!item) return '';
         switch (item.type) {
             case 'math':
+                if (item.missingPos === 'op1') return item.operand1;
+                if (item.missingPos === 'op2') return item.operand2;
                 if (item.operator === '+') return item.operand1 + item.operand2;
                 if (item.operator === '-') return item.operand1 - item.operand2;
                 if (item.operator === '×' || item.operator === '*') return item.operand1 * item.operand2;
                 if (item.operator === '÷' || item.operator === '/') return item.operand2 !== 0 ? Math.floor(item.operand1 / item.operand2) : 0;
-                return '';
+                return item.result !== undefined ? item.result : '';
             case 'fraction':
                 return `${item.numerator}/${item.denominator}`;
             case 'rhyme':
@@ -510,11 +512,11 @@ const KumonGen = (function() {
                 <h3 class="flex items-center flex-wrap">${level?.title || ''}${dayBadge}</h3>
                 <p>${level?.instruction || ''}</p>
             </div>
-            <div class="text-right">
-                <div class="text-[0.55rem] font-bold text-slate-500">${sctText}DATA: ___/___/___ TEMPO: ___ min</div>
-                <div class="border border-slate-900 px-2 py-0.5 mt-1 min-w-[120px]">
-                    <span class="text-[0.5rem] font-bold">NOME:</span>
-                    <span class="ml-2 text-[0.5rem] font-bold">${studentNameDisplay}</span>
+            <div class="text-right flex flex-col items-end">
+                <div class="text-[0.55rem] font-bold text-slate-500 whitespace-nowrap flex items-center justify-end gap-1.5">${sctText}<span>DATA: ___/___/___</span> <span>TEMPO: ___ min</span></div>
+                <div class="border border-slate-900 px-2 py-0.5 mt-1 min-w-[150px] max-w-[200px] flex items-center justify-between text-left">
+                    <span class="text-[0.5rem] font-bold text-slate-800">NOME:</span>
+                    <span class="ml-2 text-[0.55rem] font-bold text-slate-900 truncate">${studentNameDisplay}</span>
                 </div>
             </div>
         `;
@@ -564,14 +566,28 @@ const KumonGen = (function() {
                         content.innerHTML = `<span class="text-2xl font-black w-6">${item.value}</span> ${circles} <span class="answer-line"></span>`;
                     }
                     break;
-                case 'math':
+                case 'math': {
+                    const calcRes = item.result !== undefined ? item.result : (item.operator === '+' ? item.operand1 + item.operand2 : item.operator === '-' ? item.operand1 - item.operand2 : item.operator === '×' || item.operator === '*' ? item.operand1 * item.operand2 : (item.operand2 !== 0 ? Math.floor(item.operand1 / item.operand2) : 0));
                     if (isWorkedExample) {
                         const solved = solveItem(item);
-                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-base font-light italic">${item.operand1} ${item.operator} ${item.operand2} =</span> <span class="example-answer">${solved}</span>`;
+                        if (item.missingPos === 'op1') {
+                            content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="example-answer">${solved}</span> <span class="text-base font-light italic">${item.operator} ${item.operand2} = ${calcRes}</span>`;
+                        } else if (item.missingPos === 'op2') {
+                            content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-base font-light italic">${item.operand1} ${item.operator}</span> <span class="example-answer">${solved}</span> <span class="text-base font-light italic">= ${calcRes}</span>`;
+                        } else {
+                            content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-base font-light italic">${item.operand1} ${item.operator} ${item.operand2} =</span> <span class="example-answer">${solved}</span>`;
+                        }
                     } else {
-                        content.innerHTML = `<span class="text-base font-light italic">${item.operand1} ${item.operator} ${item.operand2} =</span> <span class="answer-line"></span>`;
+                        if (item.missingPos === 'op1') {
+                            content.innerHTML = `<span class="answer-line w-8"></span> <span class="text-base font-light italic">${item.operator} ${item.operand2} = ${calcRes}</span>`;
+                        } else if (item.missingPos === 'op2') {
+                            content.innerHTML = `<span class="text-base font-light italic">${item.operand1} ${item.operator}</span> <span class="answer-line w-8"></span> <span class="text-base font-light italic">= ${calcRes}</span>`;
+                        } else {
+                            content.innerHTML = `<span class="text-base font-light italic">${item.operand1} ${item.operator} ${item.operand2} =</span> <span class="answer-line"></span>`;
+                        }
                     }
                     break;
+                }
                 case 'sequence':
                     if (isWorkedExample) {
                         const solvedHole = solveItem(item);
@@ -635,13 +651,23 @@ const KumonGen = (function() {
                         content.innerHTML = `<div class="flex items-center gap-0.5">${partsHtml}</div> <span class="w-16 border-b-4 border-double border-slate-400 ml-2"></span>`;
                     }
                     break;
-                case 'fraction':
+                case 'fraction': {
+                    const num = item.numerator;
+                    const den = item.denominator;
+                    let barHtml = '<div class="inline-flex items-center gap-0.5 border border-slate-300 rounded p-0.5 bg-slate-50 mr-1.5">';
+                    for (let s = 0; s < den; s++) {
+                        const isFilled = isWorkedExample && s < num;
+                        barHtml += `<span style="width:10px;height:14px;border:1px solid #64748b;border-radius:1.5px;display:inline-block;background:${isFilled ? '#3b82f6' : '#fff'};"></span>`;
+                    }
+                    barHtml += '</div>';
+
                     if (isWorkedExample) {
-                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="inline-flex flex-col items-center justify-center font-black text-sm leading-tight border border-slate-300 rounded px-1.5 py-0.5 bg-slate-50"><span class="border-b border-slate-700 w-full text-center">${item.numerator}</span><span>${item.denominator}</span></span> <span class="text-xs text-slate-500 font-medium ml-1">(${item.numerator} de ${item.denominator})</span> <span class="example-answer ml-auto">${item.numerator}/${item.denominator}</span>`;
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> ${barHtml} <span class="inline-flex flex-col items-center justify-center font-black text-xs leading-tight border border-slate-300 rounded px-1.5 py-0.5 bg-slate-50 min-w-[22px]"><span class="border-b border-slate-700 w-full text-center">${num}</span><span>${den}</span></span> <span class="text-xs text-slate-500 font-medium ml-1">(${num} de ${den})</span> <span class="example-answer ml-auto">${num}/${den}</span>`;
                     } else {
-                        content.innerHTML = `<span class="inline-flex flex-col items-center justify-center font-black text-sm leading-tight border border-slate-300 rounded px-1.5 py-0.5 bg-slate-50"><span class="border-b border-slate-700 w-full text-center">${item.numerator}</span><span>${item.denominator}</span></span> <span class="text-[11px] text-slate-400 ml-1">pinte / represente</span> <span class="answer-line ml-auto w-14"></span>`;
+                        content.innerHTML = `${barHtml} <span class="inline-flex flex-col items-center justify-center font-black text-xs leading-tight border border-slate-300 rounded px-1.5 py-0.5 bg-slate-50 min-w-[22px]"><span class="border-b border-slate-700 w-full text-center">${num}</span><span>${den}</span></span> <span class="text-[11px] text-slate-400 ml-1.5">pinte ${num}/${den}</span> <span class="answer-line ml-auto w-14"></span>`;
                     }
                     break;
+                }
                 case 'rhyme':
                     if (isWorkedExample) {
                         content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-xs text-slate-500">Rima com</span> <span class="font-black text-indigo-700 bg-indigo-50 px-1 border rounded text-xs">${item.word}</span> <span class="text-xs text-slate-400">→</span> <span class="example-answer font-bold text-xs">${item.target}</span>`;
@@ -1148,26 +1174,53 @@ const KumonGen = (function() {
         }
     }
 
+    // IMPRESSÃO DIRETA NATIVA (WINDOW.PRINT COM SUPORTE A4 PAISAGEM)
+    function printSheet(subjectTitle = 'Kumon', levelTitle = '') {
+        try {
+            saveHistory(subjectTitle, levelTitle || 'Caderno Impresso', 2);
+        } catch (e) {
+            console.warn('Erro ao salvar histórico de impressão:', e);
+        }
+
+        const originalTransform = zoomContainer ? zoomContainer.style.transform : '';
+        if (zoomContainer) {
+            zoomContainer.style.transform = 'none';
+        }
+
+        showPrintTip(2);
+
+        window.print();
+
+        setTimeout(() => {
+            if (zoomContainer && originalTransform) {
+                zoomContainer.style.transform = originalTransform;
+            }
+            if (window.refreshPreview) {
+                window.refreshPreview();
+            }
+        }, 500);
+    }
+
     // ---------- SISTEMA DE LOCAL STORAGE, SCOREBOARD E HISTÓRICO ----------
-    function saveHistory(subject, levelTitle, pages, completed = false) {
+    function saveHistory(subject, levelTitle, pages, completed = false, extraDetails = null) {
         const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
         let history;
         try { history = JSON.parse((storage ? storage.getItem('kumongen_history') : null) || '[]'); }
         catch (e) { history = []; }
-        const entry = {
+        const entry = Object.assign({
             id: Date.now().toString(),
             date: new Date().toLocaleDateString('pt-BR'),
             subject: subject,
             levelTitle: levelTitle,
             pages: pages,
             completed: !!completed
-        };
+        }, (extraDetails && typeof extraDetails === 'object') ? extraDetails : {});
         history.unshift(entry);
         if (storage) {
-            try { storage.setItem('kumongen_history', JSON.stringify(history.slice(0, 30))); } catch (e) {}
+            try { storage.setItem('kumongen_history', JSON.stringify(history.slice(0, 50))); } catch (e) {}
         }
 
-        if (window.StudentProfileEngine) {
+        if (window.StudentProfileEngine && window.StudentProfileEngine.addActiveHistoryItem) {
             window.StudentProfileEngine.addActiveHistoryItem(entry);
         }
 
@@ -1307,6 +1360,13 @@ const KumonGen = (function() {
                     <span class="hidden xl:inline text-[11px]">+ Novo</span>
                 </button>
             </div>
+            <button type="button" onclick="if(window.StudentProfileEngine) window.StudentProfileEngine.showEvolutionModal();" class="w-full py-1.5 px-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl font-bold text-[11px] flex items-center justify-between transition-colors shadow-sm cursor-pointer group" title="Ver Gráfico de Evolução, Ritmo SCT e Histórico">
+                <span class="flex items-center gap-1.5">
+                    <i class="fas fa-chart-line text-blue-600 text-xs"></i>
+                    <span>Boletim de Evolução & Gráficos</span>
+                </span>
+                <i class="fas fa-arrow-right text-[9px] text-blue-400 group-hover:translate-x-0.5 transition-transform"></i>
+            </button>
         `;
     }
 
@@ -1459,6 +1519,9 @@ const KumonGen = (function() {
                         </button>
                         <button type="button" onclick="document.getElementById('parental-modal').remove(); if(window.StudentProfileEngine) window.StudentProfileEngine.showProfileModal({ onSelect: () => window.KumonGen.onStudentSelected() });" class="hover:text-blue-700 flex items-center gap-1 cursor-pointer">
                             <i class="fas fa-users text-blue-500"></i> Perfis
+                        </button>
+                        <button type="button" onclick="document.getElementById('parental-modal').remove(); if(window.StudentProfileEngine) window.StudentProfileEngine.showEvolutionModal();" class="hover:text-indigo-700 font-bold flex items-center gap-1 cursor-pointer" title="Ver Boletim de Evolução e Gráficos">
+                            <i class="fas fa-chart-line text-indigo-600"></i> Boletim
                         </button>
                         <button type="button" onclick="document.getElementById('parental-modal').remove(); if(window.StudentProfileEngine) window.StudentProfileEngine.showProfileModal({ initialView: 'form', onSelect: () => window.KumonGen.onStudentSelected() });" class="hover:text-emerald-700 font-bold flex items-center gap-1 cursor-pointer" title="Cadastrar nova criança">
                             <i class="fas fa-user-plus text-emerald-500"></i> + Novo Aluno
@@ -1688,6 +1751,7 @@ const KumonGen = (function() {
         initRefs,
         adjustZoom,
         buildPage,
+        printSheet,
         generatePDF,
         generateWeeklyPackagePDF,
         adjustPreviewScale,

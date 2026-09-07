@@ -276,3 +276,168 @@ const POOL_MAT_COMPARACAO = [
     // Pares com diferença 1
     [8,9], [6,5], [3,2],
 ];
+
+const POOL_MAT_FRACOES = [
+    [1, 2],
+    [1, 3], [2, 3],
+    [1, 4], [2, 4], [3, 4],
+    [1, 5], [2, 5], [3, 5], [4, 5],
+    [1, 6], [2, 6], [3, 6], [4, 6], [5, 6],
+    [1, 8], [2, 8], [3, 8], [4, 8], [5, 8], [6, 8], [7, 8],
+    [1, 10], [3, 10], [5, 10], [7, 10], [9, 10]
+];
+
+// ============================================================
+// PORTUGUÊS — Rimas & Frases Extras
+// ============================================================
+const POOL_PT_RIMAS = [
+    { word: 'GATO', target: 'PATO', options: ['PATO', 'BOLO', 'MESA'], rhymeEnding: 'ATO' },
+    { word: 'BOLA', target: 'MOLA', options: ['MOLA', 'DADO', 'GIRAFA'], rhymeEnding: 'OLA' },
+    { word: 'MÃO', target: 'PÃO', options: ['PÃO', 'LUVA', 'TATU'], rhymeEnding: 'ÃO' },
+    { word: 'COELHO', target: 'ESPELHO', options: ['ESPELHO', 'JANELA', 'RATO'], rhymeEnding: 'ELHO' },
+    { word: 'PANELA', target: 'JANELA', options: ['JANELA', 'SAPATO', 'BONECO'], rhymeEnding: 'ELA' },
+    { word: 'CORAÇÃO', target: 'BALÃO', options: ['BALÃO', 'CANETA', 'CACHORRO'], rhymeEnding: 'ÃO' },
+    { word: 'CHUVA', target: 'UVA', options: ['UVA', 'BANANA', 'BODE'], rhymeEnding: 'UVA' },
+    { word: 'SAPATO', target: 'RATO', options: ['RATO', 'CABELO', 'FOGO'], rhymeEnding: 'ATO' },
+    { word: 'FLOR', target: 'AMOR', options: ['AMOR', 'PEIXE', 'DENTE'], rhymeEnding: 'OR' },
+    { word: 'DADO', target: 'CADEADO', options: ['CADEADO', 'PIPOCA', 'LEÃO'], rhymeEnding: 'ADO' },
+    { word: 'DENTE', target: 'PRESENTE', options: ['PRESENTE', 'GELADO', 'SUCO'], rhymeEnding: 'ENTE' },
+    { word: 'LATA', target: 'BATA', options: ['BATA', 'COPO', 'SINO'], rhymeEnding: 'ATA' },
+    { word: 'SOL', target: 'CARACOL', options: ['CARACOL', 'NUVEM', 'LIVRO'], rhymeEnding: 'OL' },
+    { word: 'PEIXE', target: 'FEIXE', options: ['FEIXE', 'BARCO', 'PEDRA'], rhymeEnding: 'EIXE' },
+    { word: 'LEÃO', target: 'AVIÃO', options: ['AVIÃO', 'ZEBRA', 'FLORESTA'], rhymeEnding: 'ÃO' },
+    { word: 'BONECA', target: 'PETECA', options: ['PETECA', 'MALA', 'CAMA'], rhymeEnding: 'ECA' },
+    { word: 'JARDIM', target: 'PUDIM', options: ['PUDIM', 'FLOR', 'ÁRVORE'], rhymeEnding: 'IM' },
+    { word: 'SAPO', target: 'PAPO', options: ['PAPO', 'LAGOA', 'PEDRA'], rhymeEnding: 'APO' },
+    { word: 'CASA', target: 'ASA', options: ['ASA', 'PORTA', 'CHAVE'], rhymeEnding: 'ASA' },
+    { word: 'CASTELO', target: 'AMARELO', options: ['AMARELO', 'REI', 'TORRE'], rhymeEnding: 'ELO' },
+    { word: 'MALA', target: 'SALA', options: ['SALA', 'ROUPA', 'VIAGEM'], rhymeEnding: 'ALA' },
+    { word: 'CÃO', target: 'BOTÃO', options: ['BOTÃO', 'GATO', 'OSSO'], rhymeEnding: 'ÃO' },
+    { word: 'BICO', target: 'RICO', options: ['RICO', 'PENA', 'VOO'], rhymeEnding: 'ICO' },
+    { word: 'VENTO', target: 'TALENTO', options: ['TALENTO', 'BRISA', 'FOLHA'], rhymeEnding: 'ENTO' },
+    { word: 'DOCE', target: 'TOSSE', options: ['TOSSE', 'AÇÚCAR', 'BOLO'], rhymeEnding: 'OCE' },
+    { word: 'RUA', target: 'LUA', options: ['LUA', 'CARRO', 'CASA'], rhymeEnding: 'UA' }
+];
+
+const POOL_PT_FRASES = [
+    { sentence: 'O GATO BEBE LEITE', parts: ['O GATO', 'BEBE', 'LEITE'] },
+    { sentence: 'A BOLA É AZUL', parts: ['A BOLA', 'É', 'AZUL'] },
+    { sentence: 'O CACHORRO LATIU ALTO', parts: ['O CACHORRO', 'LATIU', 'ALTO'] },
+    { sentence: 'A MENINA COMEU MAÇÃ', parts: ['A MENINA', 'COMEU', 'MAÇÃ'] },
+    { sentence: 'O SOL BRILHA NO CÉU', parts: ['O SOL', 'BRILHA', 'NO CÉU'] },
+    { sentence: 'O SAPO PULA NA LAGOA', parts: ['O SAPO', 'PULA', 'NA LAGOA'] },
+    { sentence: 'EU GOSTO DE DESENHAR', parts: ['EU GOSTO', 'DE', 'DESENHAR'] },
+    { sentence: 'O PASSARINHO CANTA FELIZ', parts: ['O PASSARINHO', 'CANTA', 'FELIZ'] },
+    { sentence: 'O PEIXE NADA NO RIO', parts: ['O PEIXE', 'NADA', 'NO RIO'] },
+    { sentence: 'O LIVRO TEM HISTÓRIAS', parts: ['O LIVRO', 'TEM', 'HISTÓRIAS'] },
+    { sentence: 'A CORUJA DORME DE DIA', parts: ['A CORUJA', 'DORME', 'DE DIA'] },
+    { sentence: 'O BARCO NAVEGA NO MAR', parts: ['O BARCO', 'NAVEGA', 'NO MAR'] },
+    { sentence: 'A BORBOLETA VOA NO JARDIM', parts: ['A BORBOLETA', 'VOA', 'NO JARDIM'] },
+    { sentence: 'O MENINO CHUTA A BOLA', parts: ['O MENINO', 'CHUTA', 'A BOLA'] },
+    { sentence: 'A MAÇÃ É VERMELHA E DOCE', parts: ['A MAÇÃ É', 'VERMELHA', 'E DOCE'] },
+    { sentence: 'A ESTRELA BRILHA NA NOITE', parts: ['A ESTRELA', 'BRILHA', 'NA NOITE'] },
+    { sentence: 'O VENTO SOPRA AS FOLHAS', parts: ['O VENTO', 'SOPRA', 'AS FOLHAS'] },
+    { sentence: 'O COELHO COME CENOURA', parts: ['O COELHO', 'COME', 'CENOURA'] },
+    { sentence: 'A FLOR CRESCE NO VASO', parts: ['A FLOR', 'CRESCE', 'NO VASO'] },
+    { sentence: 'O TREM ANDA NOS TRILHOS', parts: ['O TREM', 'ANDA', 'NOS TRILHOS'] },
+    { sentence: 'A TARTARUGA ANDA DEVAGAR', parts: ['A TARTARUGA', 'ANDA', 'DEVAGAR'] },
+    { sentence: 'A CHUVA MOLHA A PLANTA', parts: ['A CHUVA', 'MOLHA', 'A PLANTA'] },
+    { sentence: 'O PATO NADA NA LAGOA', parts: ['O PATO', 'NADA', 'NA LAGOA'] },
+    { sentence: 'O MACACO GOSTA DE BANANA', parts: ['O MACACO', 'GOSTA DE', 'BANANA'] },
+    { sentence: 'A ABELHA PRODUZ MEL DOCE', parts: ['A ABELHA', 'PRODUZ', 'MEL DOCE'] }
+];
+
+// ============================================================
+// INGLÊS — Sentenças & Opostos Extras
+// ============================================================
+const POOL_EN_SENTENCES = [
+    { sentence: 'I SEE A CAT', parts: ['I SEE', 'A CAT'] },
+    { sentence: 'THE DOG IS BIG', parts: ['THE DOG', 'IS', 'BIG'] },
+    { sentence: 'I LIKE RED APPLES', parts: ['I LIKE', 'RED', 'APPLES'] },
+    { sentence: 'THE SUN IS HOT', parts: ['THE SUN', 'IS', 'HOT'] },
+    { sentence: 'SHE HAS A DOLL', parts: ['SHE HAS', 'A', 'DOLL'] },
+    { sentence: 'WE PLAY IN THE PARK', parts: ['WE PLAY', 'IN THE', 'PARK'] },
+    { sentence: 'HE CAN RUN FAST', parts: ['HE CAN', 'RUN', 'FAST'] },
+    { sentence: 'THE BIRD CAN FLY', parts: ['THE BIRD', 'CAN', 'FLY'] },
+    { sentence: 'LOOK AT THE MOON', parts: ['LOOK AT', 'THE', 'MOON'] },
+    { sentence: 'THIS IS MY BOOK', parts: ['THIS IS', 'MY', 'BOOK'] },
+    { sentence: 'THE FISH CAN SWIM', parts: ['THE FISH', 'CAN', 'SWIM'] },
+    { sentence: 'I LOVE MY FAMILY', parts: ['I LOVE', 'MY', 'FAMILY'] },
+    { sentence: 'THE SKY IS BLUE', parts: ['THE SKY', 'IS', 'BLUE'] },
+    { sentence: 'SHE READS A GOOD BOOK', parts: ['SHE READS', 'A GOOD', 'BOOK'] },
+    { sentence: 'WE EAT SWEET FRUIT', parts: ['WE EAT', 'SWEET', 'FRUIT'] },
+    { sentence: 'THE GREEN FROG JUMPS', parts: ['THE GREEN FROG', 'JUMPS'] },
+    { sentence: 'I HAVE TWO HANDS', parts: ['I HAVE', 'TWO', 'HANDS'] },
+    { sentence: 'THE CAR IS VERY FAST', parts: ['THE CAR', 'IS VERY', 'FAST'] },
+    { sentence: 'HE DRINKS COLD MILK', parts: ['HE DRINKS', 'COLD', 'MILK'] },
+    { sentence: 'THE FLOWERS ARE PRETTY', parts: ['THE FLOWERS', 'ARE', 'PRETTY'] },
+    { sentence: 'I CAN JUMP HIGH', parts: ['I CAN', 'JUMP', 'HIGH'] },
+    { sentence: 'THE RABBIT IS WHITE', parts: ['THE RABBIT', 'IS', 'WHITE'] },
+    { sentence: 'OPEN THE BIG DOOR', parts: ['OPEN', 'THE BIG', 'DOOR'] },
+    { sentence: 'THE STARS SHINE AT NIGHT', parts: ['THE STARS', 'SHINE', 'AT NIGHT'] }
+];
+
+const POOL_EN_OPPOSITES = [
+    { word: 'BIG', target: 'SMALL', options: ['SMALL', 'HOT', 'RED'], icon: '🐘 / 🐭' },
+    { word: 'HOT', target: 'COLD', options: ['COLD', 'FAST', 'SUN'], icon: '🔥 / ❄️' },
+    { word: 'HAPPY', target: 'SAD', options: ['SAD', 'BIG', 'BLUE'], icon: '😊 / 😢' },
+    { word: 'UP', target: 'DOWN', options: ['DOWN', 'IN', 'OUT'], icon: '⬆️ / ⬇️' },
+    { word: 'DAY', target: 'NIGHT', options: ['NIGHT', 'RAIN', 'MOON'], icon: '☀️ / 🌙' },
+    { word: 'FAST', target: 'SLOW', options: ['SLOW', 'COLD', 'RUN'], icon: '🏎️ / 🐢' },
+    { word: 'OPEN', target: 'CLOSED', options: ['CLOSED', 'BOX', 'DOOR'], icon: '📖 / 📕' },
+    { word: 'IN', target: 'OUT', options: ['OUT', 'ON', 'OFF'], icon: '📥 / 📤' },
+    { word: 'HARD', target: 'SOFT', options: ['SOFT', 'ROCK', 'TALL'], icon: '🪨 / 🧸' },
+    { word: 'TALL', target: 'SHORT', options: ['SHORT', 'LITTLE', 'TREE'], icon: '🦒 / 🦔' },
+    { word: 'HEAVY', target: 'LIGHT', options: ['LIGHT', 'STRONG', 'BIG'], icon: '🐘 / 🪶' },
+    { word: 'WET', target: 'DRY', options: ['DRY', 'WATER', 'RAIN'], icon: '🌧️ / 🌵' },
+    { word: 'CLEAN', target: 'DIRTY', options: ['DIRTY', 'FRESH', 'SHINY'], icon: '✨ / 🧼' },
+    { word: 'FULL', target: 'EMPTY', options: ['EMPTY', 'CUP', 'PLENTY'], icon: '🥛 / 🫙' },
+    { word: 'NEAR', target: 'FAR', options: ['FAR', 'CLOSE', 'HERE'], icon: '📍 / 🔭' },
+    { word: 'EARLY', target: 'LATE', options: ['LATE', 'FIRST', 'CLOCK'], icon: '⏰ / 🌙' },
+    { word: 'STRONG', target: 'WEAK', options: ['WEAK', 'BOLD', 'FAST'], icon: '💪 / 🍃' },
+    { word: 'OLD', target: 'YOUNG', options: ['YOUNG', 'TIME', 'WISE'], icon: '👴 / 👶' },
+    { word: 'DARK', target: 'LIGHT', options: ['LIGHT', 'SHADOW', 'SUN'], icon: '🌑 / 💡' },
+    { word: 'FRONT', target: 'BACK', options: ['BACK', 'DOOR', 'SIDE'], icon: '🚪 / 🔙' },
+    { word: 'QUIET', target: 'LOUD', options: ['LOUD', 'NOISE', 'CALM'], icon: '🤫 / 📢' },
+    { word: 'SWEET', target: 'SOUR', options: ['SOUR', 'SUGAR', 'CANDY'], icon: '🍭 / 🍋' },
+    { word: 'GOOD', target: 'BAD', options: ['BAD', 'GREAT', 'NICE'], icon: '👍 / 👎' },
+    { word: 'RICH', target: 'POOR', options: ['POOR', 'GOLD', 'COIN'], icon: '💎 / 🪙' }
+];
+
+// Exportação universal para compatibilidade com browser e node
+if (typeof window !== 'undefined') {
+    window.ContentPool = {
+        POOL_PT_2_SILABAS,
+        POOL_PT_3_SILABAS,
+        POOL_PT_4_SILABAS,
+        POOL_PT_RIMAS,
+        POOL_PT_FRASES,
+        POOL_EN_CVC,
+        POOL_EN_EASY,
+        POOL_EN_SNAP_WORDS,
+        POOL_EN_CVCE,
+        POOL_EN_SENTENCES,
+        POOL_EN_OPPOSITES,
+        POOL_MAT_SEQUENCIAS,
+        POOL_MAT_COMPARACAO,
+        POOL_MAT_FRACOES
+    };
+}
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        POOL_PT_2_SILABAS,
+        POOL_PT_3_SILABAS,
+        POOL_PT_4_SILABAS,
+        POOL_PT_RIMAS,
+        POOL_PT_FRASES,
+        POOL_EN_CVC,
+        POOL_EN_EASY,
+        POOL_EN_SNAP_WORDS,
+        POOL_EN_CVCE,
+        POOL_EN_SENTENCES,
+        POOL_EN_OPPOSITES,
+        POOL_MAT_SEQUENCIAS,
+        POOL_MAT_COMPARACAO,
+        POOL_MAT_FRACOES
+    };
+}

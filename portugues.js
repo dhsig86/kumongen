@@ -222,7 +222,26 @@
         { word: 'MEDO', parts: ['ME','DO'] },
         { word: 'PIPA', parts: ['PI','PA'] },
         { word: 'SOPA', parts: ['SO','PA'] },
-        { word: 'VIDA', parts: ['VI','DA'] }
+        { word: 'VIDA', parts: ['VI','DA'] },
+        { word: 'GALO', parts: ['GA','LO'] },
+        { word: 'URSO', parts: ['UR','SO'] },
+        { word: 'PERU', parts: ['PE','RU'] },
+        { word: 'PUMA', parts: ['PU','MA'] },
+        { word: 'LOBA', parts: ['LO','BA'] },
+        { word: 'MESA', parts: ['ME','SA'] },
+        { word: 'CAMA', parts: ['CA','MA'] },
+        { word: 'REMO', parts: ['RE','MO'] },
+        { word: 'VELA', parts: ['VE','LA'] },
+        { word: 'MAPA', parts: ['MA','PA'] },
+        { word: 'ROSA', parts: ['RO','SA'] },
+        { word: 'GOTA', parts: ['GO','TA'] },
+        { word: 'NUVEM', parts: ['NU','VEM'] },
+        { word: 'NEVE', parts: ['NE','VE'] },
+        { word: 'BIFE', parts: ['BI','FE'] },
+        { word: 'RISO', parts: ['RI','SO'] },
+        { word: 'GIRO', parts: ['GI','RO'] },
+        { word: 'PULO', parts: ['PU','LO'] },
+        { word: 'BEIJO', parts: ['BEI','JO'] }
     ];
 
     const DEFAULT_WORDS_P4 = [
@@ -255,7 +274,27 @@
         { word: 'TELEFONE', parts: ['TE','LE','FO','NE'] },
         { word: 'ABACAXI', parts: ['A','BA','CA','XI'] },
         { word: 'BORBOLETA', parts: ['BOR','BO','LE','TA'] },
-        { word: 'TARTARUGA', parts: ['TAR','TA','RU','GA'] }
+        { word: 'TARTARUGA', parts: ['TAR','TA','RU','GA'] },
+        { word: 'GALINHA', parts: ['GA','LI','NHA'] },
+        { word: 'COELHO', parts: ['CO','E','LHO'] },
+        { word: 'ABELHA', parts: ['A','BE','LHA'] },
+        { word: 'OVELHA', parts: ['O','VE','LHA'] },
+        { word: 'FORMIGA', parts: ['FOR','MI','GA'] },
+        { word: 'LAGARTO', parts: ['LA','GAR','TO'] },
+        { word: 'JOANINHA', parts: ['JO','A','NI','NHA'] },
+        { word: 'BATATA', parts: ['BA','TA','TA'] },
+        { word: 'CENOURA', parts: ['CE','NOU','RA'] },
+        { word: 'CEBOLA', parts: ['CE','BO','LA'] },
+        { word: 'MELANCIA', parts: ['ME','LAN','CI','A'] },
+        { word: 'CADEIRA', parts: ['CA','DEI','RA'] },
+        { word: 'MOCHILA', parts: ['MO','CHI','LA'] },
+        { word: 'TESOURA', parts: ['TE','SOU','RA'] },
+        { word: 'FLORESTA', parts: ['FLO','RES','TA'] },
+        { word: 'MONTANHA', parts: ['MON','TA','NHA'] },
+        { word: 'ESCOLA', parts: ['ES','CO','LA'] },
+        { word: 'CRIANÇA', parts: ['CRI','AN','ÇA'] },
+        { word: 'VENTILADOR', parts: ['VEN','TI','LA','DOR'] },
+        { word: 'TELEVISÃO', parts: ['TE','LE','VI','SÃO'] }
     ];
 
     const DEFAULT_RHYMES_P7 = [
@@ -270,7 +309,21 @@
         { word: 'FLOR', target: 'AMOR', options: ['AMOR', 'PEIXE', 'DENTE'], rhymeEnding: 'OR' },
         { word: 'DADO', target: 'CADEADO', options: ['CADEADO', 'PIPOCA', 'LEÃO'], rhymeEnding: 'ADO' },
         { word: 'DENTE', target: 'PRESENTE', options: ['PRESENTE', 'GELADO', 'SUCO'], rhymeEnding: 'ENTE' },
-        { word: 'LATA', target: 'BATA', options: ['BATA', 'COPO', 'SINO'], rhymeEnding: 'ATA' }
+        { word: 'LATA', target: 'BATA', options: ['BATA', 'COPO', 'SINO'], rhymeEnding: 'ATA' },
+        { word: 'SOL', target: 'CARACOL', options: ['CARACOL', 'NUVEM', 'LIVRO'], rhymeEnding: 'OL' },
+        { word: 'PEIXE', target: 'FEIXE', options: ['FEIXE', 'BARCO', 'PEDRA'], rhymeEnding: 'EIXE' },
+        { word: 'LEÃO', target: 'AVIÃO', options: ['AVIÃO', 'ZEBRA', 'FLORESTA'], rhymeEnding: 'ÃO' },
+        { word: 'BONECA', target: 'PETECA', options: ['PETECA', 'MALA', 'CAMA'], rhymeEnding: 'ECA' },
+        { word: 'JARDIM', target: 'PUDIM', options: ['PUDIM', 'FLOR', 'ÁRVORE'], rhymeEnding: 'IM' },
+        { word: 'SAPO', target: 'PAPO', options: ['PAPO', 'LAGOA', 'PEDRA'], rhymeEnding: 'APO' },
+        { word: 'CASA', target: 'ASA', options: ['ASA', 'PORTA', 'CHAVE'], rhymeEnding: 'ASA' },
+        { word: 'CASTELO', target: 'AMARELO', options: ['AMARELO', 'REI', 'TORRE'], rhymeEnding: 'ELO' },
+        { word: 'MALA', target: 'SALA', options: ['SALA', 'ROUPA', 'VIAGEM'], rhymeEnding: 'ALA' },
+        { word: 'CÃO', target: 'BOTÃO', options: ['BOTÃO', 'GATO', 'OSSO'], rhymeEnding: 'ÃO' },
+        { word: 'BICO', target: 'RICO', options: ['RICO', 'PENA', 'VOO'], rhymeEnding: 'ICO' },
+        { word: 'VENTO', target: 'TALENTO', options: ['TALENTO', 'BRISA', 'FOLHA'], rhymeEnding: 'ENTO' },
+        { word: 'DOCE', target: 'TOSSE', options: ['TOSSE', 'AÇÚCAR', 'BOLO'], rhymeEnding: 'OCE' },
+        { word: 'RUA', target: 'LUA', options: ['LUA', 'CARRO', 'CASA'], rhymeEnding: 'UA' }
     ];
 
     const DEFAULT_SENTENCES_P8 = [
@@ -283,7 +336,22 @@
         { sentence: 'EU GOSTO DE DESENHAR', parts: ['EU GOSTO', 'DE', 'DESENHAR'] },
         { sentence: 'O PASSARINHO CANTA FELIZ', parts: ['O PASSARINHO', 'CANTA', 'FELIZ'] },
         { sentence: 'O PEIXE NADA NO RIO', parts: ['O PEIXE', 'NADA', 'NO RIO'] },
-        { sentence: 'O LIVRO TEM HISTÓRIAS', parts: ['O LIVRO', 'TEM', 'HISTÓRIAS'] }
+        { sentence: 'O LIVRO TEM HISTÓRIAS', parts: ['O LIVRO', 'TEM', 'HISTÓRIAS'] },
+        { sentence: 'A CORUJA DORME DE DIA', parts: ['A CORUJA', 'DORME', 'DE DIA'] },
+        { sentence: 'O BARCO NAVEGA NO MAR', parts: ['O BARCO', 'NAVEGA', 'NO MAR'] },
+        { sentence: 'A BORBOLETA VOA NO JARDIM', parts: ['A BORBOLETA', 'VOA', 'NO JARDIM'] },
+        { sentence: 'O MENINO CHUTA A BOLA', parts: ['O MENINO', 'CHUTA', 'A BOLA'] },
+        { sentence: 'A MAÇÃ É VERMELHA E DOCE', parts: ['A MAÇÃ É', 'VERMELHA', 'E DOCE'] },
+        { sentence: 'A ESTRELA BRILHA NA NOITE', parts: ['A ESTRELA', 'BRILHA', 'NA NOITE'] },
+        { sentence: 'O VENTO SOPRA AS FOLHAS', parts: ['O VENTO', 'SOPRA', 'AS FOLHAS'] },
+        { sentence: 'O COELHO COME CENOURA', parts: ['O COELHO', 'COME', 'CENOURA'] },
+        { sentence: 'A FLOR CRESCE NO VASO', parts: ['A FLOR', 'CRESCE', 'NO VASO'] },
+        { sentence: 'O TREM ANDA NOS TRILHOS', parts: ['O TREM', 'ANDA', 'NOS TRILHOS'] },
+        { sentence: 'A TARTARUGA ANDA DEVAGAR', parts: ['A TARTARUGA', 'ANDA', 'DEVAGAR'] },
+        { sentence: 'A CHUVA MOLHA A PLANTA', parts: ['A CHUVA', 'MOLHA', 'A PLANTA'] },
+        { sentence: 'O PATO NADA NA LAGOA', parts: ['O PATO', 'NADA', 'NA LAGOA'] },
+        { sentence: 'O MACACO GOSTA DE BANANA', parts: ['O MACACO', 'GOSTA DE', 'BANANA'] },
+        { sentence: 'A ABELHA PRODUZ MEL DOCE', parts: ['A ABELHA', 'PRODUZ', 'MEL DOCE'] }
     ];
 
     // ---------- FUNÇÕES DE GERAÇÃO DE ITENS ----------
@@ -341,26 +409,34 @@
             }
 
             case 'rhyme': {
-                DEFAULT_RHYMES_P7.forEach(rh => {
-                    baseItems.push({
-                        type: 'rhyme',
-                        word: rh.word,
-                        target: rh.target,
-                        options: [...rh.options],
-                        rhymeEnding: rh.rhymeEnding
-                    });
-                });
+                const pool = [...DEFAULT_RHYMES_P7].sort(() => Math.random() - 0.5);
+                while (baseItems.length < target) {
+                    for (let i = 0; i < pool.length && baseItems.length < target; i++) {
+                        const rh = pool[i];
+                        baseItems.push({
+                            type: 'rhyme',
+                            word: rh.word,
+                            target: rh.target,
+                            options: [...rh.options],
+                            rhymeEnding: rh.rhymeEnding
+                        });
+                    }
+                }
                 break;
             }
 
             case 'sentence': {
-                DEFAULT_SENTENCES_P8.forEach(st => {
-                    baseItems.push({
-                        type: 'sentence',
-                        sentence: st.sentence,
-                        parts: [...st.parts]
-                    });
-                });
+                const pool = [...DEFAULT_SENTENCES_P8].sort(() => Math.random() - 0.5);
+                while (baseItems.length < target) {
+                    for (let i = 0; i < pool.length && baseItems.length < target; i++) {
+                        const st = pool[i];
+                        baseItems.push({
+                            type: 'sentence',
+                            sentence: st.sentence,
+                            parts: [...st.parts]
+                        });
+                    }
+                }
                 break;
             }
 
@@ -937,6 +1013,11 @@
     window.selectPorWizardGoal = selectPorWizardGoal;
     window.selectPorWizardPace = selectPorWizardPace;
     
+    window.printSheet = () => {
+        const level = LevelLibrary.portugues.find(l => l.id === currentLevelId);
+        KumonGen.printSheet('Português', level ? level.title : '');
+    };
+
     window.generatePDF = () => {
         const level = LevelLibrary.portugues.find(l => l.id === currentLevelId);
         if (!level) return;

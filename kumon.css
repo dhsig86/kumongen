@@ -70,10 +70,62 @@
     overflow: hidden;
 }
 
+@page {
+    size: A4 landscape;
+    margin: 0mm;
+}
+
 @media print {
-    body { background: white; }
-    .no-print { display: none !important; }
-    #a4-sheet { box-shadow: none; margin: 0 auto; }
+    html, body {
+        width: 297mm !important;
+        height: 210mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        overflow: hidden !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    
+    /* Oculta interface e elementos não imprimíveis */
+    aside, nav, #nav-dock, .no-print,
+    #print-tip-toast, #pdf-success-toast, #pdf-weekly-toast,
+    #kumonParentPinModal, #kumonTutorialModal, #kumonInlineEditModal, #kumonProfileModal {
+        display: none !important;
+    }
+
+    /* Container de preview adaptado para ocupar exatamente 1 página A4 */
+    main, #previewContainer {
+        padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+        width: 297mm !important;
+        height: 210mm !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        overflow: hidden !important;
+    }
+
+    #zoomContainer {
+        transform: none !important;
+        width: 297mm !important;
+        height: 210mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    #a4-sheet {
+        box-shadow: none !important;
+        border: none !important;
+        margin: 0 auto !important;
+        width: 297mm !important;
+        height: 210mm !important;
+        max-width: 297mm !important;
+        max-height: 210mm !important;
+        page-break-after: avoid !important;
+        page-break-inside: avoid !important;
+    }
 }
 
 .dashed-center-line {
@@ -81,8 +133,33 @@
     left: 50%;
     top: 0;
     bottom: 0;
-    border-left: 2px dashed #cbd5e1;
+    border-left: 1.5px dashed #94a3b8;
     pointer-events: none;
+    z-index: 10;
+}
+
+.dashed-center-line::before {
+    content: "✂";
+    position: absolute;
+    top: 8px;
+    left: -6.5px;
+    font-size: 11px;
+    color: #94a3b8;
+    background: #ffffff;
+    padding: 0 1px;
+    line-height: 1;
+}
+
+.dashed-center-line::after {
+    content: "✂";
+    position: absolute;
+    bottom: 8px;
+    left: -6.5px;
+    font-size: 11px;
+    color: #94a3b8;
+    background: #ffffff;
+    padding: 0 1px;
+    line-height: 1;
 }
 
 /* ===== PÁGINAS (esquerda/direita) ===== */
@@ -91,12 +168,12 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 30px 22px;
+    padding: 28px 24px;
     box-sizing: border-box;
 }
 
 .page-left {
-    border-right: 1px solid #e2e8f0;
+    border-right: none;
 }
 
 /* ===== CABEÇALHO DA PÁGINA ===== */
@@ -125,7 +202,7 @@
     font-weight: 700;
     color: #64748b;
     text-transform: uppercase;
-    max-width: 200px;
+    max-width: 210px;
     margin: 0;
 }
 
@@ -141,11 +218,10 @@
 .exercise-row {
     display: flex;
     align-items: center;
-    gap: 7px;
+    gap: 8px;
     border-bottom: 1px solid #e2e8f0;
-    padding-bottom: 3px;
-    height: 32px;
-    line-height: 32px;
+    padding: 2px 0 3px 0;
+    min-height: 32px;
     box-sizing: border-box;
 }
 
@@ -156,6 +232,7 @@
     width: 20px;
     text-align: right;
     line-height: 32px;
+    flex-shrink: 0;
 }
 
 .exercise-content {

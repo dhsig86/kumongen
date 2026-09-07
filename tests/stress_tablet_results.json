@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-06T19:39:00.478Z",
+  "timestamp": "2026-09-06T23:59:22.449Z",
   "totalTests": 33,
   "passed": 33,
   "failed": 0,
@@ -91,7 +91,7 @@
         {
           "name": "Entrada do antecessor registrada corretamente em Session.currentInput",
           "passed": true,
-          "details": "currentInput=\"41\", esperado=\"41\""
+          "details": "currentInput=\"6\", esperado=\"6\""
         },
         {
           "name": "Submissão via teclado virtual no nível M7 ativa trava de transição com sucesso",
@@ -220,6 +220,6 @@
       "passed": true
     }
   ],
-  "durationMs": 3981.56,
+  "durationMs": 4021,
   "status": "PASSED"
 }

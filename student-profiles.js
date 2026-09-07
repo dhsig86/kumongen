@@ -495,6 +495,14 @@
             return count;
         },
 
+        // Abre diretamente a visão do Boletim de Evolução & Histórico
+        showEvolutionModal(studentId = null) {
+            this.showProfileModal({
+                initialView: 'evolution',
+                studentId: studentId
+            });
+        },
+
         // Emite o Boletim Oficial Consolidado em PDF (A4 Paisagem com a matriz dos 25 Níveis)
         async generateMasteryReportPDF(studentId) {
             const student = studentId ? this.getById(studentId) : this.getActive();
@@ -855,8 +863,11 @@
                             </button>
 
                             <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
-                                <button type="button" class="btn-mastery-report" data-student-id="${s.id}" title="Emitir Boletim Oficial de Maestria (PDF)" style="padding:6px 10px;background:#ecfdf5;border:1px solid #a7f3d0;color:#059669;font-weight:bold;font-size:10px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:4px;">
-                                    <i class="fas fa-file-pdf"></i> Boletim
+                                <button type="button" class="btn-evolution-student" data-student-id="${s.id}" title="Ver Boletim e Gráficos de Evolução" style="padding:6px 9px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-weight:bold;font-size:10px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                                    <i class="fas fa-chart-line"></i> Evolução
+                                </button>
+                                <button type="button" class="btn-mastery-report" data-student-id="${s.id}" title="Emitir Boletim Oficial de Maestria (PDF)" style="padding:6px 9px;background:#ecfdf5;border:1px solid #a7f3d0;color:#059669;font-weight:bold;font-size:10px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                                    <i class="fas fa-file-pdf"></i> PDF
                                 </button>
                                 <button type="button" class="btn-edit-student" data-student-id="${s.id}" title="Editar Criança" style="padding:8px;border:none;background:none;color:#94a3b8;cursor:pointer;border-radius:8px;">
                                     <i class="fas fa-pen" style="font-size:12px;"></i>
@@ -872,7 +883,7 @@
                 }).join('');
 
                 modal.innerHTML = `
-                    <div style="background:white;border-radius:24px;max-width:440px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);border:4px solid #f59e0b;overflow:hidden;margin:auto;box-sizing:border-box;" onclick="event.stopPropagation()">
+                    <div style="background:white;border-radius:24px;max-width:460px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);border:4px solid #f59e0b;overflow:hidden;margin:auto;box-sizing:border-box;" onclick="event.stopPropagation()">
                         <!-- Header Fixo -->
                         <div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:white;">
                             <div style="display:flex;align-items:center;gap:10px;">
@@ -912,8 +923,11 @@
                             <button type="button" id="btnExportProfiles" style="border:none;background:none;color:#b45309;font-weight:bold;cursor:pointer;display:flex;align-items:center;gap:4px;padding:0;">
                                 <i class="fas fa-download" style="color:#f59e0b;"></i> Backup
                             </button>
-                            <button type="button" id="btnActiveMasteryReport" style="border:none;background:none;color:#059669;font-weight:bold;cursor:pointer;display:flex;align-items:center;gap:4px;padding:0;">
-                                <i class="fas fa-graduation-cap" style="color:#10b981;"></i> Boletim
+                            <button type="button" id="btnActiveEvolution" style="border:none;background:none;color:#2563eb;font-weight:bold;cursor:pointer;display:flex;align-items:center;gap:4px;padding:0;" title="Ver Gráficos e Desempenho do Aluno Ativo">
+                                <i class="fas fa-chart-line" style="color:#3b82f6;"></i> Evolução
+                            </button>
+                            <button type="button" id="btnActiveMasteryReport" style="border:none;background:none;color:#059669;font-weight:bold;cursor:pointer;display:flex;align-items:center;gap:4px;padding:0;" title="Emitir Boletim Oficial (PDF)">
+                                <i class="fas fa-graduation-cap" style="color:#10b981;"></i> PDF Oficial
                             </button>
                             <label style="color:#2563eb;font-weight:bold;cursor:pointer;display:flex;align-items:center;gap:4px;">
                                 <i class="fas fa-upload" style="color:#3b82f6;"></i> Restaurar
@@ -936,6 +950,23 @@
                         if (typeof options.onSelect === 'function') options.onSelect(self.getActive());
                     };
                 });
+
+                modal.querySelectorAll('.btn-evolution-student').forEach(btn => {
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        const sid = btn.getAttribute('data-student-id');
+                        const target = self.getById(sid);
+                        if (target) renderEvolutionView(target);
+                    };
+                });
+
+                const activeEvoBtn = modal.querySelector('#btnActiveEvolution');
+                if (activeEvoBtn) {
+                    activeEvoBtn.onclick = () => {
+                        const active = self.getActive();
+                        if (active) renderEvolutionView(active);
+                    };
+                }
 
                 modal.querySelectorAll('.btn-mastery-report').forEach(btn => {
                     btn.onclick = (e) => {
@@ -1183,11 +1214,417 @@
                 }
             };
 
+            // ==========================================
+            // VISTA 3: BOLETIM DE EVOLUÇÃO & HISTÓRICO
+            // ==========================================
+            const renderEvolutionView = (studentToInspect) => {
+                const s = studentToInspect || self.getActive() || self.getAll()[0];
+                if (!s) {
+                    renderCardsView();
+                    return;
+                }
+
+                const mascotInfo = MASCOT_PRESETS[s.mascot] || MASCOT_PRESETS.jaguar;
+                const ageInfo = AGE_TIERS[s.ageTier] || AGE_TIERS.age_6_7;
+                const stars = (s.gamification && s.gamification.stars) || 0;
+                const streak = (s.gamification && s.gamification.streak) || 0;
+                const bestStreak = (s.gamification && s.gamification.bestStreak) || 0;
+                const totalRounds = (s.gamification && s.gamification.totalRounds) || 0;
+                const masteredCount = self.getMasteryCount(s);
+                const masteredPct = Math.round((masteredCount / 25) * 100);
+
+                const historyList = Array.isArray(s.history) ? s.history : [];
+                const tabletRounds = historyList.filter(h => h.accuracy !== undefined || h.type === 'tablet_round');
+
+                // Cálculo das métricas SCT e precisão
+                const sctItems = tabletRounds.filter(h => h.timeSec && h.targetSec);
+                const sctBeatenCount = sctItems.filter(h => h.timeSec <= h.targetSec).length;
+                const sctRate = sctItems.length > 0 ? Math.round((sctBeatenCount / sctItems.length) * 100) : (totalRounds > 0 ? 100 : null);
+                const avgAccuracy = tabletRounds.length > 0
+                    ? Math.round(tabletRounds.reduce((acc, cur) => acc + (cur.accuracy !== undefined ? cur.accuracy : 100), 0) / tabletRounds.length)
+                    : (totalRounds > 0 ? 100 : null);
+                const totalItemsSolved = tabletRounds.reduce((acc, cur) => acc + (cur.totalItems || 0), 0) || ((s.gamification && s.gamification.totalCorrect) || 0);
+
+                // Geração do Gráfico SVG (Últimas 10 a 15 rodadas em ordem cronológica)
+                let chartSvgHtml = '';
+                const chartData = tabletRounds.slice(0, 15).reverse();
+
+                if (chartData.length >= 2) {
+                    const width = 500;
+                    const height = 160;
+                    const padLeft = 38;
+                    const padRight = 18;
+                    const padTop = 18;
+                    const padBottom = 26;
+                    const plotW = width - padLeft - padRight;
+                    const plotH = height - padTop - padBottom;
+
+                    const gridYMarks = [100, 75, 50, 25, 0];
+                    const gridLines = gridYMarks.map(pct => {
+                        const y = padTop + plotH - (pct / 100) * plotH;
+                        return `
+                            <line x1="${padLeft}" y1="${y}" x2="${width - padRight}" y2="${y}" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="3,3" />
+                            <text x="${padLeft - 6}" y="${y + 3}" fill="#94a3b8" font-size="9" font-weight="bold" text-anchor="end">${pct}%</text>
+                        `;
+                    }).join('');
+
+                    const points = chartData.map((item, idx) => {
+                        const acc = Math.max(0, Math.min(100, item.accuracy !== undefined ? item.accuracy : 100));
+                        const x = padLeft + (idx / (chartData.length - 1)) * plotW;
+                        const y = padTop + plotH - (acc / 100) * plotH;
+                        return { x, y, acc, item, idx };
+                    });
+
+                    const pathD = 'M ' + points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L ');
+                    const areaD = `M ${points[0].x.toFixed(1)},${(padTop + plotH).toFixed(1)} ` +
+                                  points.map(p => `L ${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') +
+                                  ` L ${points[points.length - 1].x.toFixed(1)},${(padTop + plotH).toFixed(1)} Z`;
+
+                    const gradId = 'evoGrad_' + String(s.id).replace(/[^a-zA-Z0-9]/g, '_') + '_' + Date.now();
+                    const pointCircles = points.map(p => {
+                        const is100 = p.acc === 100;
+                        const isMastered = p.item.isGauntletMastered;
+                        const color = isMastered ? '#f59e0b' : (p.acc >= 80 ? '#10b981' : '#3b82f6');
+                        const r = is100 ? 5.5 : 4;
+                        const beatSct = p.item.timeSec && p.item.targetSec && p.item.timeSec <= p.item.targetSec;
+                        const tooltip = `${p.item.date || ''} ${p.item.timeStr || ''} · ${p.item.levelTitle || p.item.levelId || 'Treino'} · Precisão: ${p.acc}% · Tempo: ${p.item.timeSec || 0}s (Meta: ${p.item.targetSec || 0}s)${beatSct ? ' ⚡ No Ritmo' : ''}`;
+
+                        return `
+                            <g class="chart-point-group" style="cursor:pointer;">
+                                <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${color}" stroke="#ffffff" stroke-width="2">
+                                    <title>${escapeHtml(tooltip)}</title>
+                                </circle>
+                                ${beatSct ? `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r + 3}" fill="none" stroke="#fde68a" stroke-width="1.5" opacity="0.85"><title>${escapeHtml(tooltip)}</title></circle>` : ''}
+                                <text x="${p.x.toFixed(1)}" y="${height - 8}" fill="#94a3b8" font-size="8.5" font-weight="600" text-anchor="middle">R${p.idx + 1}</text>
+                            </g>
+                        `;
+                    }).join('');
+
+                    chartSvgHtml = `
+                        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;padding:14px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.02);margin-bottom:12px;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                                <div style="display:flex;align-items:center;gap:6px;">
+                                    <i class="fas fa-chart-area" style="color:#3b82f6;font-size:12px;"></i>
+                                    <span style="font-weight:900;font-size:12px;color:#0f172a;">Curva de Acurácia & Fluência</span>
+                                </div>
+                                <span style="font-size:10px;color:#64748b;font-weight:bold;">Últimas ${chartData.length} sessões</span>
+                            </div>
+                            <div style="width:100%;overflow-x:auto;">
+                                <svg viewBox="0 0 ${width} ${height}" style="width:100%;height:auto;display:block;overflow:visible;" preserveAspectRatio="xMidYMid meet">
+                                    <defs>
+                                        <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.32" />
+                                            <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.01" />
+                                        </linearGradient>
+                                    </defs>
+                                    ${gridLines}
+                                    <path d="${areaD}" fill="url(#${gradId})" />
+                                    <path d="${pathD}" fill="none" stroke="#2563eb" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+                                    ${pointCircles}
+                                </svg>
+                            </div>
+                            <!-- Legenda do Gráfico -->
+                            <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px;margin-top:8px;font-size:10px;color:#64748b;font-weight:bold;border-top:1px solid #f8fafc;padding-top:8px;">
+                                <div style="display:flex;align-items:center;gap:4px;">
+                                    <span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>
+                                    <span>100% Maestria / Gauntlet</span>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:4px;">
+                                    <span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;"></span>
+                                    <span>≥ 80% Alta Precisão</span>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:4px;">
+                                    <span style="width:8px;height:8px;border-radius:50%;background:#3b82f6;display:inline-block;"></span>
+                                    <span>Treino Concluído</span>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:4px;">
+                                    <i class="fas fa-bolt" style="color:#d97706;font-size:9px;"></i>
+                                    <span>Ritmo SCT Alcançado</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    chartSvgHtml = `
+                        <div style="background:#f8fafc;border:2px dashed #cbd5e1;border-radius:18px;padding:22px;text-align:center;margin-bottom:12px;">
+                            <div style="width:48px;height:48px;border-radius:50%;background:#eff6ff;color:#3b82f6;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:20px;">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <h4 style="font-weight:900;font-size:13px;color:#1e293b;margin:0 0 4px;">Curva de Fluência em Construção</h4>
+                            <p style="font-size:11px;color:#64748b;margin:0 0 10px;line-height:1.4;">Complete pelo menos duas rodadas no modo Tablet para que o gráfico de acurácia e velocidade do aluno seja traçado automaticamente.</p>
+                            <span style="font-size:10px;font-weight:bold;color:#2563eb;background:#dbeafe;padding:4px 10px;border-radius:999px;">Dica: Pratique 1 folha por dia</span>
+                        </div>
+                    `;
+                }
+
+                // Geração da Matriz dos 25 Níveis Curriculares
+                const subjects = ['matematica', 'portugues', 'ingles'];
+                const matrixHtml = subjects.map(sKey => {
+                    const subData = CURRICULUM_25_LEVELS[sKey];
+                    const subMastery = (s.mastery && s.mastery[sKey]) || {};
+                    const masteredLvlCount = subData.levels.filter(lvl => subMastery[lvl.id] && subMastery[lvl.id].mastered).length;
+                    const subPct = Math.round((masteredLvlCount / subData.levels.length) * 100);
+
+                    const levelsListHtml = subData.levels.map(lvl => {
+                        const mInfo = subMastery[lvl.id] || {};
+                        const isDone = !!mInfo.mastered;
+                        const inHistory = historyList.some(h => (h.levelId === lvl.id || (h.levelTitle && h.levelTitle.includes(lvl.code))));
+
+                        let bg = '#f8fafc';
+                        let border = '#e2e8f0';
+                        let icon = '<i class="far fa-circle" style="color:#94a3b8;font-size:11px;"></i>';
+                        let statusText = '<span style="color:#94a3b8;font-size:10px;font-weight:bold;">Pendente</span>';
+
+                        if (isDone) {
+                            bg = '#f0fdf4';
+                            border = '#bbf7d0';
+                            icon = '<i class="fas fa-trophy" style="color:#f59e0b;font-size:12px;"></i>';
+                            const bestTimeStr = mInfo.bestTimeSec ? `${Math.floor(mInfo.bestTimeSec / 60)}:${String(mInfo.bestTimeSec % 60).padStart(2, '0')}m` : '';
+                            statusText = `<span style="color:#059669;font-size:10px;font-weight:900;">100% Maestria ${bestTimeStr ? '· ' + bestTimeStr : ''}</span>`;
+                        } else if (inHistory) {
+                            bg = '#fffbeb';
+                            border = '#fde68a';
+                            icon = '<i class="fas fa-hourglass-half" style="color:#d97706;font-size:11px;"></i>';
+                            statusText = '<span style="color:#b45309;font-size:10px;font-weight:bold;">Em Treino</span>';
+                        }
+
+                        return `
+                            <div style="background:${bg};border:1px solid ${border};border-radius:12px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                                <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+                                    <span style="font-weight:900;font-size:10px;color:white;background:${isDone ? '#10b981' : '#64748b'};padding:2px 6px;border-radius:6px;flex-shrink:0;">${lvl.code}</span>
+                                    <div style="min-width:0;">
+                                        <div style="font-weight:bold;font-size:11px;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(lvl.title)}</div>
+                                        <div>${statusText}</div>
+                                    </div>
+                                </div>
+                                <div style="flex-shrink:0;">${icon}</div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    return `
+                        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:12px;margin-bottom:12px;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;border-bottom:1px solid #f1f5f9;padding-bottom:6px;">
+                                <div style="display:flex;align-items:center;gap:6px;">
+                                    <span style="font-weight:900;font-size:12px;color:#0f172a;">${escapeHtml(subData.title)}</span>
+                                    <span style="font-size:10px;background:#f1f5f9;color:#475569;font-weight:bold;padding:1px 6px;border-radius:999px;">${subData.levels.length} Níveis</span>
+                                </div>
+                                <span style="font-size:10px;font-weight:900;color:${subPct === 100 ? '#059669' : '#d97706'};">${masteredLvlCount}/${subData.levels.length} (${subPct}%)</span>
+                            </div>
+                            <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));gap:6px;">
+                                ${levelsListHtml}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Feed das Últimas Rodadas
+                const recentHistoryHtml = historyList.length > 0 ? historyList.slice(0, 20).map(item => {
+                    const isMastered = item.isGauntletMastered || item.accuracy === 100;
+                    const beatSct = item.timeSec && item.targetSec && item.timeSec <= item.targetSec;
+                    const timeFmt = item.timeSec ? `${Math.floor(item.timeSec / 60)}:${String(item.timeSec % 60).padStart(2, '0')}` : null;
+                    const targetFmt = item.targetSec ? `${Math.floor(item.targetSec / 60)}:${String(item.targetSec % 60).padStart(2, '0')}` : null;
+
+                    return `
+                        <div style="padding:10px 12px;border-radius:12px;background:#ffffff;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                            <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                                <div style="width:34px;height:34px;border-radius:10px;background:${isMastered ? '#ecfdf5' : '#eff6ff'};color:${isMastered ? '#059669' : '#2563eb'};display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">
+                                    <i class="fas ${isMastered ? 'fa-award' : 'fa-check'}"></i>
+                                </div>
+                                <div style="min-width:0;">
+                                    <div style="font-weight:900;font-size:12px;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(item.levelTitle || item.levelId || 'Treino')}</div>
+                                    <div style="font-size:10px;color:#64748b;font-weight:600;display:flex;align-items:center;gap:6px;margin-top:2px;">
+                                        <span>${escapeHtml(item.date || '')} ${escapeHtml(item.timeStr || '')}</span>
+                                        <span>·</span>
+                                        <span>${escapeHtml(item.subject || item.subjectTitle || 'KumonGen')}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="text-align:right;flex-shrink:0;">
+                                <div style="font-size:12px;font-weight:900;color:${isMastered ? '#059669' : '#2563eb'};">
+                                    ${item.accuracy !== undefined ? `${item.accuracy}%` : (item.completed ? 'Concluído' : 'Treinado')}
+                                </div>
+                                <div style="font-size:9px;color:#64748b;margin-top:2px;display:flex;align-items:center;gap:4px;justify-content:flex-end;">
+                                    ${timeFmt ? `<span>⏱ ${timeFmt}${targetFmt ? ' (meta ' + targetFmt + ')' : ''}</span>` : ''}
+                                    ${beatSct ? '<span style="color:#059669;font-weight:bold;">⚡</span>' : ''}
+                                    ${item.starsEarned ? `<span style="color:#d97706;font-weight:bold;">+${item.starsEarned}★</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('') : `
+                    <div style="padding:24px;text-align:center;color:#94a3b8;font-size:12px;font-weight:bold;">
+                        Nenhum registro de atividade salvo ainda para este aluno.
+                    </div>
+                `;
+
+                modal.innerHTML = `
+                    <div style="background:white;border-radius:24px;max-width:620px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);border:4px solid #3b82f6;overflow:hidden;margin:auto;box-sizing:border-box;" onclick="event.stopPropagation()">
+                        <!-- Header Fixo -->
+                        <div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:white;">
+                            <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                                <div style="width:40px;height:40px;border-radius:50%;padding:2px;background:linear-gradient(to top right, #3b82f6, #60a5fa);flex-shrink:0;">
+                                    <img src="${mascotInfo.avatar}" alt="${mascotInfo.name}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid white;display:block;">
+                                </div>
+                                <div style="min-width:0;">
+                                    <div style="display:flex;align-items:center;gap:6px;">
+                                        <h3 style="font-weight:900;font-size:15px;color:#0f172a;margin:0;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.name)}</h3>
+                                        <span style="font-size:9px;font-weight:900;text-transform:uppercase;color:#1d4ed8;background:#dbeafe;padding:2px 8px;border-radius:999px;">${ageInfo.label}</span>
+                                    </div>
+                                    <div style="font-size:10px;color:#64748b;font-weight:600;display:flex;align-items:center;gap:6px;margin-top:2px;">
+                                        <span>${mascotInfo.name}</span>
+                                        <span>·</span>
+                                        <span style="color:#d97706;font-weight:bold;"><i class="fas fa-star" style="color:#f59e0b;"></i> ${stars} ★</span>
+                                        <span>·</span>
+                                        <span style="color:#ea580c;font-weight:bold;"><i class="fas fa-fire" style="color:#f97316;"></i> ${streak}d</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                                <button type="button" id="btnBackToProfilesFromEvolution" style="padding:6px 12px;background:#f1f5f9;color:#334155;font-weight:bold;font-size:11px;border:1px solid #cbd5e1;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                                    <i class="fas fa-arrow-left" style="font-size:10px;"></i> Perfis
+                                </button>
+                                <button type="button" id="btnCloseEvolutionModal" style="padding:8px;border:none;background:none;color:#94a3b8;font-size:15px;cursor:pointer;border-radius:8px;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Corpo Rolar -->
+                        <div style="padding:16px 18px;overflow-y:auto;flex:1;min-height:0;background:#f8fafc;">
+                            <!-- Cards de Métricas de Consistência -->
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(120px, 1fr));gap:8px;margin-bottom:12px;">
+                                <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:10px 12px;text-align:center;">
+                                    <div style="font-size:18px;font-weight:900;color:#059669;">${masteredCount} <span style="font-size:11px;color:#94a3b8;font-weight:normal;">/ 25</span></div>
+                                    <div style="font-size:9px;color:#64748b;font-weight:bold;text-transform:uppercase;margin-top:1px;">Níveis Kumon (100%)</div>
+                                    <div style="width:100%;height:4px;background:#e2e8f0;border-radius:999px;margin-top:6px;overflow:hidden;">
+                                        <div style="width:${masteredPct}%;height:100%;background:#10b981;border-radius:999px;"></div>
+                                    </div>
+                                </div>
+
+                                <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:10px 12px;text-align:center;">
+                                    <div style="font-size:18px;font-weight:900;color:#2563eb;">${sctRate !== null ? `${sctRate}%` : '---'}</div>
+                                    <div style="font-size:9px;color:#64748b;font-weight:bold;text-transform:uppercase;margin-top:1px;">Ritmo Fluente SCT</div>
+                                    <div style="font-size:9px;color:#94a3b8;margin-top:4px;">${sctBeatenCount} no tempo ideal</div>
+                                </div>
+
+                                <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:10px 12px;text-align:center;">
+                                    <div style="font-size:18px;font-weight:900;color:#d97706;">${streak} <span style="font-size:10px;font-weight:bold;color:#f59e0b;">dias</span></div>
+                                    <div style="font-size:9px;color:#64748b;font-weight:bold;text-transform:uppercase;margin-top:1px;">Sequência Atual</div>
+                                    <div style="font-size:9px;color:#94a3b8;margin-top:4px;">Recorde: ${bestStreak}d</div>
+                                </div>
+
+                                <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:10px 12px;text-align:center;">
+                                    <div style="font-size:18px;font-weight:900;color:#7c3aed;">${avgAccuracy !== null ? `${avgAccuracy}%` : '---'}</div>
+                                    <div style="font-size:9px;color:#64748b;font-weight:bold;text-transform:uppercase;margin-top:1px;">Precisão Média</div>
+                                    <div style="font-size:9px;color:#94a3b8;margin-top:4px;">${totalItemsSolved} questões</div>
+                                </div>
+                            </div>
+
+                            <!-- Navegação por Abas Internas -->
+                            <div style="display:flex;align-items:center;gap:6px;padding:4px;background:#e2e8f0;border-radius:12px;margin-bottom:12px;">
+                                <button type="button" id="tabBtnMetrics" style="flex:1;padding:7px 10px;border-radius:8px;border:none;background:white;color:#0f172a;font-weight:900;font-size:11px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,0.05);transition:all 0.15s ease;">
+                                    <i class="fas fa-chart-line" style="color:#2563eb;margin-right:4px;"></i> Gráficos
+                                </button>
+                                <button type="button" id="tabBtnMatrix" style="flex:1;padding:7px 10px;border-radius:8px;border:none;background:none;color:#64748b;font-weight:bold;font-size:11px;cursor:pointer;transition:all 0.15s ease;">
+                                    <i class="fas fa-th" style="color:#d97706;margin-right:4px;"></i> 25 Níveis (${masteredCount}/25)
+                                </button>
+                                <button type="button" id="tabBtnHistory" style="flex:1;padding:7px 10px;border-radius:8px;border:none;background:none;color:#64748b;font-weight:bold;font-size:11px;cursor:pointer;transition:all 0.15s ease;">
+                                    <i class="fas fa-history" style="color:#059669;margin-right:4px;"></i> Histórico (${historyList.length})
+                                </button>
+                            </div>
+
+                            <!-- Painel 1: Gráficos & Fluência -->
+                            <div id="panelEvolutionMetrics" style="display:block;">
+                                ${chartSvgHtml}
+                            </div>
+
+                            <!-- Painel 2: Matriz dos 25 Níveis Curriculares -->
+                            <div id="panelEvolutionMatrix" style="display:none;">
+                                ${matrixHtml}
+                            </div>
+
+                            <!-- Painel 3: Histórico Detalhado Cronológico -->
+                            <div id="panelEvolutionHistory" style="display:none;flex-direction:column;gap:8px;">
+                                ${recentHistoryHtml}
+                            </div>
+                        </div>
+
+                        <!-- Rodapé Fixo -->
+                        <div style="padding:12px 18px;border-top:1px solid #f1f5f9;background:#f8fafc;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+                            <button type="button" id="btnDownloadPDFFromEvolution" style="padding:8px 14px;background:#ecfdf5;border:1px solid #a7f3d0;color:#059669;font-weight:900;font-size:11px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                                <i class="fas fa-file-pdf"></i> Emitir Boletim Oficial (PDF)
+                            </button>
+                            <button type="button" id="btnFooterBackToProfiles" style="border:none;background:none;color:#64748b;font-weight:bold;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                                <i class="fas fa-users"></i> Voltar aos Perfis
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                // Event Listeners da Vista de Evolução
+                modal.querySelector('#btnCloseEvolutionModal').onclick = closeModal;
+                modal.querySelector('#btnBackToProfilesFromEvolution').onclick = () => renderCardsView();
+                modal.querySelector('#btnFooterBackToProfiles').onclick = () => renderCardsView();
+
+                const pdfBtn = modal.querySelector('#btnDownloadPDFFromEvolution');
+                if (pdfBtn) {
+                    pdfBtn.onclick = () => self.generateMasteryReportPDF(s.id);
+                }
+
+                // Alternância das Abas Internas
+                const tabMetrics = modal.querySelector('#tabBtnMetrics');
+                const tabMatrix = modal.querySelector('#tabBtnMatrix');
+                const tabHistory = modal.querySelector('#tabBtnHistory');
+                const panelMetrics = modal.querySelector('#panelEvolutionMetrics');
+                const panelMatrix = modal.querySelector('#panelEvolutionMatrix');
+                const panelHistory = modal.querySelector('#panelEvolutionHistory');
+
+                const switchSubTab = (activeTab) => {
+                    [tabMetrics, tabMatrix, tabHistory].forEach(t => {
+                        t.style.background = 'none';
+                        t.style.color = '#64748b';
+                        t.style.fontWeight = 'bold';
+                        t.style.boxShadow = 'none';
+                    });
+                    panelMetrics.style.display = 'none';
+                    panelMatrix.style.display = 'none';
+                    panelHistory.style.display = 'none';
+
+                    if (activeTab === 'metrics') {
+                        tabMetrics.style.background = 'white';
+                        tabMetrics.style.color = '#0f172a';
+                        tabMetrics.style.fontWeight = '900';
+                        tabMetrics.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                        panelMetrics.style.display = 'block';
+                    } else if (activeTab === 'matrix') {
+                        tabMatrix.style.background = 'white';
+                        tabMatrix.style.color = '#0f172a';
+                        tabMatrix.style.fontWeight = '900';
+                        tabMatrix.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                        panelMatrix.style.display = 'block';
+                    } else if (activeTab === 'history') {
+                        tabHistory.style.background = 'white';
+                        tabHistory.style.color = '#0f172a';
+                        tabHistory.style.fontWeight = '900';
+                        tabHistory.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                        panelHistory.style.display = 'flex';
+                    }
+                };
+
+                tabMetrics.onclick = () => switchSubTab('metrics');
+                tabMatrix.onclick = () => switchSubTab('matrix');
+                tabHistory.onclick = () => switchSubTab('history');
+            };
+
             // Anexa modal ao DOM antes da renderização para garantir binding de eventos e foco imediato
             document.body.appendChild(modal);
 
             if (options.initialView === 'form') {
                 renderFormView(null);
+            } else if (options.initialView === 'evolution') {
+                const target = options.studentId ? self.getById(options.studentId) : self.getActive();
+                renderEvolutionView(target || self.getActive());
             } else {
                 renderCardsView();
             }

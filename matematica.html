@@ -244,9 +244,14 @@
             <button onclick="refreshPreview()" class="w-full flex items-center justify-center gap-2 bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 font-bold text-sm shadow">
                 <i class="fas fa-sync-alt"></i> atualizar preview
             </button>
-            <button onclick="generatePDF()" class="w-full flex items-center justify-center gap-2 bg-blue-500 text-white p-4 rounded-xl hover:bg-blue-600 shadow-lg font-black text-sm">
-                <i class="fas fa-file-pdf"></i> GERAR PDF (CADERNO)
-            </button>
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="printSheet()" class="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white p-3.5 rounded-xl shadow font-black text-xs transition-transform transform active:scale-95" title="Imprimir diretamente no navegador (Ctrl+P)">
+                    <i class="fas fa-print"></i> IMPRIMIR
+                </button>
+                <button onclick="generatePDF()" class="w-full flex items-center justify-center gap-2 bg-blue-500 text-white p-3.5 rounded-xl hover:bg-blue-600 shadow-lg font-black text-xs">
+                    <i class="fas fa-file-pdf"></i> BAIXAR PDF
+                </button>
+            </div>
             <button onclick="generateWeeklyPackagePDF()" class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 p-3.5 rounded-xl shadow font-black text-xs transition-transform transform active:scale-95">
                 <i class="fas fa-calendar-week text-slate-900"></i> PACOTE SEMANAL (5 DIAS EM 1 PDF)
             </button>
@@ -268,7 +273,7 @@
 </div>
 
 <!-- PREVIEW (A4 paisagem) -->
-<main class="flex-1 overflow-auto bg-[#0F172A] flex items-start justify-center p-8 no-print" id="previewContainer">
+<main class="flex-1 overflow-auto bg-[#0F172A] flex items-start justify-center p-8" id="previewContainer">
     <div id="zoomContainer" class="transition-transform duration-200 origin-top" style="transform:scale(0.7)">
         <div id="a4-sheet" class="bg-white shadow-2xl flex relative">
             <div class="dashed-center-line"></div>
