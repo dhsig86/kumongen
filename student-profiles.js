@@ -611,12 +611,19 @@
             const masteredCount = StudentProfileEngine.getMasteryCount(student);
             const percent = Math.round((masteredCount / 25) * 100);
             const stars = (student.gamification && student.gamification.stars) || 0;
+            const streak = (student.gamification && student.gamification.streak) || 0;
             const rounds = (student.gamification && student.gamification.totalRounds) || 0;
+
+            const historyList = Array.isArray(student.history) ? student.history : [];
+            const tabletRounds = historyList.filter(h => h.accuracy !== undefined || h.type === 'tablet_round');
+            const sctItems = tabletRounds.filter(h => h.timeSec && h.targetSec);
+            const sctBeatenCount = sctItems.filter(h => h.timeSec <= h.targetSec).length;
+            const sctRate = sctItems.length > 0 ? Math.round((sctBeatenCount / sctItems.length) * 100) : (rounds > 0 ? 100 : null);
 
             const metricCards = [
                 { label: 'NÍVEIS CONQUISTADOS', val: `${masteredCount} de 25 (${percent}%)`, color: [16, 185, 129] },
-                { label: 'ESTRELAS ACUMULADAS', val: `★ ${stars}`, color: [245, 158, 11] },
-                { label: 'RODADAS CONCLUÍDAS', val: `${rounds} rodadas`, color: [59, 130, 246] },
+                { label: 'RITMO FLUENTE SCT', val: sctRate !== null ? `${sctRate}% no tempo` : `${rounds} rodadas`, color: [59, 130, 246] },
+                { label: 'OFENSIVA & ESTRELAS', val: `${streak}d seguidos · ★ ${stars}`, color: [245, 158, 11] },
                 { label: 'STATUS PEDAGÓGICO', val: masteredCount >= 20 ? 'MESTRE PLENO' : (masteredCount >= 10 ? 'AVANÇADO' : 'EM PROGRESSO'), color: [147, 51, 234] }
             ];
 
@@ -793,6 +800,350 @@
                 document.body.removeChild(a);
                 URL.revokeObjectURL(blobUrl);
             }
+
+            return doc;
+        },
+
+        // Emite o Diploma Oficial de Honra ao Mérito / Maestria em PDF (A4 Paisagem)
+        async generateMasteryCertificatePDF(studentId, options = {}) {
+            let student = studentId ? this.getById(studentId) : this.getActive();
+            if (!student && options.studentName) {
+                student = {
+                    name: options.studentName,
+                    mascot: 'jaguar',
+                    ageTier: 'age_6_7',
+                    gamification: { stars: options.starsEarned || 0, streak: 1, totalRounds: 1 },
+                    history: []
+                };
+            }
+            if (!student) {
+                alert('Perfil de aluno não encontrado.');
+                return null;
+            }
+
+            let jsPDFClass = window.jspdf ? window.jspdf.jsPDF : null;
+            if (!jsPDFClass && window.KumonGen && window.KumonGen.loadScript) {
+                try {
+                    await window.KumonGen.loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+                    jsPDFClass = window.jspdf ? window.jspdf.jsPDF : null;
+                } catch (e) {
+                    console.error('Falha ao carregar jsPDF:', e);
+                }
+            }
+
+            if (!jsPDFClass) {
+                alert('Não foi possível carregar o módulo de PDF no momento. Verifique sua conexão com a internet.');
+                return null;
+            }
+
+            const doc = new jsPDFClass({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+
+            // 1. Fundo Nobre Marfim Suave
+            doc.setFillColor(255, 255, 253);
+            doc.rect(0, 0, pageWidth, pageHeight, 'F');
+
+            // 2. Borda Externa Dourada Nobre
+            doc.setDrawColor(205, 162, 40); // Ouro clássico #CDA228
+            doc.setLineWidth(2.2);
+            doc.rect(13, 13, pageWidth - 26, pageHeight - 26);
+
+            // 3. Moldura Interna Fina Azul Marinho
+            doc.setDrawColor(30, 41, 59); // Slate-800
+            doc.setLineWidth(0.6);
+            doc.rect(16.5, 16.5, pageWidth - 33, pageHeight - 33);
+
+            // 4. Cantoneiras e Detalhes Decorativos nos 4 Cantos
+            const cOffset = 16.5;
+            const cSize = 7;
+            doc.setDrawColor(205, 162, 40);
+            doc.setLineWidth(1.2);
+
+            // Cantoneiras nos 4 cantos
+            doc.line(cOffset, cOffset + cSize, cOffset, cOffset);
+            doc.line(cOffset, cOffset, cOffset + cSize, cOffset);
+
+            doc.line(pageWidth - cOffset, cOffset + cSize, pageWidth - cOffset, cOffset);
+            doc.line(pageWidth - cOffset, cOffset, pageWidth - cOffset - cSize, cOffset);
+
+            doc.line(cOffset, pageHeight - cOffset - cSize, cOffset, pageHeight - cOffset);
+            doc.line(cOffset, pageHeight - cOffset, cOffset + cSize, pageHeight - cOffset);
+
+            doc.line(pageWidth - cOffset, pageHeight - cOffset - cSize, pageWidth - cOffset, pageHeight - cOffset);
+            doc.line(pageWidth - cOffset, pageHeight - cOffset, pageWidth - cOffset - cSize, pageHeight - cOffset);
+
+            // Pontos Dourados de Enfeite nos Cantos
+            doc.setFillColor(205, 162, 40);
+            doc.circle(cOffset + 2.5, cOffset + 2.5, 1.2, 'F');
+            doc.circle(pageWidth - cOffset - 2.5, cOffset + 2.5, 1.2, 'F');
+            doc.circle(cOffset + 2.5, pageHeight - cOffset - 2.5, 1.2, 'F');
+            doc.circle(pageWidth - cOffset - 2.5, pageHeight - cOffset - 2.5, 1.2, 'F');
+
+            // 5. Cabeçalho Institucional
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(37, 99, 235); // Blue-600
+            doc.setFontSize(11);
+            doc.text('KUMONGEN · SISTEMA DE EXCELÊNCIA PEDAGÓGICA AUTOINSTRUTIVA', pageWidth / 2, 26, { align: 'center' });
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(100, 116, 139); // Slate-500
+            doc.text('MÉTODO DE ESTUDO DIÁRIO AUTOINSTRUTIVO · DESENVOLVIMENTO DE POTENCIAL MÁXIMO', pageWidth / 2, 31, { align: 'center' });
+
+            // 6. Título Nobre do Diploma
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(26);
+            doc.setTextColor(15, 23, 42); // Slate-900
+            doc.text('DIPLOMA DE HONRA AO MÉRITO', pageWidth / 2, 45, { align: 'center' });
+
+            // Linha dourada central sob o título com ornamento
+            doc.setDrawColor(205, 162, 40);
+            doc.setLineWidth(1.0);
+            doc.line(pageWidth / 2 - 40, 49, pageWidth / 2 + 40, 49);
+            doc.circle(pageWidth / 2, 49, 1.2, 'F');
+
+            // Subtítulo Cerimonial
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8.5);
+            doc.setTextColor(180, 83, 9); // Amber-700
+            doc.text('CERTIFICADO DE MAESTRIA, AUTONOMIA & DEDICAÇÃO EXEMPLAR', pageWidth / 2, 54, { align: 'center' });
+
+            // 7. Texto introdutório cerimonial
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(11);
+            doc.setTextColor(71, 85, 105); // Slate-600
+            doc.text('Certificamos com louvor e reconhecimento que o(a) aluno(a)', pageWidth / 2, 63, { align: 'center' });
+
+            // 8. Nome do Aluno (com auto-redimensionamento dinâmico seguro)
+            const studentRawName = options.studentName || student.name || 'SUPER ALUNO';
+            const studentName = String(studentRawName).toUpperCase().trim();
+            let nameFontSize = 24;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(nameFontSize);
+            let nameW = doc.getTextWidth(studentName);
+            while (nameW > 180 && nameFontSize > 13) {
+                nameFontSize -= 1;
+                doc.setFontSize(nameFontSize);
+                nameW = doc.getTextWidth(studentName);
+            }
+            doc.setTextColor(30, 58, 138); // Deep Blue nobre
+            doc.text(studentName, pageWidth / 2, 75, { align: 'center' });
+
+            // Linha decorativa sob o nome do aluno
+            const underlineW = Math.min(140, Math.max(70, nameW + 16));
+            doc.setDrawColor(203, 213, 225); // Slate-300
+            doc.setLineWidth(0.6);
+            doc.line(pageWidth / 2 - underlineW / 2, 78, pageWidth / 2 + underlineW / 2, 78);
+
+            // 9. Conquista / Domínio (Específico por Nível ou Consolidado Geral)
+            const hasLevel = !!options.levelTitle;
+            const masteredCount = StudentProfileEngine.getMasteryCount(student);
+            const percent = Math.round((masteredCount / 25) * 100);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10.5);
+            doc.setTextColor(71, 85, 105);
+
+            let achievementText = '';
+            if (hasLevel) {
+                doc.text('concluiu com êxito os desafios de fluência e autonomia no módulo:', pageWidth / 2, 87, { align: 'center' });
+                achievementText = `${options.levelTitle} · ${options.subjectTitle || 'KumonGen'}`;
+            } else {
+                doc.text('demonstrou autodisciplina e consistência no programa autoinstrutivo, conquistando:', pageWidth / 2, 87, { align: 'center' });
+                achievementText = masteredCount > 0
+                    ? `${masteredCount} Níveis Dominados (${percent}% do Currículo KumonGen)`
+                    : 'Excelência e Dedicação na Jornada de Aprendizado Autoinstrutivo';
+            }
+
+            let achFontSize = 15;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(achFontSize);
+            let achW = doc.getTextWidth(achievementText);
+            while (achW > 190 && achFontSize > 11) {
+                achFontSize -= 1;
+                doc.setFontSize(achFontSize);
+                achW = doc.getTextWidth(achievementText);
+            }
+            doc.setTextColor(15, 23, 42);
+            doc.text(achievementText, pageWidth / 2, 95, { align: 'center' });
+
+            // 10. Três Cartões de Métricas (Grid Modular Perfeito)
+            const cardW = 60;
+            const cardH = 19;
+            const cardGap = 8;
+            const totalGridW = (cardW * 3) + (cardGap * 2);
+            const gridStartX = (pageWidth - totalGridW) / 2;
+            const gridY = 103;
+
+            let metricsData = [];
+            if (hasLevel) {
+                const isMastered = options.isGauntletMastered || options.accuracy === 100;
+                metricsData = [
+                    {
+                        label: isMastered ? 'MAESTRIA KUMON' : 'PRECISÃO',
+                        val: isMastered ? '100%' : `${options.accuracy || 100}%`,
+                        sub: isMastered ? `1ª tent: ${options.accuracy || 100}%` : 'Acertos na 1ª tentativa',
+                        color: [16, 185, 129]
+                    },
+                    {
+                        label: 'TEMPO SCT',
+                        val: options.timeFormatted || 'No Ritmo',
+                        sub: options.targetFormatted ? `Meta: ${options.targetFormatted}` : 'Tempo ideal superado',
+                        color: [59, 130, 246]
+                    },
+                    {
+                        label: 'ESTRELAS',
+                        val: `+${options.starsEarned || 10} ★`,
+                        sub: 'Conquistadas na sessão',
+                        color: [245, 158, 11]
+                    }
+                ];
+            } else {
+                const historyList = Array.isArray(student.history) ? student.history : [];
+                const tabletRounds = historyList.filter(h => h.accuracy !== undefined || h.type === 'tablet_round');
+                const sctItems = tabletRounds.filter(h => h.timeSec && h.targetSec);
+                const sctBeatenCount = sctItems.filter(h => h.timeSec <= h.targetSec).length;
+                const sctRate = sctItems.length > 0 ? Math.round((sctBeatenCount / sctItems.length) * 100) : (student.gamification?.totalRounds > 0 ? 100 : null);
+                const streak = (student.gamification && student.gamification.streak) || 0;
+                const stars = (student.gamification && student.gamification.stars) || 0;
+
+                metricsData = [
+                    {
+                        label: 'MAESTRIA CURRICULAR',
+                        val: `${masteredCount} de 25`,
+                        sub: `${percent}% do programa dominado`,
+                        color: [16, 185, 129]
+                    },
+                    {
+                        label: 'RITMO FLUENTE SCT',
+                        val: sctRate !== null ? `${sctRate}%` : '100%',
+                        sub: `${sctBeatenCount} rodadas no tempo ideal`,
+                        color: [59, 130, 246]
+                    },
+                    {
+                        label: 'OFENSIVA & ESTRELAS',
+                        val: `${streak} Dias`,
+                        sub: `★ ${stars} estrelas acumuladas`,
+                        color: [245, 158, 11]
+                    }
+                ];
+            }
+
+            metricsData.forEach((m, i) => {
+                const cX = gridStartX + i * (cardW + cardGap);
+                doc.setFillColor(248, 250, 252);
+                doc.roundedRect(cX, gridY, cardW, cardH, 2.5, 2.5, 'F');
+                doc.setDrawColor(226, 232, 240);
+                doc.setLineWidth(0.4);
+                doc.roundedRect(cX, gridY, cardW, cardH, 2.5, 2.5, 'D');
+
+                // Valor
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(12.5);
+                doc.setTextColor(m.color[0], m.color[1], m.color[2]);
+                doc.text(m.val, cX + cardW / 2, gridY + 7.5, { align: 'center' });
+
+                // Rótulo
+                doc.setFontSize(6.8);
+                doc.setTextColor(30, 41, 59);
+                doc.text(m.label, cX + cardW / 2, gridY + 12.2, { align: 'center' });
+
+                // Subtítulo
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(6.2);
+                doc.setTextColor(100, 116, 139);
+                doc.text(m.sub, cX + cardW / 2, gridY + 16, { align: 'center' });
+            });
+
+            // 11. Selo de Honra com Fitas Cerimoniais
+            const sealX = pageWidth / 2;
+            const sealY = 138;
+
+            // Fitas da medalha
+            const isAmber = options.isGauntletMastered || !hasLevel;
+            doc.setFillColor(isAmber ? 217 : 37, isAmber ? 119 : 99, isAmber ? 6 : 235);
+            doc.triangle(sealX - 7, sealY + 7, sealX - 3, sealY + 18, sealX - 11, sealY + 20, 'F');
+            doc.triangle(sealX + 7, sealY + 7, sealX + 3, sealY + 18, sealX + 11, sealY + 20, 'F');
+
+            // Círculo Ouro Externo
+            doc.setFillColor(205, 162, 40);
+            doc.circle(sealX, sealY, 11.5, 'F');
+            // Círculo Interno Marfim
+            doc.setFillColor(254, 249, 195);
+            doc.circle(sealX, sealY, 9.5, 'F');
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(6.8);
+            doc.setTextColor(146, 64, 14);
+            const sealTitle = hasLevel ? (options.isGauntletMastered ? 'MAESTRIA' : 'EXCELÊNCIA') : 'HONRA';
+            doc.text(sealTitle, sealX, sealY - 0.5, { align: 'center' });
+            doc.setFontSize(4.5);
+            doc.setTextColor(180, 83, 9);
+            const sealSubtitle = hasLevel ? 'KUMONGEN' : 'AO MÉRITO';
+            doc.text(sealSubtitle, sealX, sealY + 3.2, { align: 'center' });
+
+            // Menção ao Mascote Companheiro
+            const mascotInfo = (typeof MASCOT_PRESETS !== 'undefined' && MASCOT_PRESETS[student.mascot]) ? MASCOT_PRESETS[student.mascot] : { name: 'Jade', title: 'A Jaguatirica da Agilidade' };
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7.5);
+            doc.setTextColor(100, 116, 139);
+            doc.text(`Companheiro(a) de Jornada: ${mascotInfo.name} (${mascotInfo.title})`, pageWidth / 2, 157, { align: 'center' });
+
+            // 12. Linhas de Assinatura
+            const sigY = 171;
+            const sigLineW = 62;
+            const sigLeftX = 35;
+            const sigRightX = pageWidth - 35 - sigLineW;
+
+            doc.setDrawColor(148, 163, 184);
+            doc.setLineWidth(0.45);
+
+            // Assinatura Orientador
+            doc.line(sigLeftX, sigY, sigLeftX + sigLineW, sigY);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7.5);
+            doc.setTextColor(100, 116, 139);
+            doc.text('Responsável / Orientador(a)', sigLeftX + sigLineW / 2, sigY + 4, { align: 'center' });
+
+            // Assinatura KumonGen
+            doc.line(sigRightX, sigY, sigRightX + sigLineW, sigY);
+            doc.text('KumonGen 4.0 · Autenticação Pedagógica', sigRightX + sigLineW / 2, sigY + 4, { align: 'center' });
+
+            // 13. Rodapé Oficial
+            const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+            const certCode = 'KM-CERT-' + Date.now().toString(36).toUpperCase();
+            doc.setFontSize(6.8);
+            doc.setTextColor(148, 163, 184);
+            doc.text(`Emitido em ${today} · Autenticação Digital: ${certCode} · Documento Oficial KumonGen`, pageWidth / 2, pageHeight - 20, { align: 'center' });
+
+            const safeName = (student.name || options.studentName || 'Aluno').replace(/[^a-zA-Z0-9]/g, '_');
+            const suffix = options.levelId ? `_${options.levelId}` : '_Geral';
+            const pdfFileName = `Diploma_Kumon_${safeName}${suffix}.pdf`;
+
+            try {
+                doc.save(pdfFileName);
+            } catch (saveErr) {
+                console.warn('doc.save falhou, tentando fallback via Blob:', saveErr);
+                const blob = doc.output('blob');
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = pdfFileName;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(blobUrl);
+                }, 1000);
+            }
+
+            return doc;
         },
 
         // Modal Interativo: "Quem vai treinar hoje?"
@@ -1378,7 +1729,7 @@
                         if (isDone) {
                             bg = '#f0fdf4';
                             border = '#bbf7d0';
-                            icon = '<i class="fas fa-trophy" style="color:#f59e0b;font-size:12px;"></i>';
+                            icon = `<button type="button" class="btn-cert-level" data-level-id="${lvl.id}" data-level-title="${escapeHtml(lvl.title)}" data-subject="${sKey}" title="Emitir Diploma deste Nível" style="border:none;background:none;cursor:pointer;padding:4px;color:#f59e0b;display:flex;align-items:center;justify-content:center;"><i class="fas fa-trophy" style="font-size:12px;"></i></button>`;
                             const bestTimeStr = mInfo.bestTimeSec ? `${Math.floor(mInfo.bestTimeSec / 60)}:${String(mInfo.bestTimeSec % 60).padStart(2, '0')}m` : '';
                             statusText = `<span style="color:#059669;font-size:10px;font-weight:900;">100% Maestria ${bestTimeStr ? '· ' + bestTimeStr : ''}</span>`;
                         } else if (inHistory) {
@@ -1551,10 +1902,15 @@
                         </div>
 
                         <!-- Rodapé Fixo -->
-                        <div style="padding:12px 18px;border-top:1px solid #f1f5f9;background:#f8fafc;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
-                            <button type="button" id="btnDownloadPDFFromEvolution" style="padding:8px 14px;background:#ecfdf5;border:1px solid #a7f3d0;color:#059669;font-weight:900;font-size:11px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:6px;">
-                                <i class="fas fa-file-pdf"></i> Emitir Boletim Oficial (PDF)
-                            </button>
+                        <div style="padding:12px 18px;border-top:1px solid #f1f5f9;background:#f8fafc;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;">
+                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                <button type="button" id="btnDownloadPDFFromEvolution" style="padding:8px 14px;background:#ecfdf5;border:1px solid #a7f3d0;color:#059669;font-weight:900;font-size:11px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                                    <i class="fas fa-file-pdf"></i> Emitir Boletim A4
+                                </button>
+                                <button type="button" id="btnDownloadCertFromEvolution" style="padding:8px 14px;background:#fffbeb;border:1px solid #fde68a;color:#b45309;font-weight:900;font-size:11px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                                    <i class="fas fa-award"></i> Emitir Diploma de Mérito
+                                </button>
+                            </div>
                             <button type="button" id="btnFooterBackToProfiles" style="border:none;background:none;color:#64748b;font-weight:bold;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px;">
                                 <i class="fas fa-users"></i> Voltar aos Perfis
                             </button>
@@ -1570,6 +1926,32 @@
                 const pdfBtn = modal.querySelector('#btnDownloadPDFFromEvolution');
                 if (pdfBtn) {
                     pdfBtn.onclick = () => self.generateMasteryReportPDF(s.id);
+                }
+
+                const certBtn = modal.querySelector('#btnDownloadCertFromEvolution');
+                if (certBtn) {
+                    certBtn.onclick = () => self.generateMasteryCertificatePDF(s.id);
+                }
+
+                // Delegação de cliques para emissão de diploma por nível específico na matriz
+                const matrixPanel = modal.querySelector('#panelEvolutionMatrix');
+                if (matrixPanel) {
+                    matrixPanel.addEventListener('click', (e) => {
+                        const btn = e.target.closest('.btn-cert-level');
+                        if (btn) {
+                            const lvlId = btn.getAttribute('data-level-id');
+                            const lvlTitle = btn.getAttribute('data-level-title');
+                            const subKey = btn.getAttribute('data-subject');
+                            const subTitle = (CURRICULUM_25_LEVELS[subKey] && CURRICULUM_25_LEVELS[subKey].title) || subKey;
+                            self.generateMasteryCertificatePDF(s.id, {
+                                levelId: lvlId,
+                                levelTitle: lvlTitle,
+                                subjectTitle: subTitle,
+                                accuracy: 100,
+                                isGauntletMastered: true
+                            });
+                        }
+                    });
                 }
 
                 // Alternância das Abas Internas

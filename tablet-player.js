@@ -324,6 +324,9 @@
     // 4. CERTIFICADO OFICIAL EM PDF (jsPDF)
     // ============================================================
     async function generateCertificatePDF(certData) {
+        if (typeof window !== 'undefined' && window.StudentProfileEngine && typeof window.StudentProfileEngine.generateMasteryCertificatePDF === 'function') {
+            return window.StudentProfileEngine.generateMasteryCertificatePDF(null, certData);
+        }
         let jsPDFClass = window.jspdf ? window.jspdf.jsPDF : null;
         if (!jsPDFClass && window.KumonGen && window.KumonGen.loadScript) {
             try {
