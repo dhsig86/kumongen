@@ -328,6 +328,17 @@
         return null;
     }
 
+    // Mapeamento fonético claro para alfabeto em Português (P1)
+    const LETRAS_FONETICAS_PT = {
+        'A': 'Letra A', 'B': 'Letra Bê', 'C': 'Letra Cê', 'D': 'Letra Dê',
+        'E': 'Letra E', 'F': 'Letra Éfe', 'G': 'Letra Gê', 'H': 'Letra Agá',
+        'I': 'Letra I', 'J': 'Letra Jota', 'K': 'Letra Cá', 'L': 'Letra Éle',
+        'M': 'Letra Eme', 'N': 'Letra Ene', 'O': 'Letra O', 'P': 'Letra Pê',
+        'Q': 'Letra Quê', 'R': 'Letra Érre', 'S': 'Letra Esse', 'T': 'Letra Tê',
+        'U': 'Letra U', 'V': 'Letra Vê', 'W': 'Letra Dáblio', 'X': 'Letra Xis',
+        'Y': 'Letra Ípsilon', 'Z': 'Letra Zê'
+    };
+
     // Síntese de voz com afinação e velocidade acolhedoras para crianças
     function speakWord(text, lang = 'pt-BR', pitch = 1.15, rate = 0.92, btnEl = null) {
         if (!text || typeof text !== 'string') return;
@@ -342,9 +353,26 @@
             const cleanText = text.trim();
             if (!cleanText) return;
 
+            // Normalização fonética inteligente
+            let textToSpeak = cleanText;
+            if (lang.startsWith('pt')) {
+                if (cleanText.length === 1 && LETRAS_FONETICAS_PT[cleanText.toUpperCase()]) {
+                    textToSpeak = LETRAS_FONETICAS_PT[cleanText.toUpperCase()];
+                } else if (cleanText.length <= 15 && cleanText === cleanText.toUpperCase() && !cleanText.includes(' ')) {
+                    // Minúsculo impede o motor de confundir sílabas com siglas de estados (BA=Bahia, SE=Sergipe, etc.)
+                    textToSpeak = cleanText.toLowerCase();
+                }
+            } else if (lang.startsWith('en')) {
+                if (cleanText.length === 1 && /^[A-Z]$/i.test(cleanText)) {
+                    textToSpeak = `Letter ${cleanText.toUpperCase()}`;
+                } else if (cleanText.length <= 15 && cleanText === cleanText.toUpperCase() && !cleanText.includes(' ')) {
+                    textToSpeak = cleanText.toLowerCase();
+                }
+            }
+
             const executeSpeak = () => {
                 try {
-                    const utterance = new SpeechSynthesisUtterance(cleanText.slice(0, 300));
+                    const utterance = new SpeechSynthesisUtterance(textToSpeak.slice(0, 300));
                     utterance.lang = lang;
                     utterance.pitch = pitch;
                     utterance.rate = rate;
@@ -2018,6 +2046,38 @@
                         <span class="bg-purple-100 text-purple-700 px-4 py-2 rounded-2xl border-2 border-dashed border-purple-400 font-black text-2xl">${solved}</span>
                     </div>
                 `;
+            } else if (item.type === 'word') {
+                exampleHtml = `
+                    <div class="text-xl md:text-2xl font-bold text-slate-800 flex flex-col items-center justify-center gap-2 my-6">
+                        <span>Palavra modelo:</span>
+                        <div class="flex items-center gap-2">
+                            ${(item.parts || [item.word]).map(p => `<span class="bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-xl font-black text-xl border-2 border-dashed border-emerald-400">${p}</span>`).join('')}
+                        </div>
+                        <button id="speakExampleBtn" type="button" class="mt-2 px-3 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-full font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-emerald-300">
+                            <i class="fas fa-volume-up"></i> Ouvir Palavra
+                        </button>
+                    </div>
+                `;
+            } else if (item.type === 'syllable') {
+                exampleHtml = `
+                    <div class="text-xl md:text-2xl font-bold text-slate-800 flex flex-col items-center justify-center gap-2 my-6">
+                        <span>Sílaba modelo:</span>
+                        <span class="bg-blue-100 text-blue-700 px-6 py-3 rounded-2xl border-2 border-dashed border-blue-400 font-black text-4xl">${item.syllable}</span>
+                        <button id="speakExampleBtn" type="button" class="mt-2 px-3 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-full font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-blue-300">
+                            <i class="fas fa-volume-up"></i> Ouvir Sílaba
+                        </button>
+                    </div>
+                `;
+            } else if (item.type === 'trace') {
+                exampleHtml = `
+                    <div class="text-xl md:text-2xl font-bold text-slate-800 flex flex-col items-center justify-center gap-2 my-6">
+                        <span>Letra modelo:</span>
+                        <span class="bg-blue-100 text-blue-700 px-8 py-4 rounded-3xl border-2 border-dashed border-blue-400 font-serif font-black text-6xl">${item.char || 'A'}</span>
+                        <button id="speakExampleBtn" type="button" class="mt-2 px-3 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-full font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-blue-300">
+                            <i class="fas fa-volume-up"></i> Ouvir Letra
+                        </button>
+                    </div>
+                `;
             } else {
                 exampleHtml = `
                     <div class="text-2xl font-bold text-slate-700 my-6 text-center">
@@ -2048,6 +2108,16 @@
             `;
 
             modal.style.display = 'flex';
+
+            const exampleSpeakBtn = document.getElementById('speakExampleBtn');
+            if (exampleSpeakBtn) {
+                exampleSpeakBtn.addEventListener('click', () => {
+                    const lang = Session.subjectKey === 'ingles' ? 'en-US' : 'pt-BR';
+                    const toSpeak = item.word || item.syllable || item.char || '';
+                    speakWord(toSpeak, lang, 1.15, 0.92, exampleSpeakBtn);
+                });
+            }
+
             const btn = document.getElementById('dismissExampleBtn');
             if (btn) {
                 btn.addEventListener('click', () => {
@@ -2295,6 +2365,7 @@
                 speakBtn.addEventListener('click', () => {
                     speakWord(char, lang, 1.15, 0.92, speakBtn);
                 });
+                setTimeout(() => speakWord(char, lang, 1.15, 0.92, speakBtn), 400);
             }
 
             this.setupTraceCanvas();
@@ -2456,6 +2527,7 @@
                     sound.init();
                     sound.playClick();
                     const syl = btn.getAttribute('data-syllable');
+                    speakWord(syl, lang, 1.2, 0.95);
                     assembled.push(syl);
                     btn.classList.add('opacity-40', 'pointer-events-none');
                     updateSlots();
@@ -2464,6 +2536,7 @@
                     if (assembled.length === parts.length) {
                         const built = assembled.join('');
                         if (built === word || built === parts.join('')) {
+                            speakWord(word, lang, 1.15, 0.92);
                             this.registerSuccess();
                         } else {
                             sound.playWrong();
@@ -2723,6 +2796,7 @@
                     sound.init();
                     sound.playClick();
                     const chipVal = btn.getAttribute('data-chip');
+                    speakWord(chipVal, lang, 1.15, 0.95);
                     assembled.push(chipVal);
                     btn.classList.add('opacity-40', 'pointer-events-none');
                     updateSlots();
@@ -2731,6 +2805,7 @@
                         const builtStr = assembled.join(' ');
                         const targetStr = parts.join(' ');
                         if (builtStr === targetStr || builtStr === sentence) {
+                            speakWord(sentence, lang, 1.1, 0.9);
                             this.registerSuccess();
                         } else {
                             sound.playWrong();
