@@ -296,22 +296,46 @@ async function runAudioGauntlet() {
                 }, '#speakOppositeBtn', 'I7 Opposites (Listen Opposite)');
 
                 // -------------------------------------------------------------
-                // LOOP 4: ESTRESSE DE CLIQUES RÁPIDOS (RAPID-FIRE STRESS)
+                // LOOP 4: TREINO AUDITIVO INFANTIL & REPETIÇÕES SUCESSIVAS (ANTI-DEADLOCK)
                 // -------------------------------------------------------------
-                console.log('\n[GAUNTLET LOOP 4] Estresse de Cliques Rápidos e Anti-Deadlock');
+                console.log('\n[GAUNTLET LOOP 4] Treino Auditivo — Repetição Múltipla da Palavra & Anti-Deadlock');
                 await page.goto(`${baseUrl}/tablet.html?subject=portugues&level=p3`);
-                await page.evaluate(() => {
-                    window.TabletPlayer.Session.workedExampleDismissed = true;
-                    const ex = document.getElementById('workedExampleModal');
-                    if (ex) ex.style.display = 'none';
-                    const tut = document.getElementById('tabletTutorialModal');
-                    if (tut) tut.style.display = 'none';
-                    const wiz = document.getElementById('taskWizardModal');
-                    if (wiz) wiz.style.display = 'none';
-                    window.TabletPlayer.renderCurrentQuestion();
-                });
+                await page.evaluate(bypassModals);
                 await page.waitForTimeout(300);
 
+                // Teste 4A: A criança repete o áudio 3 vezes sucessivas para treinar a audição da palavra
+                const repeatedListenResult = await page.evaluate(async () => {
+                    const btn = document.getElementById('speakWordBtn');
+                    if (!btn) return { ok: false, reason: 'btn_not_found' };
+
+                    let repeatEvents = 0;
+                    const origSpeak = window.speechSynthesis.speak.bind(window.speechSynthesis);
+                    window.speechSynthesis.speak = (u) => {
+                        repeatEvents++;
+                        origSpeak(u);
+                    };
+
+                    // Criança clica 3 vezes com intervalo para ouvir a pronúncia repetidas vezes
+                    for (let i = 0; i < 3; i++) {
+                        btn.click();
+                        await new Promise(r => setTimeout(r, 400));
+                    }
+
+                    await new Promise(r => setTimeout(r, 800));
+
+                    return {
+                        ok: true,
+                        repeatEvents,
+                        pending: window.speechSynthesis.pending,
+                        speaking: window.speechSynthesis.speaking
+                    };
+                });
+
+                assert(repeatedListenResult.ok, 'Treino auditivo de repetição de palavra executado');
+                assert(repeatedListenResult.repeatEvents >= 3, `Repetições de áudio processadas com sucesso (total: ${repeatedListenResult.repeatEvents})`);
+                assert(!repeatedListenResult.pending, 'Fila destravada após repetições de áudio da criança');
+
+                // Teste 4B: Estresse de cliques rápidos (anti-deadlock)
                 const rapidFireResult = await page.evaluate(async () => {
                     const btn = document.getElementById('speakWordBtn');
                     if (!btn) return { ok: false, reason: 'btn_not_found' };
@@ -325,22 +349,20 @@ async function runAudioGauntlet() {
 
                     for (let i = 0; i < 5; i++) {
                         btn.click();
-                        await new Promise(r => setTimeout(r, 70));
+                        await new Promise(r => setTimeout(r, 60));
                     }
 
-                    await new Promise(r => setTimeout(r, 1200));
+                    await new Promise(r => setTimeout(r, 1000));
 
                     return {
                         ok: true,
                         speakCalls,
-                        speaking: window.speechSynthesis.speaking,
-                        pending: window.speechSynthesis.pending,
-                        paused: window.speechSynthesis.paused
+                        pending: window.speechSynthesis.pending
                     };
                 });
 
-                assert(rapidFireResult.ok, 'Teste de cliques rápidos executado');
-                assert(rapidFireResult.speakCalls > 0, `Disparos processados pelo motor (total: ${rapidFireResult.speakCalls})`);
+                assert(rapidFireResult.ok, 'Estresse de cliques rápidos executado');
+                assert(rapidFireResult.speakCalls > 0, `Cliques rápidos absorvidos pelo motor (total: ${rapidFireResult.speakCalls})`);
                 assert(!rapidFireResult.pending, 'Fila de síntese destravada após estresse (pending=false)');
 
                 // -------------------------------------------------------------

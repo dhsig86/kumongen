@@ -335,21 +335,34 @@
         const target = (lang || 'pt-BR').toLowerCase().replace('_', '-');
         const langPrefix = target.split('-')[0];
 
-        // 1. Busca exata (ex: pt-BR ou en-US)
-        let match = _cachedVoices.find(v => (v.lang || '').toLowerCase().replace('_', '-') === target);
-        if (match) return match;
+        // Filtra todas as vozes compatíveis com o idioma
+        const matchingVoices = _cachedVoices.filter(v => {
+            const vLang = (v.lang || '').toLowerCase().replace('_', '-');
+            return vLang === target || vLang.startsWith(langPrefix);
+        });
 
-        // 2. Busca por prefixo regional (qualquer voz pt-* ou en-*)
-        match = _cachedVoices.find(v => (v.lang || '').toLowerCase().startsWith(langPrefix));
-        if (match) return match;
-
-        // 3. Fallback para voz padrão se for compatível
-        const defaultVoice = _cachedVoices.find(v => v.default);
-        if (defaultVoice && (defaultVoice.lang || '').toLowerCase().startsWith(langPrefix)) {
-            return defaultVoice;
+        if (!matchingVoices.length) {
+            const defaultVoice = _cachedVoices.find(v => v.default);
+            if (defaultVoice && (defaultVoice.lang || '').toLowerCase().startsWith(langPrefix)) {
+                return defaultVoice;
+            }
+            return null;
         }
 
-        return null;
+        // 1. Preferência pedagógica por vozes claras, naturais e acolhedoras para crianças (ex: Maria, Francisca, Google, Zira, Jenny)
+        const preferredRegex = langPrefix === 'pt'
+            ? /maria|francisca|google|natural|neural|online|leticia|helena|vitoria|fabiola/i
+            : /zira|jenny|google|natural|neural|online|samantha|aria|karen/i;
+
+        const premiumVoice = matchingVoices.find(v => preferredRegex.test(v.name));
+        if (premiumVoice) return premiumVoice;
+
+        // 2. Voz que case exatamente com o dialeto (ex: pt-BR sobre pt-PT)
+        const exactMatch = matchingVoices.find(v => (v.lang || '').toLowerCase().replace('_', '-') === target);
+        if (exactMatch) return exactMatch;
+
+        // 3. Primeira voz do idioma
+        return matchingVoices[0];
     }
 
     // Mapeamento fonético claro para alfabeto em Português (P1)
@@ -361,6 +374,27 @@
         'Q': 'Letra Quê', 'R': 'Letra Érre', 'S': 'Letra Esse', 'T': 'Letra Tê',
         'U': 'Letra U', 'V': 'Letra Vê', 'W': 'Letra Dáblio', 'X': 'Letra Xis',
         'Y': 'Letra Ípsilon', 'Z': 'Letra Zê'
+    };
+
+    // Mapeamento fonético com tonicidade explícita para sílabas isoladas (P2, P3, P4, P5, P6)
+    // Garante que o sintetizador vocalize a sílaba com vogal plena e não confunda com preposições átonas ou siglas
+    const SILABAS_FONETICAS_PT = {
+        'DE': 'dê', 'DO': 'dô',
+        'SE': 'sê', 'SO': 'sô',
+        'TE': 'tê', 'TO': 'tô',
+        'ME': 'mê', 'MO': 'mô',
+        'NE': 'nê', 'NO': 'nô',
+        'LE': 'lê', 'LO': 'lô',
+        'PE': 'pê', 'PO': 'pô',
+        'RE': 'rê', 'RO': 'rô',
+        'BE': 'bê', 'BO': 'bô',
+        'CE': 'cê', 'CO': 'cô',
+        'FE': 'fê', 'FO': 'fô',
+        'GE': 'gê', 'GO': 'gô',
+        'JE': 'jê', 'JO': 'jô',
+        'VE': 'vê', 'VO': 'vô',
+        'ZE': 'zê', 'ZO': 'zô',
+        'QUE': 'quê', 'QUI': 'qui'
     };
 
     function startSpeechWatchdog() {
@@ -383,8 +417,8 @@
         }, 1500);
     }
 
-    // Síntese de voz com afinação e velocidade acolhedoras para crianças
-    function speakWord(text, lang = 'pt-BR', pitch = 1.15, rate = 0.92, btnEl = null) {
+    // Síntese de voz com afinação e velocidade acolhedoras para crianças (rate 0.84 para alfabetização calma e inteligível)
+    function speakWord(text, lang = 'pt-BR', pitch = 1.04, rate = 0.84, btnEl = null) {
         if (!text || typeof text !== 'string') return;
         if (!('speechSynthesis' in window) || sound.muted) return;
         clearCardAutoplay();
@@ -393,7 +427,7 @@
         sound.init();
         if (btnEl) {
             sound.playTone(880, 0.04, 'sine', 0.08);
-            btnEl.classList.add('ring-2', 'ring-emerald-400', 'animate-pulse');
+            btnEl.classList.add('ring-4', 'ring-emerald-400/80', 'animate-pulse');
         }
 
         const requestId = ++_activeSpeechRequestId;
@@ -408,15 +442,18 @@
 
             // Normalização fonética inteligente
             let textToSpeak = cleanText;
+            const upper = cleanText.toUpperCase();
             if (lang.startsWith('pt')) {
-                if (cleanText.length === 1 && LETRAS_FONETICAS_PT[cleanText.toUpperCase()]) {
-                    textToSpeak = LETRAS_FONETICAS_PT[cleanText.toUpperCase()];
-                } else if (cleanText.length <= 15 && cleanText === cleanText.toUpperCase() && !cleanText.includes(' ')) {
+                if (cleanText.length === 1 && LETRAS_FONETICAS_PT[upper]) {
+                    textToSpeak = LETRAS_FONETICAS_PT[upper];
+                } else if (SILABAS_FONETICAS_PT[upper]) {
+                    textToSpeak = SILABAS_FONETICAS_PT[upper];
+                } else if (cleanText.length <= 15 && cleanText === upper && !cleanText.includes(' ')) {
                     // Minúsculo impede o motor de confundir sílabas com siglas de estados (BA=Bahia, SE=Sergipe, etc.)
                     textToSpeak = cleanText.toLowerCase();
                 }
             } else if (lang.startsWith('en')) {
-                if (cleanText === cleanText.toUpperCase()) {
+                if (cleanText === upper) {
                     textToSpeak = cleanText.toLowerCase();
                 }
             }
@@ -442,13 +479,13 @@
                     const cleanup = () => {
                         _utterancePool.delete(utterance);
                         if (btnEl) {
-                            btnEl.classList.remove('ring-2', 'ring-emerald-400', 'animate-pulse');
+                            btnEl.classList.remove('ring-4', 'ring-emerald-400/80', 'animate-pulse');
                         }
                     };
 
                     utterance.onstart = () => {
                         if (btnEl) {
-                            btnEl.classList.add('ring-2', 'ring-emerald-400');
+                            btnEl.classList.add('ring-4', 'ring-emerald-400/80');
                         }
                     };
 
@@ -468,20 +505,20 @@
                     }
                 } catch (e) {
                     console.warn('[KumonGen Speech] Erro ao sintetizar fala:', e);
-                    if (btnEl) btnEl.classList.remove('ring-2', 'ring-emerald-400', 'animate-pulse');
+                    if (btnEl) btnEl.classList.remove('ring-4', 'ring-emerald-400/80', 'animate-pulse');
                 }
             };
 
-            // Se o sintetizador estiver ocupado, cancela com segurança e espera 80ms para estabilizar
+            // Se o sintetizador estiver ocupado, cancela com segurança e reinicia rápido (50ms)
             if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
                 window.speechSynthesis.cancel();
-                setTimeout(executeSpeak, 80);
+                setTimeout(executeSpeak, 50);
             } else {
                 executeSpeak();
             }
         } catch (e) {
             console.warn('[KumonGen Speech] SpeechSynthesis error:', e);
-            if (btnEl) btnEl.classList.remove('ring-2', 'ring-emerald-400', 'animate-pulse');
+            if (btnEl) btnEl.classList.remove('ring-4', 'ring-emerald-400/80', 'animate-pulse');
         }
     }
 
@@ -2475,8 +2512,10 @@
                 <div class="flex flex-col items-center justify-center py-2">
                     <div class="flex items-center gap-3 mb-2">
                         <span class="text-sm font-bold text-slate-600">${isEng ? 'Trace the letter with your finger or stylus:' : 'Trace a letra com o dedo ou caneta stylus:'}</span>
-                        <button id="speakTraceBtn" class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-bold text-xs flex items-center gap-1.5 hover:bg-blue-200 transition-colors">
-                            <i class="fas fa-volume-up"></i> ${isEng ? 'Listen Letter' : 'Ouvir Letra'}
+                        <button id="speakTraceBtn" class="btn-speech-hero btn-speech-blue" style="padding: 0.5rem 1.25rem; font-size: 0.875rem;">
+                            <i class="fas fa-volume-high text-blue-200"></i>
+                            <span>${isEng ? 'Listen Letter' : 'Ouvir Letra'}</span>
+                            <span class="btn-speech-badge"><i class="fas fa-redo-alt text-[9px]"></i>${isEng ? 'Repeat' : 'Repetir'}</span>
                         </button>
                     </div>
 
@@ -2510,9 +2549,9 @@
             const speakBtn = document.getElementById('speakTraceBtn');
             if (speakBtn) {
                 speakBtn.addEventListener('click', () => {
-                    speakWord(spokenChar, lang, 1.15, 0.90, speakBtn);
+                    speakWord(spokenChar, lang, 1.04, 0.84, speakBtn);
                 });
-                scheduleCardSpeech(() => speakWord(spokenChar, lang, 1.15, 0.90, speakBtn), 400);
+                scheduleCardSpeech(() => speakWord(spokenChar, lang, 1.04, 0.84, speakBtn), 400);
             }
 
             this.setupTraceCanvas();
@@ -2632,17 +2671,20 @@
 
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-2">
-                    <div class="flex items-center gap-3 mb-2">
-                        <span class="text-sm font-bold text-slate-600">${instructionText}</span>
-                        <button id="speakWordBtn" class="px-3.5 py-1.5 bg-emerald-600 text-white rounded-full font-bold text-xs flex items-center gap-1.5 hover:bg-emerald-700 shadow-sm transition-colors cursor-pointer">
-                            <i class="fas fa-volume-up"></i> ${listenBtnText}
+                    <!-- Botão Hero de Audição & Repetição Ilimitada -->
+                    <div class="flex flex-col items-center gap-2 mb-3">
+                        <button id="speakWordBtn" class="btn-speech-hero btn-speech-emerald">
+                            <i class="fas fa-volume-high text-xl"></i>
+                            <span>${listenBtnText}</span>
+                            <span class="btn-speech-badge"><i class="fas fa-redo-alt text-[10px]"></i>${isEng ? 'Repeat' : 'Repetir'}</span>
                         </button>
+                        <span class="text-xs md:text-sm font-bold text-slate-500">${instructionText}</span>
                     </div>
 
                     <!-- Contexto da Palavra Alvo com Alto Contraste -->
-                    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100/90 border border-emerald-300 text-emerald-950 font-bold text-sm mb-3 shadow-sm">
-                        <span class="text-emerald-700 font-medium">${isEng ? 'Target Word:' : 'Palavra Alvo:'}</span>
-                        <span class="text-emerald-950 font-black tracking-wide text-base uppercase">${word}</span>
+                    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-950 font-bold text-sm mb-4 shadow-sm">
+                        <span class="text-emerald-700 text-xs font-semibold">${isEng ? 'Target Word:' : 'Palavra Alvo:'}</span>
+                        <span class="text-emerald-950 font-black tracking-widest text-base uppercase">${word}</span>
                     </div>
 
                     <!-- Palavra sendo montada -->
@@ -2653,15 +2695,15 @@
                     <!-- Sílabas disponíveis como botões táteis -->
                     <div id="syllableChipsWrapper" class="flex flex-wrap items-center justify-center gap-3 max-w-md">
                         ${allChips.map(chip => `
-                            <button class="syllable-chip px-6 py-4 bg-white border-2 border-emerald-500 hover:bg-emerald-50 text-emerald-800 text-2xl font-black rounded-2xl shadow-md active:scale-95 transition-transform" data-syllable="${chip}">
+                            <button class="syllable-chip px-6 py-4 bg-white border-2 border-emerald-500 hover:bg-emerald-50 text-emerald-800 text-2xl font-black rounded-2xl shadow-md active:scale-95 transition-transform cursor-pointer" data-syllable="${chip}">
                                 ${chip}
                             </button>
                         `).join('')}
                     </div>
 
                     <div class="flex items-center gap-3 mt-4">
-                        <button id="resetWordChipsBtn" class="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-200 transition-colors">
-                            <i class="fas fa-undo"></i> ${resetBtnText}
+                        <button id="resetWordChipsBtn" class="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-200 transition-colors cursor-pointer">
+                            <i class="fas fa-undo mr-1"></i> ${resetBtnText}
                         </button>
                     </div>
                 </div>
@@ -2669,9 +2711,9 @@
 
             const speakBtn = document.getElementById('speakWordBtn');
             if (speakBtn) {
-                speakBtn.addEventListener('click', () => speakWord(word, lang, 1.15, 0.90, speakBtn));
+                speakBtn.addEventListener('click', () => speakWord(word, lang, 1.04, 0.84, speakBtn));
                 // Pronúncia automática ao carregar o card
-                scheduleCardSpeech(() => speakWord(word, lang, 1.15, 0.90, speakBtn), 400);
+                scheduleCardSpeech(() => speakWord(word, lang, 1.04, 0.84, speakBtn), 400);
             }
 
             let assembled = [];
@@ -2696,7 +2738,7 @@
                     sound.init();
                     sound.playClick();
                     const syl = btn.getAttribute('data-syllable');
-                    speakWord(syl, lang, 1.15, 0.90);
+                    speakWord(syl, lang, 1.04, 0.84);
                     assembled.push(syl);
                     btn.classList.add('opacity-40', 'pointer-events-none');
                     updateSlots();
@@ -2705,7 +2747,7 @@
                     if (assembled.length === parts.length) {
                         const built = assembled.join('');
                         if (built === word || built === parts.join('')) {
-                            speakWord(word, lang, 1.15, 0.90);
+                            speakWord(word, lang, 1.04, 0.84);
                             this.registerSuccess();
                         } else {
                             sound.playWrong();
@@ -2741,21 +2783,25 @@
             const options = [targetSyl, ...distractors].sort(() => Math.random() - 0.5);
 
             container.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-4">
-                    <div class="flex items-center gap-3 mb-4">
-                        <span class="text-base font-bold text-slate-700">Qual é a sílaba correta?</span>
-                        <button id="speakSyllableBtn" class="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full font-bold text-xs flex items-center gap-1.5 hover:bg-blue-200 transition-colors">
-                            <i class="fas fa-volume-up"></i> Ouvir Som
+                <div class="flex flex-col items-center justify-center py-3">
+                    <div class="flex flex-col items-center gap-2 mb-4">
+                        <button id="speakSyllableBtn" class="btn-speech-hero btn-speech-blue">
+                            <i class="fas fa-volume-high text-xl"></i>
+                            <span>Ouvir Sílaba</span>
+                            <span class="btn-speech-badge"><i class="fas fa-redo-alt text-[10px]"></i>Repetir</span>
                         </button>
+                        <span class="text-xs md:text-sm font-bold text-slate-500">Ouça o som e toque na sílaba correspondente:</span>
                     </div>
 
-                    <div class="text-5xl font-black text-slate-800 bg-slate-100 px-8 py-6 rounded-3xl border-2 border-slate-300 shadow-inner mb-6">
-                        ${targetSyl}
+                    <!-- Bloco Sonoro Central de Treino Auditivo -->
+                    <div class="w-32 h-28 bg-blue-50 border-2 border-dashed border-blue-400 rounded-3xl shadow-inner flex flex-col items-center justify-center gap-1 mb-6 text-blue-600">
+                        <i class="fas fa-headphones text-3xl"></i>
+                        <span class="text-xs font-black tracking-wider uppercase text-blue-500">Qual o som?</span>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4 w-full max-w-xs">
                         ${options.map(opt => `
-                            <button class="syl-choice-btn py-4 bg-white border-2 border-blue-500 hover:bg-blue-50 text-blue-800 rounded-2xl text-3xl font-black shadow-md active:scale-95 transition-transform" data-syl="${opt}">
+                            <button class="syl-choice-btn py-4 bg-white border-2 border-blue-500 hover:bg-blue-50 text-blue-800 rounded-2xl text-3xl font-black shadow-md active:scale-95 transition-transform cursor-pointer" data-syl="${opt}">
                                 ${opt}
                             </button>
                         `).join('')}
@@ -2765,14 +2811,15 @@
 
             const speakBtn = document.getElementById('speakSyllableBtn');
             if (speakBtn) {
-                speakBtn.addEventListener('click', () => speakWord(targetSyl, 'pt-BR', 1.15, 0.92, speakBtn));
-                scheduleCardSpeech(() => speakWord(targetSyl, 'pt-BR', 1.15, 0.92, speakBtn), 300);
+                speakBtn.addEventListener('click', () => speakWord(targetSyl, 'pt-BR', 1.04, 0.84, speakBtn));
+                scheduleCardSpeech(() => speakWord(targetSyl, 'pt-BR', 1.04, 0.84, speakBtn), 300);
             }
 
             container.querySelectorAll('.syl-choice-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     if (Session.isTransitionLocked) return;
                     const chosen = btn.getAttribute('data-syl');
+                    speakWord(chosen, 'pt-BR', 1.04, 0.84);
                     if (chosen === targetSyl) {
                         this.registerSuccess();
                     } else {
@@ -2859,11 +2906,13 @@
 
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-2">
-                    <div class="flex items-center gap-3 mb-3">
-                        <span class="text-sm font-bold text-slate-600">Qual palavra rima com:</span>
-                        <button id="speakRhymeBtn" class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full font-bold text-xs flex items-center gap-1.5 hover:bg-indigo-200 transition-colors">
-                            <i class="fas fa-volume-up"></i> Ouvir
+                    <div class="flex flex-col items-center gap-2 mb-3">
+                        <button id="speakRhymeBtn" class="btn-speech-hero btn-speech-indigo">
+                            <i class="fas fa-volume-high text-xl"></i>
+                            <span>Ouvir Palavra</span>
+                            <span class="btn-speech-badge"><i class="fas fa-redo-alt text-[10px]"></i>Repetir</span>
                         </button>
+                        <span class="text-xs md:text-sm font-bold text-slate-500">Qual palavra rima com:</span>
                     </div>
 
                     <div class="text-3xl md:text-4xl font-black text-indigo-900 bg-indigo-50 border-2 border-indigo-300 px-8 py-4 rounded-3xl shadow-inner mb-6 tracking-wide">
@@ -2883,14 +2932,15 @@
 
             const speakBtn = document.getElementById('speakRhymeBtn');
             if (speakBtn) {
-                speakBtn.addEventListener('click', () => speakWord(baseWord, 'pt-BR', 1.15, 0.92, speakBtn));
-                scheduleCardSpeech(() => speakWord(baseWord, 'pt-BR', 1.15, 0.92, speakBtn), 300);
+                speakBtn.addEventListener('click', () => speakWord(baseWord, 'pt-BR', 1.04, 0.84, speakBtn));
+                scheduleCardSpeech(() => speakWord(baseWord, 'pt-BR', 1.04, 0.84, speakBtn), 300);
             }
 
             container.querySelectorAll('.rhyme-choice-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     if (Session.isTransitionLocked) return;
                     const chosen = btn.getAttribute('data-word');
+                    speakWord(chosen, 'pt-BR', 1.04, 0.84);
                     if (chosen === targetWord) {
                         this.registerSuccess();
                     } else {
@@ -2916,11 +2966,13 @@
 
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-2">
-                    <div class="flex items-center gap-3 mb-2">
-                        <span class="text-sm font-bold text-slate-600">${instructionText}</span>
-                        <button id="speakSentenceBtn" class="px-3.5 py-1.5 bg-emerald-600 text-white rounded-full font-bold text-xs flex items-center gap-1.5 hover:bg-emerald-700 shadow-sm transition-colors cursor-pointer">
-                            <i class="fas fa-volume-up"></i> ${listenBtnText}
+                    <div class="flex flex-col items-center gap-2 mb-3">
+                        <button id="speakSentenceBtn" class="btn-speech-hero btn-speech-emerald">
+                            <i class="fas fa-volume-high text-xl"></i>
+                            <span>${listenBtnText}</span>
+                            <span class="btn-speech-badge"><i class="fas fa-redo-alt text-[10px]"></i>${isEng ? 'Repeat' : 'Repetir'}</span>
                         </button>
+                        <span class="text-xs md:text-sm font-bold text-slate-500">${instructionText}</span>
                     </div>
 
                     <!-- Contexto da Frase Modelo com Alto Contraste -->
@@ -2943,7 +2995,7 @@
 
                     <div class="flex items-center gap-3 mt-4">
                         <button id="resetSentenceChipsBtn" class="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-200 transition-colors cursor-pointer">
-                            <i class="fas fa-undo"></i> ${resetBtnText}
+                            <i class="fas fa-undo mr-1"></i> ${resetBtnText}
                         </button>
                     </div>
                 </div>
@@ -2951,8 +3003,8 @@
 
             const speakBtn = document.getElementById('speakSentenceBtn');
             if (speakBtn) {
-                speakBtn.addEventListener('click', () => speakWord(sentence, lang, 1.1, 0.88, speakBtn));
-                scheduleCardSpeech(() => speakWord(sentence, lang, 1.1, 0.88, speakBtn), 400);
+                speakBtn.addEventListener('click', () => speakWord(sentence, lang, 1.04, 0.86, speakBtn));
+                scheduleCardSpeech(() => speakWord(sentence, lang, 1.04, 0.86, speakBtn), 400);
             }
 
             let assembled = [];
@@ -2977,7 +3029,7 @@
                     sound.init();
                     sound.playClick();
                     const chipVal = btn.getAttribute('data-chip');
-                    speakWord(chipVal, lang, 1.15, 0.90);
+                    speakWord(chipVal, lang, 1.04, 0.84);
                     assembled.push(chipVal);
                     btn.classList.add('opacity-40', 'pointer-events-none');
                     updateSlots();
@@ -2986,7 +3038,7 @@
                         const builtStr = assembled.join(' ');
                         const targetStr = parts.join(' ');
                         if (builtStr === targetStr || builtStr === sentence) {
-                            speakWord(sentence, lang, 1.1, 0.88);
+                            speakWord(sentence, lang, 1.04, 0.86);
                             this.registerSuccess();
                         } else {
                             sound.playWrong();
@@ -3024,11 +3076,13 @@
 
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-2">
-                    <div class="flex items-center gap-3 mb-3">
-                        <span class="text-sm font-bold text-slate-600">What is the opposite of:</span>
-                        <button id="speakOppositeBtn" class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-bold text-xs flex items-center gap-1.5 hover:bg-purple-200 transition-colors">
-                            <i class="fas fa-volume-up"></i> Listen
+                    <div class="flex flex-col items-center gap-2 mb-3">
+                        <button id="speakOppositeBtn" class="btn-speech-hero btn-speech-purple">
+                            <i class="fas fa-volume-high text-xl"></i>
+                            <span>Listen Word</span>
+                            <span class="btn-speech-badge"><i class="fas fa-redo-alt text-[10px]"></i>Repeat</span>
                         </button>
+                        <span class="text-xs md:text-sm font-bold text-slate-500">What is the opposite of:</span>
                     </div>
 
                     <div class="flex items-center gap-3 bg-purple-50 border-2 border-purple-300 px-8 py-4 rounded-3xl shadow-inner mb-6">
@@ -3049,15 +3103,15 @@
 
             const speakBtn = document.getElementById('speakOppositeBtn');
             if (speakBtn) {
-                speakBtn.addEventListener('click', () => speakWord(word, 'en-US', 1.15, 0.90, speakBtn));
-                scheduleCardSpeech(() => speakWord(word, 'en-US', 1.15, 0.90, speakBtn), 300);
+                speakBtn.addEventListener('click', () => speakWord(word, 'en-US', 1.04, 0.84, speakBtn));
+                scheduleCardSpeech(() => speakWord(word, 'en-US', 1.04, 0.84, speakBtn), 300);
             }
 
             container.querySelectorAll('.opposite-choice-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     if (Session.isTransitionLocked) return;
                     const chosen = btn.getAttribute('data-word');
-                    speakWord(chosen, 'en-US', 1.15, 0.90);
+                    speakWord(chosen, 'en-US', 1.04, 0.84);
                     if (chosen === target) {
                         this.registerSuccess();
                     } else {
