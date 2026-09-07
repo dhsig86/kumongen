@@ -1,0 +1,146 @@
+{
+  "total": 26,
+  "passed": 26,
+  "failed": 0,
+  "assertions": [
+    {
+      "status": "PASS",
+      "message": "index.html responde com status HTTP 200",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "Todos os 4 atalhos centrais (Matemática, Português, Inglês, Tablet) existem na Home",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "Botão do Boletim na Home verificado via motor de perfis",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "matematica.html responde com status HTTP 200",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "Elemento #a4-sheet (preview do caderno) existe em matematica.html",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "Botões [IMPRIMIR] e [BAIXAR PDF] presentes na barra lateral de Matemática",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "Função window.selectLevel(\"m10\") executada com sucesso",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "Folha A4 renderizou 16 exercícios de fração no nível M10",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "window.printSheet() dispara diálogo de impressão nativo sem lançar erros",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "portugues.html responde com status HTTP 200",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "Nível P8 (Frases com pauta) renderizado na folha com 8+ itens",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "Nível P4 (Palavras de 3 a 4 sílabas) renderizado com sucesso",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "ingles.html responde com status HTTP 200",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "Nível I7 (Opostos / Antonyms) renderizado com sucesso na folha A4",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "tablet.html responde com status HTTP 200",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "Elementos vitais do Tablet (Card de Foco, Teclado Touch, Mascote Jade, Botão Evolução) presentes",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "Questão interativa respondida e validada via teclado touch do TabletPlayer",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "Botão de evolução no cabeçalho do Tablet abre o Boletim (studentProfileManagerModal)",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "Navegação entre abas do Boletim (Métricas, 25 Níveis, Histórico) executada sem falhas",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "manifest.json acessível com HTTP 200",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "manifest.json possui name e pelo menos 3 ícones",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "sw.js acessível com HTTP 200",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "icon-192x192.png responde com HTTP 200",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "Mecanismo SafeStorage e LocalStorage operacional",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "Zero erros de console durante toda a navegação (encontrados: 0)",
+      "details": "[]"
+    },
+    {
+      "status": "PASS",
+      "message": "Zero falhas de rede (404/500) em assets locais (falhas: 0)",
+      "details": "[]"
+    }
+  ],
+  "consoleErrors": [],
+  "networkErrors": [],
+  "pageTimings": {
+    "index.html": 260,
+    "matematica.html": 105,
+    "portugues.html": 39,
+    "ingles.html": 44,
+    "tablet.html": 114
+  }
+}
