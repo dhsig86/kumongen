@@ -234,6 +234,9 @@ declare global {
             HapticEngine?: any;
             WakeLockEngine?: any;
             speakWord?: (word: string, lang?: string) => Promise<boolean>;
+            speakCurrentInstruction?: (userTriggered?: boolean) => void;
+            getSpokenInstructionForItem?: (item: any, level: any, subjectKey: string) => { text: string; lang: string };
+            shouldAutoNarrate?: () => boolean;
             testAudio?: (lang?: string) => void;
             showAudioDiagnosticsModal?: () => void;
             [key: string]: any;

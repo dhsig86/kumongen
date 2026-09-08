@@ -537,7 +537,12 @@
         <!-- Cabeçalho do Card (Instrução e Questão Atual) -->
         <div class="w-full flex items-center justify-between text-xs text-gray-500 font-semibold mb-2 px-2 flex-shrink-0">
             <span id="roundProgressText" class="bg-gray-100 px-3 py-1 rounded-xl text-blue-400 border border-gray-200 text-[11px] font-bold tracking-wide">Questão 1 de 10</span>
-            <span id="exerciseInstruction" class="text-gray-500 text-right truncate max-w-xs md:max-w-md text-[11px]">Resolva com atenção</span>
+            <div class="flex items-center gap-2">
+                <button id="repeatInstructionBtn" type="button" class="px-2.5 py-1 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95" title="Ouvir instrução falada novamente">
+                    <i class="fas fa-volume-up text-xs"></i> <span>Ouvir</span>
+                </button>
+                <span id="exerciseInstruction" class="text-gray-500 text-right truncate max-w-xs md:max-w-md text-[11px]">Resolva com atenção</span>
+            </div>
         </div>
 
         <!-- ESPAÇO DE TRABALHO RESPONSIVO (RETRATO: VERTICAL | PAISAGEM: 2 COLUNAS) -->

@@ -297,9 +297,15 @@
         }
     }
 
-    // Autoplay desativado para cumprir regras de navegadores modernos e evitar colisão de cliques
+    // Agendamento seguro de fala de card com cancelamento prévio para evitar sobreposições
     function scheduleCardSpeech(fn, delay = 400) {
         clearCardAutoplay();
+        _cardAutoplayTimer = setTimeout(() => {
+            _cardAutoplayTimer = null;
+            if (typeof fn === 'function') {
+                fn();
+            }
+        }, delay);
     }
 
     function loadAvailableVoices() {
@@ -615,6 +621,166 @@
             console.warn('[KumonGen Speech] SpeechSynthesis error:', e);
             if (btnEl) btnEl.classList.remove('ring-4', 'ring-emerald-400/80', 'animate-pulse');
         }
+    }
+
+    // ------------------------------------------------------------
+    // 2.1 MOTOR DE INSTRUÇÕES NARRADAS PARA EDUCAÇÃO INFANTIL (4 a 6 ANOS)
+    // ------------------------------------------------------------
+    /**
+     * Retorna o texto falado e o idioma apropriado para cada tipo de questão dos 25 níveis Kumon
+     */
+    function getSpokenInstructionForItem(item, level, subjectKey) {
+        if (!item) return { text: 'Resolva a questão com atenção.', lang: 'pt-BR' };
+
+        const isEnglish = subjectKey === 'ingles';
+        let lang = isEnglish ? 'en-US' : 'pt-BR';
+
+        switch (item.type) {
+            case 'quantity':
+                return {
+                    text: 'Conte as figuras e digite o número.',
+                    lang: 'pt-BR'
+                };
+
+            case 'trace':
+                const char = item.char || item.letter || '';
+                return {
+                    text: char ? `Trace com o dedo a letra ${char}.` : 'Trace a letra com o dedo no quadro.',
+                    lang: 'pt-BR'
+                };
+
+            case 'syllable':
+                if (item.targetSyl) {
+                    return {
+                        text: `Toque na sílaba ${item.targetSyl}.`,
+                        lang: 'pt-BR'
+                    };
+                }
+                const wordMissing = item.word || item.target || '';
+                if (wordMissing) {
+                    return {
+                        text: `Complete a palavra ${wordMissing}. Qual sílaba está faltando?`,
+                        lang: 'pt-BR'
+                    };
+                }
+                return {
+                    text: 'Toque na sílaba correta para completar a palavra.',
+                    lang: 'pt-BR'
+                };
+
+            case 'word':
+                if (isEnglish) {
+                    const engWord = item.word || '';
+                    return {
+                        text: `Qual é a palavra correta? ${engWord}`,
+                        lang: 'pt-BR'
+                    };
+                }
+                return {
+                    text: `Monte a palavra: ${item.word || ''}.`,
+                    lang: 'pt-BR'
+                };
+
+            case 'math':
+                const op1 = item.operand1;
+                const op2 = item.operand2;
+                const op = item.operator;
+                if (op === '+') {
+                    return { text: `Quanto é ${op1} mais ${op2}?`, lang: 'pt-BR' };
+                } else if (op === '-') {
+                    return { text: `Quanto é ${op1} menos ${op2}?`, lang: 'pt-BR' };
+                } else if (op === '×' || op === '*') {
+                    return { text: `Quanto é ${op1} vezes ${op2}?`, lang: 'pt-BR' };
+                } else if (op === '÷' || op === '/') {
+                    return { text: `Quanto é ${op1} dividido por ${op2}?`, lang: 'pt-BR' };
+                }
+                return { text: `Resolva a operação: ${op1} ${op} ${op2}.`, lang: 'pt-BR' };
+
+            case 'sequence':
+                return { text: 'Qual número completa a sequência?', lang: 'pt-BR' };
+
+            case 'neighbors':
+                const baseNum = item.center || item.number || item.base || '';
+                return { text: baseNum ? `Qual número vem antes ou depois de ${baseNum}?` : 'Descubra os números vizinhos.', lang: 'pt-BR' };
+
+            case 'tens':
+                return { text: 'Quantas dezenas e unidades formam o número?', lang: 'pt-BR' };
+
+            case 'compare':
+                return { text: 'Compare os números e escolha o sinal correto.', lang: 'pt-BR' };
+
+            case 'fraction':
+                return { text: 'Qual fração representa a parte pintada?', lang: 'pt-BR' };
+
+            case 'rhyme':
+                return { text: `Qual palavra rima com ${item.word || ''}?`, lang: 'pt-BR' };
+
+            case 'sentence':
+                if (isEnglish) {
+                    return { text: 'Organize as palavras em inglês para formar a frase.', lang: 'pt-BR' };
+                }
+                return { text: 'Organize as palavras para formar a frase.', lang: 'pt-BR' };
+
+            case 'opposite':
+                return { text: `Qual é o oposto da palavra ${item.word || ''}?`, lang: 'pt-BR' };
+
+            default:
+                const fallbackText = (level && (level.instruction || level.instructions))
+                    ? (level.instruction || level.instructions)
+                    : 'Resolva a questão com atenção.';
+                return { text: fallbackText, lang: isEnglish ? 'en-US' : 'pt-BR' };
+        }
+    }
+
+    /**
+     * Determina se o enunciado deve ser narrado automaticamente para o aluno atual
+     */
+    function shouldAutoNarrate() {
+        if (sound && sound.isMuted) return false;
+
+        // Preferência explícita no storage (se o responsável ativou ou desativou)
+        const pref = window.SafeStorage ? window.SafeStorage.getItem('kumongen_auto_narrate_instructions') : null;
+        if (pref === 'false') return false;
+        if (pref === 'true') return true;
+
+        // Padrão pedagógico: ativado para faixas etárias de 4 a 6/7 anos
+        const activeStudent = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getActive === 'function')
+            ? window.StudentProfileEngine.getActive()
+            : null;
+
+        const ageTier = activeStudent ? activeStudent.ageTier : 'age_6_7';
+        return ageTier === 'age_4_5' || ageTier === 'age_6_7';
+    }
+
+    /**
+     * Dispara a fala da instrução da questão atual e anima os controles
+     */
+    function speakCurrentInstruction(userTriggered = false) {
+        if (!userTriggered && !shouldAutoNarrate()) return;
+        if (sound && sound.isMuted && !userTriggered) return;
+
+        if (!Session.items || !Session.items[Session.currentIndex]) return;
+        const item = Session.items[Session.currentIndex];
+
+        const sub = window.KumonSubjects[Session.subjectKey];
+        const level = sub && sub.levels ? sub.levels.find(l => l.id === Session.levelId) : null;
+        const spoken = getSpokenInstructionForItem(item, level, Session.subjectKey);
+
+        const repeatBtn = document.getElementById('repeatInstructionBtn');
+        if (repeatBtn) {
+            repeatBtn.classList.add('scale-105', 'bg-blue-100');
+            setTimeout(() => {
+                repeatBtn.classList.remove('scale-105', 'bg-blue-100');
+            }, 600);
+        }
+
+        // Atualiza o balão de fala do mascote companheiro
+        const mascotTextEl = document.getElementById('mascotSpeechText');
+        if (mascotTextEl) {
+            mascotTextEl.innerText = spoken.text;
+        }
+
+        speakWord(spoken.text, spoken.lang, 1.0, 0.86, repeatBtn);
     }
 
     // ------------------------------------------------------------
@@ -2003,6 +2169,14 @@
                 openPickerBtn.addEventListener('click', () => this.showLevelPickerModal());
             }
 
+            // Botão Repetir Instrução Falada (Ouvir)
+            const repeatBtn = document.getElementById('repeatInstructionBtn');
+            if (repeatBtn) {
+                repeatBtn.addEventListener('click', () => {
+                    speakCurrentInstruction(true);
+                });
+            }
+
             const closePickerBtn = document.getElementById('closeLevelPickerBtn');
             if (closePickerBtn) {
                 closePickerBtn.addEventListener('click', () => this.closeLevelPickerModal());
@@ -2566,6 +2740,11 @@
                 default:
                     focusContainer.innerHTML = `<div class="p-8 text-center text-slate-400">Exercício em preparação.</div>`;
             }
+
+            // Agendamento de instrução falada amigável para educação infantil (4 a 6 anos)
+            scheduleCardSpeech(() => {
+                speakCurrentInstruction(false);
+            }, 350);
         },
 
         // Exemplo guiado Kumon antes de começar
@@ -3634,6 +3813,13 @@
             if (Session.isTransitionLocked) return;
             Session.isTransitionLocked = true;
 
+            clearCardAutoplay();
+            if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                try {
+                    window.speechSynthesis.cancel();
+                } catch (e) {}
+            }
+
             sound.playSuccess();
             this.pulseSuccessCard();
 
@@ -3677,6 +3863,13 @@
         },
 
         registerWrong() {
+            clearCardAutoplay();
+            if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                try {
+                    window.speechSynthesis.cancel();
+                } catch (e) {}
+            }
+
             sound.playWrong();
             Session.currentAttempts++;
             Gamification.resetStreak();
@@ -4206,6 +4399,9 @@
     TabletPlayer.getAudioDiagnosticInfo = getAudioDiagnosticInfo;
     TabletPlayer.testAudio = testAudio;
     TabletPlayer.speakWord = speakWord;
+    TabletPlayer.speakCurrentInstruction = speakCurrentInstruction;
+    TabletPlayer.getSpokenInstructionForItem = getSpokenInstructionForItem;
+    TabletPlayer.shouldAutoNarrate = shouldAutoNarrate;
     TabletPlayer.renderCard = function() {
         Session.isTransitionLocked = false;
         return this.renderCurrentQuestion();
