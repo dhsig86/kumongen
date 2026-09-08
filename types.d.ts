@@ -180,6 +180,34 @@ export interface TabletSessionState {
     gauntletCycles: number;
     initialItemsCount: number;
     gauntletItemsSolved: number;
+    isReviewMode?: boolean;
+}
+
+/**
+ * Item persistido no Caderno de Revisão Inteligente (Spaced Repetition de Erros Recentes)
+ */
+export interface ReviewNotebookItem {
+    id: string;
+    subjectKey: SubjectKey | string;
+    levelId: string;
+    item: ExerciseItem;
+    addedAt: string;
+    attempts: number;
+}
+
+export interface ReviewNotebookManagerInterface {
+    STORAGE_PREFIX: string;
+    getStorageKey: () => string;
+    getItemCanonicalKey: (item: any) => string;
+    getItems: () => ReviewNotebookItem[];
+    saveItems: (items: ReviewNotebookItem[]) => void;
+    addItem: (item: any, subjectKey?: string, levelId?: string) => void;
+    removeItem: (item: any) => void;
+    count: () => number;
+    updateHeaderUI: () => void;
+    showModal: () => void;
+    closeModal: () => void;
+    startReviewSession: () => void;
 }
 
 /**
@@ -239,6 +267,7 @@ declare global {
             shouldAutoNarrate?: () => boolean;
             testAudio?: (lang?: string) => void;
             showAudioDiagnosticsModal?: () => void;
+            ReviewNotebook?: ReviewNotebookManagerInterface;
             [key: string]: any;
         };
         SafeStorage: SafeStorageInterface;

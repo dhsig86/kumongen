@@ -1181,7 +1181,219 @@
         isGauntlet: false,
         gauntletCycles: 0,
         initialItemsCount: 10,
-        gauntletItemsSolved: 0
+        gauntletItemsSolved: 0,
+        isReviewMode: false
+    };
+
+    // ============================================================
+    // 3.1 MOTOR DO CADERNO DE REVISÃO (SPACED REPETITION DE ERROS RECENTES)
+    // ============================================================
+    const ReviewNotebookManager = {
+        STORAGE_PREFIX: 'kumongen_review_notebook_',
+
+        getActiveStudentId() {
+            try {
+                if (window.StudentProfileEngine && typeof window.StudentProfileEngine.getActive === 'function') {
+                    const s = window.StudentProfileEngine.getActive();
+                    if (s && s.id) return s.id;
+                }
+            } catch (e) {}
+            return 'default';
+        },
+
+        getItemCanonicalKey(item) {
+            if (!item) return '';
+            if (item.type === 'math') return `math:${item.operand1}${item.operator}${item.operand2}`;
+            if (item.type === 'quantity') return `qty:${item.value}:${item.prompt || ''}`;
+            if (item.type === 'trace') return `trace:${item.char || item.letter || ''}`;
+            if (item.type === 'syllable') return `syl:${item.word || item.target || ''}:${item.targetSyl || item.missingSyllable || ''}`;
+            if (item.type === 'word') return `word:${item.word || ''}`;
+            if (item.type === 'fraction') return `frac:${item.numerator || ''}/${item.denominator || ''}`;
+            if (item.type === 'rhyme') return `rhyme:${item.word || ''}`;
+            if (item.type === 'sentence') return `sent:${item.sentence || ''}`;
+            if (item.type === 'opposite') return `opp:${item.word || ''}`;
+            if (item.type === 'sequence') return `seq:${(item.sequence || []).join(',')}`;
+            return JSON.stringify(item);
+        },
+
+        getItems(studentId = null) {
+            const sid = studentId || this.getActiveStudentId();
+            const key = this.STORAGE_PREFIX + sid;
+            try {
+                const raw = window.SafeStorage ? window.SafeStorage.getItem(key) : localStorage.getItem(key);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed)) return parsed;
+                }
+            } catch (e) {}
+            return [];
+        },
+
+        saveItems(items, studentId = null) {
+            const sid = studentId || this.getActiveStudentId();
+            const key = this.STORAGE_PREFIX + sid;
+            try {
+                const str = JSON.stringify(items || []);
+                if (window.SafeStorage) window.SafeStorage.setItem(key, str);
+                else localStorage.setItem(key, str);
+            } catch (e) {
+                console.warn('[ReviewNotebook] Erro ao salvar itens:', e);
+            }
+            this.updateHeaderUI();
+        },
+
+        addItem(item, subjectKey, levelId) {
+            if (!item) return;
+            const items = this.getItems();
+            const cKey = this.getItemCanonicalKey(item);
+            const idx = items.findIndex(it => it.id === cKey);
+
+            if (idx >= 0) {
+                items[idx].attempts = (items[idx].attempts || 1) + 1;
+                items[idx].lastFailedAt = new Date().toISOString();
+            } else {
+                try {
+                    const clone = JSON.parse(JSON.stringify(item));
+                    items.push({
+                        id: cKey,
+                        item: clone,
+                        subjectKey: subjectKey || Session.subjectKey || 'matematica',
+                        levelId: levelId || Session.levelId || 'm1',
+                        addedAt: new Date().toISOString(),
+                        lastFailedAt: new Date().toISOString(),
+                        attempts: 1
+                    });
+                } catch (e) {
+                    console.warn('[ReviewNotebook] Falha ao clonar item:', e);
+                }
+            }
+            this.saveItems(items);
+        },
+
+        removeItem(item) {
+            if (!item) return;
+            const items = this.getItems();
+            const cKey = this.getItemCanonicalKey(item);
+            const filtered = items.filter(it => it.id !== cKey);
+            if (filtered.length !== items.length) {
+                this.saveItems(filtered);
+            }
+        },
+
+        count(studentId = null) {
+            return this.getItems(studentId).length;
+        },
+
+        updateHeaderUI() {
+            const btn = document.getElementById('reviewNotebookBtn');
+            const badge = document.getElementById('reviewCountBadge');
+            const c = this.count();
+            if (btn) {
+                if (c > 0) {
+                    btn.classList.remove('hidden');
+                    if (badge) badge.innerText = String(c);
+                } else {
+                    btn.classList.add('hidden');
+                }
+            }
+        },
+
+        showModal() {
+            const modal = document.getElementById('reviewNotebookModal');
+            if (!modal) return;
+            const items = this.getItems();
+            const count = items.length;
+            const m = MascotEngine.getCurrent();
+
+            const mathCount = items.filter(it => it.subjectKey === 'matematica').length;
+            const ptCount = items.filter(it => it.subjectKey === 'portugues').length;
+            const engCount = items.filter(it => it.subjectKey === 'ingles').length;
+
+            modal.innerHTML = `
+                <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl text-center border border-amber-300 relative modal-enter max-h-[90vh] overflow-y-auto">
+                    <div class="flex items-center justify-center gap-3 mb-3">
+                        <div class="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr ${m.ringGradient} shadow-sm flex-shrink-0">
+                            <img src="${m.avatar}" alt="${m.name}" class="w-full h-full rounded-full object-cover border-2 border-white shadow-inner">
+                        </div>
+                        <div class="w-14 h-14 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-2xl shadow-inner flex-shrink-0">
+                            <i class="fas fa-book-reader text-amber-500"></i>
+                        </div>
+                    </div>
+
+                    <span class="inline-block bg-amber-500/10 text-amber-800 border border-amber-300/60 text-[11px] font-black uppercase tracking-wider px-3 py-0.5 rounded-full mb-1">
+                        Caderno de Revisão Inteligente
+                    </span>
+                    <h3 class="text-xl md:text-2xl font-black text-slate-900 mt-1">Superação de Desafios</h3>
+                    <p class="text-xs md:text-sm text-slate-600 mt-2 leading-relaxed">
+                        Você tem <strong class="text-amber-600 font-black">${count} ${count === 1 ? 'exercício pendente' : 'exercícios pendentes'}</strong> para dominar. Cada acerto remove o item do caderno e rende estrelas extras!
+                    </p>
+
+                    <div class="my-4 grid grid-cols-3 gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs">
+                        <div class="flex flex-col items-center">
+                            <span class="text-blue-500 font-black text-lg">${mathCount}</span>
+                            <span class="text-slate-500 text-[10px] font-bold">Matemática</span>
+                        </div>
+                        <div class="flex flex-col items-center border-x border-slate-200">
+                            <span class="text-emerald-500 font-black text-lg">${ptCount}</span>
+                            <span class="text-slate-500 text-[10px] font-bold">Português</span>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <span class="text-indigo-500 font-black text-lg">${engCount}</span>
+                            <span class="text-slate-500 text-[10px] font-bold">Inglês</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-2 mt-4">
+                        <button type="button" id="startReviewActionBtn" class="w-full btn-amber-action text-white font-black text-sm py-3.5 px-6 rounded-2xl shadow-lg transition-all transform hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fas fa-play text-xs"></i> <span>Praticar Caderno Agora</span>
+                        </button>
+                        <button type="button" id="closeReviewModalBtn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 px-4 rounded-xl transition-all cursor-pointer">
+                            Praticar mais tarde
+                        </button>
+                    </div>
+                </div>
+            `;
+            modal.style.display = 'flex';
+
+            const startBtn = document.getElementById('startReviewActionBtn');
+            if (startBtn) {
+                startBtn.onclick = () => {
+                    this.closeModal();
+                    this.startReviewSession();
+                };
+            }
+            const closeBtn = document.getElementById('closeReviewModalBtn');
+            if (closeBtn) {
+                closeBtn.onclick = () => this.closeModal();
+            }
+        },
+
+        closeModal() {
+            const modal = document.getElementById('reviewNotebookModal');
+            if (modal) modal.style.display = 'none';
+        },
+
+        startReviewSession() {
+            const items = this.getItems();
+            if (!items.length) return;
+
+            Session.isReviewMode = true;
+            Session.isGauntletPhase = false;
+            Session.isGauntlet = false;
+            Session.items = items.map(it => it.item);
+            Session.currentIndex = 0;
+            Session.currentInput = '';
+            Session.currentAttempts = 0;
+            Session.roundCorrectFirstAttempt = 0;
+            Session.workedExampleDismissed = true;
+            Session.missedItemsQueue = [];
+            Session.initialItemsCount = Session.items.length;
+            Session.targetSctSeconds = Math.max(180, Session.items.length * 35);
+
+            sound.playGauntletTransition();
+            TabletPlayer.startTimer();
+            TabletPlayer.renderCurrentQuestion();
+        }
     };
 
     // ============================================================
@@ -2125,6 +2337,7 @@
             this.bindKeypad();
             this.loadInitialState();
             this.updateGamificationHeader();
+            ReviewNotebookManager.updateHeaderUI();
         },
 
         bindTopNav() {
@@ -2142,6 +2355,12 @@
             const newTaskBtn = document.getElementById('newTaskBtn');
             if (newTaskBtn) {
                 newTaskBtn.addEventListener('click', () => TaskWizard.show());
+            }
+
+            // Botão Caderno de Revisão (Spaced Repetition)
+            const reviewBtn = document.getElementById('reviewNotebookBtn');
+            if (reviewBtn) {
+                reviewBtn.addEventListener('click', () => ReviewNotebookManager.showModal());
             }
 
             // Seletor de matéria
@@ -2348,6 +2567,7 @@
             }
 
             this.updateGamificationHeader();
+            ReviewNotebookManager.updateHeaderUI();
         },
 
         loadInitialState() {
@@ -2647,20 +2867,24 @@
             const sub = window.KumonSubjects[Session.subjectKey];
             const level = sub && sub.levels ? sub.levels.find(l => l.id === Session.levelId) : null;
 
-            // Barra de progresso superior com destaque para modo Gauntlet
+            // Barra de progresso superior com destaque para modo Gauntlet e Caderno de Revisão
             const progressPercent = Math.round((Session.currentIndex / total) * 100);
             const progressBar = document.getElementById('roundProgressBar');
             const progressText = document.getElementById('roundProgressText');
             if (progressBar) {
                 progressBar.style.width = `${progressPercent}%`;
-                if (Session.isGauntletPhase) {
+                if (Session.isReviewMode) {
+                    progressBar.className = 'h-full bg-gradient-to-r from-amber-500 to-yellow-500 rounded-full transition-all duration-300 shadow';
+                } else if (Session.isGauntletPhase) {
                     progressBar.className = 'h-full bg-gradient-to-r from-amber-400 to-yellow-500 rounded-full transition-all duration-300 shadow';
                 } else {
                     progressBar.className = 'h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-300 shadow-sm';
                 }
             }
             if (progressText) {
-                if (Session.isGauntletPhase) {
+                if (Session.isReviewMode) {
+                    progressText.innerHTML = `<span class="text-amber-500 font-black tracking-wide"><i class="fas fa-book-reader"></i> Caderno de Revisão: ${Session.currentIndex + 1} de ${total}</span>`;
+                } else if (Session.isGauntletPhase) {
                     progressText.innerHTML = `<span class="text-amber-400 font-black tracking-wide"><i class="fas fa-bullseye"></i> Modo Maestria: ${Session.currentIndex + 1} de ${total}</span>`;
                 } else {
                     progressText.innerText = `Questão ${Session.currentIndex + 1} de ${total}`;
@@ -3834,6 +4058,12 @@
                 Session.gauntletItemsSolved++;
             }
 
+            // Se estiver no Modo Revisão, remove o exercício superado do Caderno de Revisão
+            if (Session.isReviewMode) {
+                const currentItem = Session.items[Session.currentIndex];
+                ReviewNotebookManager.removeItem(currentItem);
+            }
+
             const currentStreak = (Gamification.get && Gamification.get().streak) || 1;
             MascotEngine.onCorrect(currentStreak);
             if (currentStreak >= 3) {
@@ -3890,6 +4120,9 @@
                 } catch (e) {
                     console.warn('Erro ao enfileirar no Gauntlet Kumon:', e);
                 }
+
+                // Persiste no Caderno de Revisão Inteligente do Aluno (Spaced Repetition)
+                ReviewNotebookManager.addItem(currentItem, Session.subjectKey, Session.levelId);
             }
 
             const msg = document.getElementById('cardFeedbackMsg');
@@ -4114,6 +4347,11 @@
                 }
             } catch (e) {
                 console.warn('Erro ao integrar histórico analítico com KumonGen', e);
+            }
+
+            if (Session.isReviewMode) {
+                Session.isReviewMode = false;
+                ReviewNotebookManager.updateHeaderUI();
             }
 
             this.updateGamificationHeader();
@@ -4402,6 +4640,7 @@
     TabletPlayer.speakCurrentInstruction = speakCurrentInstruction;
     TabletPlayer.getSpokenInstructionForItem = getSpokenInstructionForItem;
     TabletPlayer.shouldAutoNarrate = shouldAutoNarrate;
+    TabletPlayer.ReviewNotebook = ReviewNotebookManager;
     TabletPlayer.renderCard = function() {
         Session.isTransitionLocked = false;
         return this.renderCurrentQuestion();

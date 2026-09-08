@@ -45,6 +45,18 @@
             animation: modalEnter 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .opacity-30 { opacity: 0.3; }
+        .btn-amber-action {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4) !important;
+        }
+        .btn-amber-action:hover {
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important;
+        }
+        .bg-amber-badge {
+            background-color: #f59e0b !important;
+            color: #ffffff !important;
+        }
 
         /* Otimizações táteis para iPad e tablets */
         * {
@@ -360,6 +372,11 @@
         <!-- Injetado dinamicamente via JS -->
     </div>
 
+    <!-- MODAL: CADERNO DE REVISÃO (SPACED REPETITION DE ERROS RECENTES) -->
+    <div id="reviewNotebookModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:56;background:var(--modal-overlay);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:1rem;overflow-y:auto">
+        <!-- Injetado dinamicamente via JS -->
+    </div>
+
     <!-- MODAL: RODADA CONCLUÍDA & EMISSÃO DE CERTIFICADO -->
     <div id="roundFinishedModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:40;background:var(--modal-overlay);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:1rem">
         <!-- Injetado dinamicamente via JS -->
@@ -452,6 +469,13 @@
             <button type="button" id="newTaskBtn" class="bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-600 text-xs font-bold rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95" title="Configurar nova tarefa">
                 <i class="fas fa-plus-circle text-sm" style="color: var(--accent);"></i>
                 <span class="hidden sm:inline">Nova Tarefa</span>
+            </button>
+
+            <!-- Botão Caderno de Revisão (Erros Recentes) -->
+            <button type="button" id="reviewNotebookBtn" class="hidden bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-800 text-xs font-black rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95" title="Abrir Caderno de Revisão com desafios pendentes">
+                <i class="fas fa-book-reader text-sm text-amber-500"></i>
+                <span class="hidden sm:inline">Revisão</span>
+                <span id="reviewCountBadge" class="bg-amber-badge text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">0</span>
             </button>
         </div>
 
