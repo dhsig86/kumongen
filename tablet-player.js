@@ -2186,6 +2186,9 @@
 
         close() {
             if (this.modal) this.modal.style.display = 'none';
+            try {
+                (window.SafeStorage || localStorage).setItem('kumongen-wizard-done', 'true');
+            } catch (e) {}
         },
 
         renderStep1() {

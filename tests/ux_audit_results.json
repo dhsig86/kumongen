@@ -1,16 +1,16 @@
 {
   "metadata": {
     "title": "KumonGen UX/UI Audit Results",
-    "generatedAt": "2026-09-07T11:49:55.017Z",
+    "generatedAt": "2026-09-08T16:30:23.634Z",
     "viewportsTested": 6,
     "pagesTested": 5,
     "scenariosTested": 11
   },
   "summary": {
-    "total": 90,
-    "passed": 90,
+    "total": 94,
+    "passed": 94,
     "failed": 0,
-    "warnings": 2,
+    "warnings": 0,
     "passRate": "100.0%"
   },
   "bugs": [],
@@ -178,6 +178,10 @@
     },
     {
       "status": "PASS",
+      "message": "[Mobile Retrato (iPhone 12)] Task Wizard não excede largura do viewport"
+    },
+    {
+      "status": "PASS",
       "message": "[Mobile Retrato (iPhone 12)] Level Picker não excede largura do viewport"
     },
     {
@@ -313,9 +317,8 @@
       "message": "[tablet.html] <html lang=\"pt-BR\"> presente"
     },
     {
-      "status": "WARN",
-      "message": "[tablet.html] 1 botão(ões) sem texto/aria-label/title",
-      "details": ""
+      "status": "PASS",
+      "message": "[tablet.html] Todos os botões acessíveis (com texto ou title)"
     },
     {
       "status": "PASS",
@@ -382,9 +385,12 @@
       "message": "[Tablet Retrato] Teclado virtual visível na carga inicial (exercício numérico M1)"
     },
     {
-      "status": "WARN",
-      "message": "[Tablet] #activeAnswerBox não renderizado — exercício pode ser de tipo seleção/arrasto",
-      "details": ""
+      "status": "PASS",
+      "message": "[Tablet] Dígito \"5\" registrado no answer box"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet] Backspace removeu dígito do answer box"
     }
   ]
 }

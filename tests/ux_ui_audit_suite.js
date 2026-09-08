@@ -352,6 +352,29 @@ async function testModals(page, baseUrl) {
         await page.goto(`${baseUrl}/tablet.html`, { waitUntil: 'networkidle' });
         await page.waitForTimeout(600);
 
+        // ── Task Wizard Modal (se ativo na primeira carga) ──
+        const isWizardVisible = await page.evaluate(() => {
+            const wm = document.getElementById('taskWizardModal');
+            return wm && wm.style.display === 'flex';
+        });
+        if (isWizardVisible) {
+            const wizardBox = await getBoundingBox(page, '#taskWizardModal > div');
+            if (wizardBox) {
+                assert(wizardBox.width <= vp.width + 5,
+                    `[${vp.label}] Task Wizard não excede largura do viewport`,
+                    `Width: ${wizardBox.width.toFixed(0)}`
+                );
+            }
+            const wizardClose = await page.$('#wizardCloseBtn1');
+            if (wizardClose) {
+                await wizardClose.click();
+                await page.waitForTimeout(300);
+            } else {
+                await page.keyboard.press('Escape');
+                await page.waitForTimeout(300);
+            }
+        }
+
         // ── Level Picker Modal ──
         const levelBtn = await page.$('#openLevelPickerBtn');
         if (levelBtn) {
@@ -680,8 +703,17 @@ async function testTabletKeypadInteraction(page, baseUrl) {
     console.log('\n[CENÁRIO 11] Interação com Teclado Virtual no Tablet');
 
     await page.setViewportSize({ width: 768, height: 1024 });
-    await page.goto(`${baseUrl}/tablet.html`, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(1500); // Esperar inicialização completa do TabletPlayer
+    await page.goto(`${baseUrl}/tablet.html?subject=matematica&level=m1`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(800);
+    await page.evaluate(() => {
+        const dismissBtn = document.getElementById('dismissExampleBtn');
+        if (dismissBtn) {
+            dismissBtn.click();
+        }
+        const tm = document.getElementById('taskWizardModal');
+        if (tm) tm.style.display = 'none';
+    });
+    await page.waitForTimeout(500);
 
     // Verificar que teclado está visível (exercício padrão é M1 que é numérico)
     const keypadVisible = await page.evaluate(() => {
