@@ -370,6 +370,11 @@
         <!-- Injetado dinamicamente via JS -->
     </div>
 
+    <!-- MODAL: DIAGNÓSTICO E TESTE DE ÁUDIO & VOZ -->
+    <div id="audioDiagModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:70;background:var(--modal-overlay);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:1rem">
+        <!-- Injetado dinamicamente via JS -->
+    </div>
+
     <!-- MODAL: ESCOLHA DO MASCOTE COMPANHEIRO -->
     <div id="mascotPickerModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:45;background:var(--modal-overlay);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:1rem">
         <!-- Injetado dinamicamente via JS -->
@@ -510,8 +515,13 @@
                 <span class="hidden sm:inline font-black">Instalar App</span>
             </button>
 
+            <!-- Botão de Diagnóstico de Som -->
+            <button id="soundDiagBtn" class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors cursor-pointer" title="Diagnóstico e Teste de Áudio">
+                <i class="fas fa-headphones text-sm"></i>
+            </button>
+
             <!-- Botão de Som Mudo / Ativo -->
-            <button id="soundToggleBtn" class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors" title="Alternar som">
+            <button id="soundToggleBtn" class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors cursor-pointer" title="Alternar som">
                 <i class="fas fa-volume-up text-sm"></i>
             </button>
         </div>

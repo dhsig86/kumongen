@@ -283,12 +283,11 @@
 
     // ------------------------------------------------------------
     // ------------------------------------------------------------
-    // Gerenciador de Síntese de Voz (Web Speech API) — Kumon Speech Engine v4
+    // Gerenciador de Síntese de Voz (Web Speech API) — Kumon Speech Engine v5 (Definitivo)
     // ------------------------------------------------------------
     let _cachedVoices = [];
     const _utterancePool = new Set(); // Previne Garbage Collection prematuro de utterances (Chromium bug)
     let _speechWatchdogTimer = null;
-    let _activeSpeechRequestId = 0;
     let _cardAutoplayTimer = null;
 
     function clearCardAutoplay() {
@@ -298,12 +297,9 @@
         }
     }
 
+    // Autoplay desativado para cumprir regras de navegadores modernos e evitar colisão de cliques
     function scheduleCardSpeech(fn, delay = 400) {
         clearCardAutoplay();
-        _cardAutoplayTimer = setTimeout(() => {
-            _cardAutoplayTimer = null;
-            fn();
-        }, delay);
     }
 
     function loadAvailableVoices() {
@@ -317,6 +313,7 @@
                 _cachedVoices = [];
             }
         }
+        return _cachedVoices;
     }
 
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -328,41 +325,46 @@
         }
     }
 
+    function isVoiceNativeToLang(voice, lang) {
+        if (!voice || !voice.lang) return false;
+        const prefix = (lang || '').toLowerCase().split('-')[0];
+        return (voice.lang || '').toLowerCase().replace('_', '-').startsWith(prefix);
+    }
+
     function findBestVoice(lang = 'pt-BR') {
-        if (!_cachedVoices.length) loadAvailableVoices();
-        if (!_cachedVoices.length) return null;
+        const voices = loadAvailableVoices();
+        if (!voices || !voices.length) return null;
 
         const target = (lang || 'pt-BR').toLowerCase().replace('_', '-');
         const langPrefix = target.split('-')[0];
 
-        // Filtra todas as vozes compatíveis com o idioma
-        const matchingVoices = _cachedVoices.filter(v => {
+        // 1. Filtra vozes compatíveis com o idioma
+        const matchingVoices = voices.filter(v => {
             const vLang = (v.lang || '').toLowerCase().replace('_', '-');
             return vLang === target || vLang.startsWith(langPrefix);
         });
 
-        if (!matchingVoices.length) {
-            const defaultVoice = _cachedVoices.find(v => v.default);
-            if (defaultVoice && (defaultVoice.lang || '').toLowerCase().startsWith(langPrefix)) {
-                return defaultVoice;
-            }
-            return null;
+        if (matchingVoices.length > 0) {
+            // Preferência pedagógica por vozes claras e acolhedoras para crianças
+            const preferredRegex = langPrefix === 'pt'
+                ? /maria|francisca|google|natural|neural|online|leticia|helena|vitoria|fabiola/i
+                : /zira|jenny|google|natural|neural|online|samantha|aria|karen/i;
+
+            const premiumVoice = matchingVoices.find(v => preferredRegex.test(v.name));
+            if (premiumVoice) return premiumVoice;
+
+            const exactMatch = matchingVoices.find(v => (v.lang || '').toLowerCase().replace('_', '-') === target);
+            if (exactMatch) return exactMatch;
+
+            return matchingVoices[0];
         }
 
-        // 1. Preferência pedagógica por vozes claras, naturais e acolhedoras para crianças (ex: Maria, Francisca, Google, Zira, Jenny)
-        const preferredRegex = langPrefix === 'pt'
-            ? /maria|francisca|google|natural|neural|online|leticia|helena|vitoria|fabiola/i
-            : /zira|jenny|google|natural|neural|online|samantha|aria|karen/i;
-
-        const premiumVoice = matchingVoices.find(v => preferredRegex.test(v.name));
-        if (premiumVoice) return premiumVoice;
-
-        // 2. Voz que case exatamente com o dialeto (ex: pt-BR sobre pt-PT)
-        const exactMatch = matchingVoices.find(v => (v.lang || '').toLowerCase().replace('_', '-') === target);
-        if (exactMatch) return exactMatch;
-
-        // 3. Primeira voz do idioma
-        return matchingVoices[0];
+        // 2. REGRA DE OURO ANTI-TRAVAMENTO (Never-Null):
+        // Se o sistema não tiver voz do idioma solicitado (ex: inglês em Windows pt-BR padrão),
+        // NUNCA retorne null se houver vozes instaladas. Retorna a voz padrão do sistema para evitar
+        // o bug crítico de congelamento da fila do Chromium!
+        const defaultVoice = voices.find(v => v.default) || voices[0];
+        return defaultVoice || null;
     }
 
     // Mapeamento fonético claro para alfabeto em Português (P1)
@@ -377,7 +379,6 @@
     };
 
     // Mapeamento fonético com tonicidade explícita para sílabas isoladas (P2, P3, P4, P5, P6)
-    // Garante que o sintetizador vocalize a sílaba com vogal plena e não confunda com preposições átonas ou siglas
     const SILABAS_FONETICAS_PT = {
         'DE': 'dê', 'DO': 'dô',
         'SE': 'sê', 'SO': 'sô',
@@ -397,6 +398,136 @@
         'QUE': 'quê', 'QUI': 'qui'
     };
 
+    // Fonética do alfabeto em Inglês adaptada para vozes pt-BR quando não houver voz nativa instalada
+    const INGLES_ALFABETO_FONETICA_PT = {
+        'A': 'êi', 'B': 'bi', 'C': 'si', 'D': 'di', 'E': 'i', 'F': 'éf',
+        'G': 'dji', 'H': 'êitch', 'I': 'ái', 'J': 'djêi', 'K': 'quêi', 'L': 'él',
+        'M': 'ém', 'N': 'én', 'O': 'ôu', 'P': 'pi', 'Q': 'quíú', 'R': 'ár',
+        'S': 'és', 'T': 'ti', 'U': 'iú', 'V': 'vi', 'W': 'dábliu', 'X': 'écs',
+        'Y': 'uái', 'Z': 'zí'
+    };
+
+    // Fonética de vocabulário de Inglês adaptada para vozes pt-BR (I1 a I7)
+    const INGLES_FONETICA_PT = {
+        // CVC e Palavras Básicas (I2)
+        'CAT': 'két', 'DOG': 'dóg', 'SUN': 'sân', 'CAR': 'cár', 'BED': 'béd',
+        'HAT': 'rrét', 'FOG': 'fóg', 'LEG': 'lég', 'PIG': 'pígui', 'BUS': 'bâs',
+        'MAP': 'mép', 'PEN': 'pén', 'FOX': 'fócs', 'BAT': 'bét', 'CUP': 'câp',
+        'COW': 'cáu', 'FAN': 'fén', 'HEN': 'rrén', 'NUT': 'nât', 'PAN': 'pén',
+        'POT': 'pót', 'RAT': 'rrét', 'VAN': 'vén', 'BOX': 'bócs', 'BUG': 'bâgui',
+        'CAN': 'quén', 'NET': 'nét', 'TOP': 'tóp', 'MUG': 'mâgui', 'PIN': 'pín',
+        'LOG': 'lóg',
+
+        // Easy Words (I3)
+        'BIRD': 'bãrd', 'FISH': 'fíxi', 'TREE': 'trí', 'BOOK': 'búk', 'FROG': 'fróg',
+        'DUCK': 'dâk', 'STAR': 'stár', 'BOAT': 'bôut', 'MILK': 'mílk', 'HAND': 'rrénd',
+        'JUMP': 'djâmp', 'LAMP': 'lémp', 'DRUM': 'drâm', 'RING': 'ríng', 'KING': 'kíng',
+        'SWIM': 'suím', 'SHIP': 'xíp', 'CHIN': 'txín', 'THIN': 'tín', 'SOCK': 'sók',
+        'BELL': 'bél', 'HILL': 'rríl', 'WOLF': 'uúlf', 'NEST': 'nést', 'GIFT': 'guíft',
+        'POND': 'pónd', 'CRAB': 'créb', 'SNAIL': 'snéil', 'PLANT': 'plént', 'CLOUD': 'cláud',
+        'BATH': 'béz', 'MATH': 'méz', 'CASH': 'kéxi', 'WISH': 'uíxi', 'RUSH': 'râxi',
+        'SUCH': 'sâtxi', 'MUCH': 'mâtxi', 'RICH': 'rítxi', 'LOCK': 'lók', 'KICK': 'kík',
+        'SONG': 'sóng', 'LONG': 'lóng', 'SING': 'síng', 'WING': 'uíng', 'WELL': 'uél',
+        'TALL': 'tól', 'FALL': 'fól', 'STOP': 'stóp',
+
+        // Snap Words (I4)
+        'THE': 'dâ', 'AND': 'énd', 'IS': 'iz', 'IN': 'ín', 'IT': 'ít', 'TO': 'tú',
+        'HE': 'rrí', 'SHE': 'xí', 'WE': 'uí', 'YOU': 'iú', 'ARE': 'ár', 'WAS': 'uóz',
+        'FOR': 'fór', 'ON': 'ón', 'HAD': 'rréd', 'HAS': 'rréz', 'HIS': 'rríz',
+        'HER': 'rrãr', 'NOT': 'nót', 'BUT': 'bât', 'ALL': 'ól', 'MY': 'mái',
+        'GO': 'gôu', 'SEE': 'sí', 'LIKE': 'láik', 'COME': 'câm', 'LOOK': 'lúk',
+        'SAID': 'séd', 'PLAY': 'plêi', 'THEY': 'dêi', 'THIS': 'díz', 'THAT': 'dét',
+        'THEM': 'dém', 'THEN': 'dén', 'WITH': 'uíz', 'WHEN': 'uén', 'WHAT': 'uót',
+        'WILL': 'uíl', 'DOWN': 'dáun', 'EACH': 'ítxi', 'FROM': 'fróm', 'HAVE': 'rrév',
+        'BEEN': 'bín', 'SOME': 'sâm', 'JUST': 'djâst', 'VERY': 'véri', 'OVER': 'ôuver',
+        'INTO': 'íntu', 'GOOD': 'gúd',
+
+        // Magic E (I5)
+        'CAKE': 'kêik', 'BIKE': 'báik', 'HOME': 'rrôum', 'TUBE': 'tiúb', 'GATE': 'guêit',
+        'KITE': 'káit', 'BONE': 'bôun', 'CUTE': 'kiút', 'LAKE': 'lêik', 'PINE': 'páin',
+        'NOSE': 'nôuz', 'MULE': 'miúl', 'WAVE': 'uêiv', 'LINE': 'láin', 'ROPE': 'rrôup',
+        'TUNE': 'tiún', 'RACE': 'rrêis', 'MICE': 'máis', 'POLE': 'pôul', 'HUGE': 'rriúdj',
+        'FACE': 'fêis', 'FIRE': 'fáier', 'NOTE': 'nôut', 'CUBE': 'kiúb', 'MADE': 'mêid',
+        'BAKE': 'bêik', 'CAPE': 'quêip', 'DIME': 'dáim', 'DIVE': 'dáiv', 'FIVE': 'fáiv',
+        'GAME': 'guêim', 'GLOBE': 'glôub', 'GRADE': 'grêid',
+
+        // Opposites (I7)
+        'BIG': 'bígui', 'SMALL': 'smól', 'HOT': 'rrót', 'COLD': 'côuld', 'FAST': 'fést',
+        'SLOW': 'slôu', 'HAPPY': 'rrépi', 'SAD': 'séd', 'OPEN': 'ôupen', 'CLOSED': 'clôuzd',
+        'UP': 'âp', 'DAY': 'dêi', 'NIGHT': 'náit', 'FULL': 'fúl', 'EMPTY': 'émpti',
+        'HARD': 'rrárd', 'SOFT': 'sóft', 'BAD': 'béd', 'OUT': 'áut', 'OLD': 'ôuld',
+        'YOUNG': 'iâng', 'HIGH': 'rrái', 'LOW': 'lôu', 'CLEAN': 'clín', 'DIRTY': 'dãrti',
+        'LIGHT': 'láit', 'DARK': 'dárk', 'DRY': 'drái', 'WET': 'uét', 'SHORT': 'xórt'
+    };
+
+    function transcribeEnToPtPhonetic(text) {
+        if (!text) return '';
+        let s = text.toLowerCase();
+        s = s.replace(/\bthe\b/g, 'dâ')
+             .replace(/\ba\b/g, 'ei')
+             .replace(/\bis\b/g, 'iz')
+             .replace(/\bto\b/g, 'tu')
+             .replace(/\bfor\b/g, 'fór')
+             .replace(/\bwith\b/g, 'uiz')
+             .replace(/\band\b/g, 'end');
+        s = s.replace(/th/g, 't')
+             .replace(/sh/g, 'x')
+             .replace(/ch/g, 'tx')
+             .replace(/ee/g, 'i')
+             .replace(/oo/g, 'u')
+             .replace(/ea/g, 'i')
+             .replace(/\bw/g, 'u')
+             .replace(/\bh([aeiouáéíóúâêôãõ])/g, 'rr$1')
+             .replace(/y\b/g, 'i')
+             .replace(/ph/g, 'f')
+             .replace(/j/g, 'dj');
+        return s;
+    }
+
+    function prepareSpeechText(cleanText, lang, voice) {
+        if (!cleanText || typeof cleanText !== 'string') return '';
+        const isEn = lang.startsWith('en');
+        const isPt = lang.startsWith('pt');
+        const upper = cleanText.toUpperCase();
+
+        if (isPt) {
+            if (cleanText.length === 1 && LETRAS_FONETICAS_PT[upper]) {
+                return LETRAS_FONETICAS_PT[upper];
+            }
+            if (SILABAS_FONETICAS_PT[upper]) {
+                return SILABAS_FONETICAS_PT[upper];
+            }
+            if (cleanText.length <= 15 && cleanText === upper && !cleanText.includes(' ')) {
+                return cleanText.toLowerCase();
+            }
+            return cleanText;
+        }
+
+        if (isEn) {
+            const isNativeEnVoice = isVoiceNativeToLang(voice, 'en');
+            if (isNativeEnVoice) {
+                return cleanText;
+            }
+
+            // Fallback inteligente para sistemas sem voz nativa em inglês (ex: Windows pt-BR)
+            if (INGLES_FONETICA_PT[upper]) {
+                return INGLES_FONETICA_PT[upper];
+            }
+            if (upper.startsWith('LETTER ') && upper.length === 8) {
+                const char = upper.charAt(7);
+                if (INGLES_ALFABETO_FONETICA_PT[char]) {
+                    return 'Léter ' + INGLES_ALFABETO_FONETICA_PT[char];
+                }
+            }
+            if (cleanText.length === 1 && INGLES_ALFABETO_FONETICA_PT[upper]) {
+                return INGLES_ALFABETO_FONETICA_PT[upper];
+            }
+            return transcribeEnToPtPhonetic(cleanText);
+        }
+
+        return cleanText;
+    }
+
     function startSpeechWatchdog() {
         if (_speechWatchdogTimer) return;
         _speechWatchdogTimer = setInterval(() => {
@@ -406,7 +537,6 @@
                 return;
             }
             if (_utterancePool.size > 0 && window.speechSynthesis.speaking) {
-                // Bug do Chromium: se ficar pausado silenciosamente, acorda
                 if (window.speechSynthesis.paused) {
                     window.speechSynthesis.resume();
                 }
@@ -417,108 +547,328 @@
         }, 1500);
     }
 
-    // Síntese de voz com afinação e velocidade acolhedoras para crianças (rate 0.84 para alfabetização calma e inteligível)
+    // Síntese de voz com disparo síncrono, garantia de voz never-null e repetição ilimitada
     function speakWord(text, lang = 'pt-BR', pitch = 1.04, rate = 0.84, btnEl = null) {
         if (!text || typeof text !== 'string') return;
         if (!('speechSynthesis' in window) || sound.muted) return;
         clearCardAutoplay();
 
-        // Feedback sonoro tátil imediato via Web Audio API
+        // Destravamento imediato do AudioContext no clique da criança
         sound.init();
         if (btnEl) {
             sound.playTone(880, 0.04, 'sine', 0.08);
             btnEl.classList.add('ring-4', 'ring-emerald-400/80', 'animate-pulse');
         }
 
-        const requestId = ++_activeSpeechRequestId;
+        const cleanText = text.trim();
+        if (!cleanText) return;
 
         try {
             if (window.speechSynthesis.paused) {
                 window.speechSynthesis.resume();
             }
-
-            const cleanText = text.trim();
-            if (!cleanText) return;
-
-            // Normalização fonética inteligente
-            let textToSpeak = cleanText;
-            const upper = cleanText.toUpperCase();
-            if (lang.startsWith('pt')) {
-                if (cleanText.length === 1 && LETRAS_FONETICAS_PT[upper]) {
-                    textToSpeak = LETRAS_FONETICAS_PT[upper];
-                } else if (SILABAS_FONETICAS_PT[upper]) {
-                    textToSpeak = SILABAS_FONETICAS_PT[upper];
-                } else if (cleanText.length <= 15 && cleanText === upper && !cleanText.includes(' ')) {
-                    // Minúsculo impede o motor de confundir sílabas com siglas de estados (BA=Bahia, SE=Sergipe, etc.)
-                    textToSpeak = cleanText.toLowerCase();
-                }
-            } else if (lang.startsWith('en')) {
-                if (cleanText === upper) {
-                    textToSpeak = cleanText.toLowerCase();
-                }
+            // Limpa enfileiramento anterior síncronamente
+            if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+                window.speechSynthesis.cancel();
             }
 
-            const executeSpeak = () => {
-                // Se uma requisição mais nova foi feita durante o delay de estabilização, descarta
-                if (requestId !== _activeSpeechRequestId) return;
+            const voice = findBestVoice(lang);
+            const textToSpeak = prepareSpeechText(cleanText, lang, voice);
 
-                try {
-                    const utterance = new SpeechSynthesisUtterance(textToSpeak.slice(0, 300));
-                    utterance.lang = lang;
-                    utterance.pitch = pitch;
-                    utterance.rate = rate;
+            const utterance = new SpeechSynthesisUtterance(textToSpeak.slice(0, 300));
+            utterance.lang = (voice && voice.lang) ? voice.lang : lang;
+            if (voice) {
+                utterance.voice = voice;
+            }
+            utterance.pitch = pitch;
+            utterance.rate = rate;
 
-                    const voice = findBestVoice(lang);
-                    if (voice) {
-                        utterance.voice = voice;
-                    }
+            // Mantém na pool para evitar que o Garbage Collector do V8 silencie a voz no meio da frase
+            _utterancePool.add(utterance);
 
-                    // Proteção de Garbage Collection (V8)
-                    _utterancePool.add(utterance);
-
-                    const cleanup = () => {
-                        _utterancePool.delete(utterance);
-                        if (btnEl) {
-                            btnEl.classList.remove('ring-4', 'ring-emerald-400/80', 'animate-pulse');
-                        }
-                    };
-
-                    utterance.onstart = () => {
-                        if (btnEl) {
-                            btnEl.classList.add('ring-4', 'ring-emerald-400/80');
-                        }
-                    };
-
-                    utterance.onend = cleanup;
-                    utterance.onerror = (err) => {
-                        cleanup();
-                        // Ignora erro benigno de 'interrupted'/'canceled' quando o usuário clica rápido em outra palavra
-                        if (err && err.error !== 'interrupted' && err.error !== 'canceled') {
-                            console.warn('[KumonGen Speech] Falha de síntese:', err.error || err);
-                        }
-                    };
-
-                    startSpeechWatchdog();
-                    window.speechSynthesis.speak(utterance);
-                    if (window.speechSynthesis.paused) {
-                        window.speechSynthesis.resume();
-                    }
-                } catch (e) {
-                    console.warn('[KumonGen Speech] Erro ao sintetizar fala:', e);
-                    if (btnEl) btnEl.classList.remove('ring-4', 'ring-emerald-400/80', 'animate-pulse');
+            const cleanup = () => {
+                _utterancePool.delete(utterance);
+                if (btnEl) {
+                    btnEl.classList.remove('ring-4', 'ring-emerald-400/80', 'animate-pulse');
                 }
             };
 
-            // Se o sintetizador estiver ocupado, cancela com segurança e reinicia rápido (50ms)
-            if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
-                window.speechSynthesis.cancel();
-                setTimeout(executeSpeak, 50);
-            } else {
-                executeSpeak();
+            utterance.onstart = () => {
+                if (btnEl) {
+                    btnEl.classList.add('ring-4', 'ring-emerald-400/80');
+                }
+            };
+            utterance.onend = cleanup;
+            utterance.onerror = (err) => {
+                cleanup();
+                if (err && err.error !== 'interrupted' && err.error !== 'canceled') {
+                    console.warn('[KumonGen Speech] Falha de síntese:', err.error || err);
+                }
+            };
+
+            startSpeechWatchdog();
+            window.speechSynthesis.speak(utterance);
+            if (window.speechSynthesis.paused) {
+                window.speechSynthesis.resume();
             }
         } catch (e) {
             console.warn('[KumonGen Speech] SpeechSynthesis error:', e);
             if (btnEl) btnEl.classList.remove('ring-4', 'ring-emerald-400/80', 'animate-pulse');
+        }
+    }
+
+    // ------------------------------------------------------------
+    // Utilitários de Diagnóstico e Teste de Áudio (Painel de Autoteste)
+    // ------------------------------------------------------------
+    function getAudioDiagnosticInfo() {
+        loadAvailableVoices();
+        const hasSynth = typeof window !== 'undefined' && 'speechSynthesis' in window;
+        const synth = hasSynth ? window.speechSynthesis : null;
+        const ptVoice = findBestVoice('pt-BR');
+        const enVoice = findBestVoice('en-US');
+        const isEnNative = isVoiceNativeToLang(enVoice, 'en');
+
+        return {
+            audioContextSupported: !!(typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)),
+            audioContextState: sound.ctx ? sound.ctx.state : 'uninitialized',
+            muted: sound.muted,
+            speechSynthesisSupported: hasSynth,
+            speaking: synth ? synth.speaking : false,
+            pending: synth ? synth.pending : false,
+            paused: synth ? synth.paused : false,
+            totalVoices: _cachedVoices.length,
+            voices: _cachedVoices.map(v => ({ name: v.name, lang: v.lang, default: v.default })),
+            selectedPtVoice: ptVoice ? { name: ptVoice.name, lang: ptVoice.lang } : null,
+            selectedEnVoice: enVoice ? { name: enVoice.name, lang: enVoice.lang, isNative: isEnNative } : null
+        };
+    }
+
+    function testAudio(type = 'pt') {
+        return new Promise(resolve => {
+            sound.init();
+            if (type === 'tone') {
+                sound.playSuccess();
+                return resolve({ ok: true, type: 'tone', message: 'Tom sintetizado reproduzido' });
+            }
+
+            if (!('speechSynthesis' in window)) {
+                return resolve({ ok: false, error: 'speechSynthesis não suportado neste navegador' });
+            }
+
+            const lang = type === 'en' ? 'en-US' : 'pt-BR';
+            const sampleText = type === 'en' 
+                ? 'Hello! English audio is working properly.'
+                : 'Olá! O áudio em português está funcionando perfeitamente.';
+
+            try {
+                if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+                if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+
+                const voice = findBestVoice(lang);
+                const textToSpeak = prepareSpeechText(sampleText, lang, voice);
+                const u = new SpeechSynthesisUtterance(textToSpeak);
+                u.lang = (voice && voice.lang) ? voice.lang : lang;
+                if (voice) u.voice = voice;
+                u.pitch = 1.04;
+                u.rate = 0.88;
+
+                _utterancePool.add(u);
+                let resolved = false;
+
+                const finish = (ok, err = null) => {
+                    if (resolved) return;
+                    resolved = true;
+                    _utterancePool.delete(u);
+                    resolve({ ok, error: err, voice: voice ? voice.name : null, lang: u.lang, text: textToSpeak });
+                };
+
+                u.onstart = () => {
+                    setTimeout(() => finish(true), 600);
+                };
+                u.onend = () => finish(true);
+                u.onerror = (e) => {
+                    if (e && e.error !== 'interrupted' && e.error !== 'canceled') {
+                        finish(false, e.error);
+                    } else {
+                        finish(true);
+                    }
+                };
+
+                startSpeechWatchdog();
+                window.speechSynthesis.speak(u);
+
+                setTimeout(() => {
+                    if (!resolved) finish(true);
+                }, 3000);
+            } catch (err) {
+                resolve({ ok: false, error: err.message || err });
+            }
+        });
+    }
+
+    function showAudioDiagnosticsModal() {
+        let modal = document.getElementById('audioDiagModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'audioDiagModal';
+            modal.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:70;background:var(--modal-overlay);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);justify-content:center;align-items:center;padding:1rem';
+            document.body.appendChild(modal);
+        }
+
+        const info = getAudioDiagnosticInfo();
+        const ptVoiceName = info.selectedPtVoice ? info.selectedPtVoice.name : 'Nenhuma detectada';
+        const enVoiceName = info.selectedEnVoice 
+            ? `${info.selectedEnVoice.name} ${info.selectedEnVoice.isNative ? '(Voz Nativa)' : '(Voz Adaptada)'}`
+            : 'Nenhuma detectada';
+
+        modal.innerHTML = `
+            <div class="bg-white rounded-3xl p-5 md:p-7 max-w-lg w-full shadow-2xl border border-slate-200 text-slate-800 flex flex-col gap-4 modal-enter max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg shadow-sm">
+                            <i class="fas fa-headphones"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-black text-slate-900 text-base leading-tight">Diagnóstico e Teste de Som</h3>
+                            <p class="text-xs text-slate-500">Verificação em tempo real de áudio e síntese de voz</p>
+                        </div>
+                    </div>
+                    <button id="closeAudioDiagBtn" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Painel de Status -->
+                <div class="grid grid-cols-2 gap-2.5 text-xs">
+                    <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col gap-1">
+                        <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Volume / Estado</span>
+                        <span class="font-black ${info.muted ? 'text-amber-600' : 'text-emerald-600'} text-sm flex items-center gap-1.5">
+                            <i class="fas ${info.muted ? 'fa-volume-mute' : 'fa-volume-up'}"></i>
+                            ${info.muted ? 'Silenciado (Mudo)' : 'Som Ativado'}
+                        </span>
+                        <button id="diagToggleMuteBtn" class="mt-1 px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg font-bold text-[11px] text-slate-700 cursor-pointer transition-colors text-left">
+                            ${info.muted ? 'Ativar Som Agora' : 'Silenciar'}
+                        </button>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col gap-1">
+                        <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Efeitos (Web Audio)</span>
+                        <span class="font-black text-emerald-600 text-sm flex items-center gap-1.5">
+                            <i class="fas fa-check-circle"></i>
+                            ${info.audioContextSupported ? (info.audioContextState === 'running' ? 'Ativo' : 'Pronto') : 'Não suportado'}
+                        </span>
+                        <span class="text-[10px] text-slate-400">Tons, acordes e cliques</span>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col gap-1 col-span-2">
+                        <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Voz Português (pt-BR)</span>
+                        <span class="font-bold text-slate-800 text-xs truncate" title="${ptVoiceName}">${ptVoiceName}</span>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col gap-1 col-span-2">
+                        <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Voz Inglês (en-US)</span>
+                        <span class="font-bold text-slate-800 text-xs truncate" title="${enVoiceName}">${enVoiceName}</span>
+                    </div>
+                </div>
+
+                <!-- Botões de Teste Interativos -->
+                <div class="flex flex-col gap-2">
+                    <span class="text-xs font-black text-slate-700 uppercase tracking-wider">Testar Saída de Som:</span>
+                    
+                    <button id="testAudioToneBtn" class="w-full py-2.5 px-4 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 rounded-2xl font-bold text-xs flex items-center justify-between transition-colors cursor-pointer active:scale-98">
+                        <span class="flex items-center gap-2"><i class="fas fa-music text-blue-600"></i> 1. Testar Efeito Sonoro (Acorde)</span>
+                        <span id="toneTestStatus" class="text-[10px] bg-blue-200/60 px-2 py-0.5 rounded-full font-bold text-blue-900">Clique para testar</span>
+                    </button>
+
+                    <button id="testAudioPtBtn" class="w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 rounded-2xl font-bold text-xs flex items-center justify-between transition-colors cursor-pointer active:scale-98">
+                        <span class="flex items-center gap-2"><i class="fas fa-comment-dots text-emerald-600"></i> 2. Testar Voz Português (pt-BR)</span>
+                        <span id="ptTestStatus" class="text-[10px] bg-emerald-200/60 px-2 py-0.5 rounded-full font-bold text-emerald-900">Clique para testar</span>
+                    </button>
+
+                    <button id="testAudioEnBtn" class="w-full py-2.5 px-4 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-800 rounded-2xl font-bold text-xs flex items-center justify-between transition-colors cursor-pointer active:scale-98">
+                        <span class="flex items-center gap-2"><i class="fas fa-language text-purple-600"></i> 3. Testar Voz Inglês (en-US)</span>
+                        <span id="enTestStatus" class="text-[10px] bg-purple-200/60 px-2 py-0.5 rounded-full font-bold text-purple-900">Clique para testar</span>
+                    </button>
+                </div>
+
+                <!-- Dica Operacional -->
+                <div class="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-[11px] text-amber-900 flex items-start gap-2">
+                    <i class="fas fa-lightbulb text-amber-600 mt-0.5 flex-shrink-0"></i>
+                    <span><strong>Dica importante:</strong> Se não ouvir som, certifique-se de que o volume do seu aparelho ou monitor está ligado e que a chave de mudo física do iPad/celular não está ativada.</span>
+                </div>
+
+                <div class="flex justify-end pt-1">
+                    <button id="dismissAudioDiagBtn" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-2xl shadow transition-all active:scale-95 cursor-pointer">
+                        Concluído
+                    </button>
+                </div>
+            </div>
+        `;
+
+        modal.style.display = 'flex';
+
+        const closeModal = () => {
+            modal.style.display = 'none';
+        };
+
+        const closeBtn = modal.querySelector('#closeAudioDiagBtn');
+        if (closeBtn) closeBtn.onclick = closeModal;
+        const dismissBtn = modal.querySelector('#dismissAudioDiagBtn');
+        if (dismissBtn) dismissBtn.onclick = closeModal;
+        modal.onclick = (e) => {
+            if (e.target === modal) closeModal();
+        };
+
+        const toggleMuteBtn = modal.querySelector('#diagToggleMuteBtn');
+        if (toggleMuteBtn) {
+            toggleMuteBtn.onclick = () => {
+                sound.toggleMute();
+                TabletPlayer.updateSoundBtn();
+                showAudioDiagnosticsModal();
+            };
+        }
+
+        const toneBtn = modal.querySelector('#testAudioToneBtn');
+        const toneStatus = modal.querySelector('#toneTestStatus');
+        if (toneBtn) {
+            toneBtn.onclick = () => {
+                sound.init();
+                sound.playSuccess();
+                toneStatus.textContent = 'Reproduzindo tom...';
+                toneStatus.className = 'text-[10px] bg-blue-300 text-blue-950 px-2 py-0.5 rounded-full font-black animate-pulse';
+                setTimeout(() => {
+                    toneStatus.textContent = 'Sucesso! Audível';
+                    toneStatus.className = 'text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-bold';
+                }, 600);
+            };
+        }
+
+        const ptBtn = modal.querySelector('#testAudioPtBtn');
+        const ptStatus = modal.querySelector('#ptTestStatus');
+        if (ptBtn) {
+            ptBtn.onclick = () => {
+                sound.init();
+                ptStatus.textContent = 'Falando...';
+                ptStatus.className = 'text-[10px] bg-emerald-300 text-emerald-950 px-2 py-0.5 rounded-full font-black animate-pulse';
+                testAudio('pt').then(res => {
+                    ptStatus.textContent = res.ok ? 'Sucesso! Falando' : 'Falha';
+                    ptStatus.className = `text-[10px] ${res.ok ? 'bg-emerald-200 text-emerald-900' : 'bg-rose-200 text-rose-900'} px-2 py-0.5 rounded-full font-bold`;
+                });
+            };
+        }
+
+        const enBtn = modal.querySelector('#testAudioEnBtn');
+        const enStatus = modal.querySelector('#enTestStatus');
+        if (enBtn) {
+            enBtn.onclick = () => {
+                sound.init();
+                enStatus.textContent = 'Speaking...';
+                enStatus.className = 'text-[10px] bg-purple-300 text-purple-950 px-2 py-0.5 rounded-full font-black animate-pulse';
+                testAudio('en').then(res => {
+                    enStatus.textContent = res.ok ? 'Sucesso! Falando' : 'Falha';
+                    enStatus.className = `text-[10px] ${res.ok ? 'bg-purple-200 text-purple-900' : 'bg-rose-200 text-rose-900'} px-2 py-0.5 rounded-full font-bold`;
+                });
+            };
         }
     }
 
@@ -1732,7 +2082,7 @@
                 }
             });
 
-            // Som mudo / desmutado
+            // Botão de Som Mudo / Desmutado
             const soundBtn = document.getElementById('soundToggleBtn');
             if (soundBtn) {
                 this.updateSoundBtn();
@@ -1744,6 +2094,14 @@
                         } catch (e) {}
                     }
                     this.updateSoundBtn();
+                });
+            }
+
+            // Botão de Diagnóstico de Áudio e Teste de Som
+            const soundDiagBtn = document.getElementById('soundDiagBtn');
+            if (soundDiagBtn) {
+                soundDiagBtn.addEventListener('click', () => {
+                    this.showAudioDiagnosticsModal();
                 });
             }
 
@@ -2606,7 +2964,6 @@
                 speakBtn.addEventListener('click', () => {
                     speakWord(spokenChar, lang, 1.04, 0.84, speakBtn);
                 });
-                scheduleCardSpeech(() => speakWord(spokenChar, lang, 1.04, 0.84, speakBtn), 400);
             }
 
             this.setupTraceCanvas();
@@ -2767,8 +3124,6 @@
             const speakBtn = document.getElementById('speakWordBtn');
             if (speakBtn) {
                 speakBtn.addEventListener('click', () => speakWord(word, lang, 1.04, 0.84, speakBtn));
-                // Pronúncia automática ao carregar o card
-                scheduleCardSpeech(() => speakWord(word, lang, 1.04, 0.84, speakBtn), 400);
             }
 
             let assembled = [];
@@ -2867,7 +3222,6 @@
             const speakBtn = document.getElementById('speakSyllableBtn');
             if (speakBtn) {
                 speakBtn.addEventListener('click', () => speakWord(targetSyl, 'pt-BR', 1.04, 0.84, speakBtn));
-                scheduleCardSpeech(() => speakWord(targetSyl, 'pt-BR', 1.04, 0.84, speakBtn), 300);
             }
 
             container.querySelectorAll('.syl-choice-btn').forEach(btn => {
@@ -2988,7 +3342,6 @@
             const speakBtn = document.getElementById('speakRhymeBtn');
             if (speakBtn) {
                 speakBtn.addEventListener('click', () => speakWord(baseWord, 'pt-BR', 1.04, 0.84, speakBtn));
-                scheduleCardSpeech(() => speakWord(baseWord, 'pt-BR', 1.04, 0.84, speakBtn), 300);
             }
 
             container.querySelectorAll('.rhyme-choice-btn').forEach(btn => {
@@ -3059,7 +3412,6 @@
             const speakBtn = document.getElementById('speakSentenceBtn');
             if (speakBtn) {
                 speakBtn.addEventListener('click', () => speakWord(sentence, lang, 1.04, 0.86, speakBtn));
-                scheduleCardSpeech(() => speakWord(sentence, lang, 1.04, 0.86, speakBtn), 400);
             }
 
             let assembled = [];
@@ -3159,7 +3511,6 @@
             const speakBtn = document.getElementById('speakOppositeBtn');
             if (speakBtn) {
                 speakBtn.addEventListener('click', () => speakWord(word, 'en-US', 1.04, 0.84, speakBtn));
-                scheduleCardSpeech(() => speakWord(word, 'en-US', 1.04, 0.84, speakBtn), 300);
             }
 
             container.querySelectorAll('.opposite-choice-btn').forEach(btn => {
@@ -3845,13 +4196,16 @@
         }
     };
 
-    // Exporta globalmente para uso na página e testes
     TabletPlayer.Session = Session;
     TabletPlayer.sound = sound;
     TabletPlayer.Gamification = Gamification;
     TabletPlayer.MascotEngine = MascotEngine;
     TabletPlayer.HapticEngine = haptic;
     TabletPlayer.WakeLockEngine = wakeLock;
+    TabletPlayer.showAudioDiagnosticsModal = showAudioDiagnosticsModal;
+    TabletPlayer.getAudioDiagnosticInfo = getAudioDiagnosticInfo;
+    TabletPlayer.testAudio = testAudio;
+    TabletPlayer.speakWord = speakWord;
     TabletPlayer.renderCard = function() {
         Session.isTransitionLocked = false;
         return this.renderCurrentQuestion();
