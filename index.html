@@ -28,10 +28,33 @@
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             min-height: 100vh;
         }
+        @media (max-width: 768px) {
+            .tablet-hero-banner {
+                flex-direction: column !important;
+                text-align: center !important;
+            }
+            .tablet-hero-banner .tablet-hero-content {
+                flex-direction: column !important;
+                text-align: center !important;
+                align-items: center !important;
+            }
+            .tablet-hero-banner .tablet-hero-badges {
+                justify-content: center !important;
+            }
+            .tablet-hero-banner .tablet-hero-actions {
+                width: 100% !important;
+                justify-content: center !important;
+                margin-top: 0.5rem !important;
+            }
+            .tablet-hero-banner .tablet-hero-actions a {
+                width: 100% !important;
+                justify-content: center !important;
+            }
+        }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4 py-12 text-white">
-    <div class="max-w-4xl w-full text-center">
+    <div class="max-w-5xl w-full text-center px-2 sm:px-4">
         <!-- Gatilho do Guia dos Pais (Estilo Escuro Sóbrio) -->
         <button type="button" onclick="if(window.KumonParentGuide)window.KumonParentGuide.open()" class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700 text-slate-300 hover:text-white text-xs font-semibold mb-5 transition-all cursor-pointer shadow-lg active:scale-95" title="Abrir Manual dos Pais e Metodologia">
             <i class="fas fa-book-open text-emerald-400 text-xs"></i>
@@ -39,13 +62,16 @@
             <i class="fas fa-chevron-right text-[9px] text-slate-400"></i>
         </button>
 
-        <h1 class="text-4xl sm:text-5xl font-black text-white mb-2 tracking-tight">
-            Kumon<span class="text-indigo-400">Gen</span>
+        <!-- Título Hero Grande e Imponente -->
+        <h1 class="text-5xl sm:text-6xl md:text-7xl font-black text-white mb-3 tracking-tight leading-none">
+            Kumon<span class="bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300 bg-clip-text text-transparent">Gen</span>
         </h1>
-        <p class="text-base sm:text-lg text-slate-300 mb-7 font-normal">Cadernos diários de matemática e linguagem inspirados no Método Kumon</p>
+        <p class="text-base sm:text-lg md:text-xl text-slate-300 mb-7 max-w-xl mx-auto font-normal leading-relaxed">
+            Cadernos diários e treino interativo inspirados no Método Kumon
+        </p>
 
         <!-- BARRA DO ALUNO ATIVO / MULTI-PERFIS -->
-        <div id="homeStudentCard" class="max-w-lg mx-auto mb-8 bg-slate-800/90 backdrop-blur-md border border-slate-700 hover:border-amber-500/50 rounded-2xl p-3.5 flex items-center justify-between shadow-xl transition-all">
+        <div id="homeStudentCard" class="max-w-xl mx-auto mb-8 bg-slate-800/90 backdrop-blur-md border border-slate-700 hover:border-amber-500/50 rounded-2xl p-3.5 flex items-center justify-between shadow-xl transition-all">
             <div class="flex items-center gap-3 text-left min-w-0">
                 <div class="w-12 h-12 rounded-full p-0.5 bg-gradient-to-tr from-amber-400 to-yellow-500 shadow-sm flex-shrink-0 overflow-hidden">
                     <img id="homeStudentAvatar" src="assets/mascotes/jaguar_avatar.png" alt="Mascote" class="w-full h-full rounded-full object-cover">
@@ -66,16 +92,43 @@
             </div>
         </div>
 
+        <!-- BANNER MODO TABLET (Gamificado Escuro - Destaque Hero Superior) -->
+        <div class="tablet-hero-banner max-w-4xl mx-auto mb-8 bg-gradient-to-r from-indigo-950/90 via-purple-950/70 to-slate-900 border border-indigo-500/40 hover:border-indigo-400/60 rounded-2xl p-5 md:p-6 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-5 text-left transition-all">
+            <div class="tablet-hero-content flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white text-2xl shadow-lg flex-shrink-0">
+                    <i class="fas fa-tablet-alt"></i>
+                </div>
+                <div>
+                    <div class="tablet-hero-badges flex items-center gap-2 mb-1">
+                        <span class="bg-indigo-500 text-white text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm">Modo Interativo</span>
+                        <span class="text-[11px] text-indigo-300 font-semibold hidden sm:inline">Treino direto na tela</span>
+                    </div>
+                    <h2 class="text-lg md:text-xl font-black text-white leading-tight">Modo Tablet Gamificado</h2>
+                    <p class="text-xs text-slate-300 mt-1 max-w-xl leading-relaxed">
+                        Pratique com autocorreção imediata, síntese de voz nativa nos respectivos idiomas, cronômetro de maestria e recompensas com estrelas.
+                    </p>
+                </div>
+            </div>
+            <div class="tablet-hero-actions flex items-center gap-3 flex-shrink-0">
+                <button id="pwaInstallBtn" type="button" class="pwa-install-btn hidden bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs px-3.5 py-2.5 rounded-xl shadow transition-all flex items-center gap-2 cursor-pointer active:scale-95" title="Instalar aplicativo no seu dispositivo">
+                    <i class="fas fa-download text-amber-400"></i> <span class="hidden sm:inline">Instalar App</span>
+                </button>
+                <a href="tablet.html" class="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-black text-xs md:text-sm px-5 py-3 rounded-xl shadow-xl transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2.5" style="text-decoration:none;">
+                    <i class="fas fa-play text-xs"></i> <span>Abrir Tablet</span>
+                </a>
+            </div>
+        </div>
+
         <!-- Três Pilares Kumon (Cards Informativos Sóbrios) -->
-        <div class="max-w-3xl mx-auto mb-8 text-left">
-            <div class="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-5 border border-slate-700/80 shadow-xl">
+        <div class="max-w-4xl mx-auto mb-9 text-left">
+            <div class="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-5 border border-slate-700/70 shadow-lg">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="flex items-start gap-3">
                         <div class="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center flex-shrink-0 mt-0.5">
                             <i class="fas fa-sliders-h text-xs"></i>
                         </div>
                         <div>
-                            <h2 class="text-xs font-bold text-white tracking-wide">Escolha Rápida</h2>
+                            <h3 class="text-xs font-bold text-white tracking-wide">Escolha Rápida</h3>
                             <p class="text-[11px] text-slate-400 leading-relaxed mt-1">
                                 Selecione a matéria e o nível para gerar folhas prontas para impressão em segundos.
                             </p>
@@ -87,7 +140,7 @@
                             <i class="fas fa-eye text-xs"></i>
                         </div>
                         <div>
-                            <h2 class="text-xs font-bold text-white tracking-wide">Exemplo Guiado</h2>
+                            <h3 class="text-xs font-bold text-white tracking-wide">Exemplo Guiado</h3>
                             <p class="text-[11px] text-slate-400 leading-relaxed mt-1">
                                 Primeira questão resolvida como modelo para guiar o aprendizado com autonomia.
                             </p>
@@ -99,7 +152,7 @@
                             <i class="fas fa-clock text-xs"></i>
                         </div>
                         <div>
-                            <h2 class="text-xs font-bold text-white tracking-wide">Rotina de 10 min</h2>
+                            <h3 class="text-xs font-bold text-white tracking-wide">Rotina de 10 min</h3>
                             <p class="text-[11px] text-slate-400 leading-relaxed mt-1">
                                 1 folha diária para automatizar o raciocínio sem cansaço ou sobrecarga.
                             </p>
@@ -109,77 +162,69 @@
             </div>
         </div>
 
-        <!-- BANNER MODO TABLET (Gamificado Escuro) -->
-        <div class="mb-8 bg-gradient-to-r from-indigo-950/80 via-purple-950/60 to-slate-900 border border-indigo-500/40 rounded-2xl p-5 shadow-xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-5 text-left">
-            <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xl shadow-md flex-shrink-0">
-                    <i class="fas fa-tablet-alt"></i>
-                </div>
-                <div>
-                    <div class="flex items-center gap-2">
-                        <span class="bg-indigo-500 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">Interativo</span>
-                        <h2 class="text-base font-bold text-white">Modo Tablet Gamificado</h2>
-                    </div>
-                    <p class="text-xs text-slate-300 mt-1 max-w-xl leading-relaxed">
-                        Pratique direto na tela com autocorreção imediata, teclado touch sob medida, som suave e acompanhamento de tempo.
-                    </p>
-                </div>
+        <!-- SEÇÃO DOS 3 BOTÕES PRINCIPAIS: CADERNOS DE EXERCÍCIOS -->
+        <div class="max-w-4xl mx-auto mb-5 text-center">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-slate-300 text-xs font-semibold mb-2 shadow-sm">
+                <i class="fas fa-print text-indigo-400 text-[11px]"></i>
+                <span>Material Pedagógico para Impressão</span>
             </div>
-            <div class="flex items-center gap-2.5 flex-shrink-0">
-                <button id="pwaInstallBtn" type="button" class="pwa-install-btn hidden bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs px-3.5 py-2.5 rounded-xl shadow transition-all flex items-center gap-2 cursor-pointer active:scale-95" title="Instalar aplicativo no seu dispositivo">
-                    <i class="fas fa-download text-amber-400"></i> <span class="hidden sm:inline">Instalar App</span>
-                </button>
-                <a href="tablet.html" class="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-lg transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2" style="text-decoration:none;">
-                    <i class="fas fa-play"></i> Abrir Tablet
-                </a>
-            </div>
+            <h2 class="text-2xl sm:text-3xl font-black text-white tracking-tight">Cadernos Diários de Exercícios</h2>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1 max-w-lg mx-auto">
+                Gere folhas A4 estruturadas por nível de desenvolvimento para treinar caligrafia e raciocínio no papel
+            </p>
         </div>
 
         <!-- CARDS DAS TRÊS DISCIPLINAS (Elegância Minimalista) -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-4xl mx-auto">
             <!-- Matemática: Azul -->
-            <a href="matematica.html" class="group bg-blue-600 hover:bg-blue-700 rounded-2xl p-8 shadow-2xl transition-all transform hover:scale-105 relative" style="text-decoration:none;">
+            <a href="matematica.html" class="group bg-blue-600 hover:bg-blue-700 rounded-2xl p-7 shadow-2xl transition-all transform hover:-translate-y-1 hover:scale-[1.02] relative flex flex-col justify-between" style="text-decoration:none;">
                 <div class="flex flex-col items-center">
-                    <i class="fas fa-calculator text-white text-5xl mb-4"></i>
-                    <h2 class="text-2xl font-bold text-white mb-2">Matemática</h2>
-                    <p class="text-blue-100 text-sm">Números, contas, desafios</p>
-                    <div class="mt-3 flex flex-wrap justify-center gap-1">
-                        <span class="text-[9px] bg-white/20 text-blue-100 px-2 py-0.5 rounded-full">3+ M1</span>
-                        <span class="text-[9px] bg-white/20 text-blue-100 px-2 py-0.5 rounded-full">5+ M2–M5</span>
-                        <span class="text-[9px] bg-white/20 text-blue-100 px-2 py-0.5 rounded-full">7+ M6–M10</span>
+                    <div class="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-calculator text-white text-3xl"></i>
                     </div>
-                    <span class="mt-4 inline-block bg-white text-blue-600 px-4 py-2 rounded-full text-sm font-bold group-hover:bg-blue-50">Acessar →</span>
+                    <h3 class="text-2xl font-black text-white mb-1.5">Matemática</h3>
+                    <p class="text-blue-100 text-xs sm:text-sm">Números, contas e operações</p>
+                    <div class="mt-3.5 flex flex-wrap justify-center gap-1.5">
+                        <span class="text-[10px] bg-white/20 text-white font-bold px-2.5 py-0.5 rounded-full">3+ M1</span>
+                        <span class="text-[10px] bg-white/20 text-white font-bold px-2.5 py-0.5 rounded-full">5+ M2–M5</span>
+                        <span class="text-[10px] bg-white/20 text-white font-bold px-2.5 py-0.5 rounded-full">7+ M6–M10</span>
+                    </div>
                 </div>
+                <span class="mt-6 inline-block bg-white text-blue-600 px-5 py-2.5 rounded-full text-xs font-black group-hover:bg-blue-50 shadow-md transition-colors">Acessar Cadernos →</span>
             </a>
 
             <!-- Português: Verde e Amarelo em degradê -->
-            <a href="portugues.html" class="group bg-gradient-to-br from-green-600 to-yellow-500 hover:from-green-700 hover:to-yellow-600 rounded-2xl p-8 shadow-2xl transition-all transform hover:scale-105 relative" style="text-decoration:none;">
+            <a href="portugues.html" class="group bg-gradient-to-br from-green-600 to-yellow-500 hover:from-green-700 hover:to-yellow-600 rounded-2xl p-7 shadow-2xl transition-all transform hover:-translate-y-1 hover:scale-[1.02] relative flex flex-col justify-between" style="text-decoration:none;">
                 <div class="flex flex-col items-center">
-                    <i class="fas fa-font text-white text-5xl mb-4"></i>
-                    <h2 class="text-2xl font-bold text-white mb-2">Português</h2>
-                    <p class="text-green-100 text-sm">Letras, sílabas, palavras</p>
-                    <div class="mt-3 flex flex-wrap justify-center gap-1">
-                        <span class="text-[9px] bg-white/20 text-green-100 px-2 py-0.5 rounded-full">3+ P1</span>
-                        <span class="text-[9px] bg-white/20 text-green-100 px-2 py-0.5 rounded-full">5+ P2–P3</span>
-                        <span class="text-[9px] bg-white/20 text-green-100 px-2 py-0.5 rounded-full">7+ P4–P8</span>
+                    <div class="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-font text-white text-3xl"></i>
                     </div>
-                    <span class="mt-4 inline-block bg-white text-green-600 px-4 py-2 rounded-full text-sm font-bold group-hover:bg-green-50">Acessar →</span>
+                    <h3 class="text-2xl font-black text-white mb-1.5">Português</h3>
+                    <p class="text-green-100 text-xs sm:text-sm">Letras, sílabas e escrita</p>
+                    <div class="mt-3.5 flex flex-wrap justify-center gap-1.5">
+                        <span class="text-[10px] bg-white/20 text-white font-bold px-2.5 py-0.5 rounded-full">3+ P1</span>
+                        <span class="text-[10px] bg-white/20 text-white font-bold px-2.5 py-0.5 rounded-full">5+ P2–P3</span>
+                        <span class="text-[10px] bg-white/20 text-white font-bold px-2.5 py-0.5 rounded-full">7+ P4–P8</span>
+                    </div>
                 </div>
+                <span class="mt-6 inline-block bg-white text-green-700 px-5 py-2.5 rounded-full text-xs font-black group-hover:bg-green-50 shadow-md transition-colors">Acessar Cadernos →</span>
             </a>
 
             <!-- Inglês: Azul e Vermelho em degradê -->
-            <a href="ingles.html" class="group bg-gradient-to-br from-red-600 to-blue-600 hover:from-red-700 hover:to-blue-700 rounded-2xl p-8 shadow-2xl transition-all transform hover:scale-105 relative" style="text-decoration:none;">
+            <a href="ingles.html" class="group bg-gradient-to-br from-red-600 to-blue-600 hover:from-red-700 hover:to-blue-700 rounded-2xl p-7 shadow-2xl transition-all transform hover:-translate-y-1 hover:scale-[1.02] relative flex flex-col justify-between" style="text-decoration:none;">
                 <div class="flex flex-col items-center">
-                    <i class="fas fa-language text-white text-5xl mb-4"></i>
-                    <h2 class="text-2xl font-bold text-white mb-2">Inglês</h2>
-                    <p class="text-red-100 text-sm">Alphabet, words, phonics</p>
-                    <div class="mt-3 flex flex-wrap justify-center gap-1">
-                        <span class="text-[9px] bg-white/20 text-red-100 px-2 py-0.5 rounded-full">3+ I1</span>
-                        <span class="text-[9px] bg-white/20 text-red-100 px-2 py-0.5 rounded-full">5+ I2–I4</span>
-                        <span class="text-[9px] bg-white/20 text-red-100 px-2 py-0.5 rounded-full">7+ I5–I7</span>
+                    <div class="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-language text-white text-3xl"></i>
                     </div>
-                    <span class="mt-4 inline-block bg-white text-red-600 px-4 py-2 rounded-full text-sm font-bold group-hover:bg-red-50">Acessar →</span>
+                    <h3 class="text-2xl font-black text-white mb-1.5">Inglês</h3>
+                    <p class="text-red-100 text-xs sm:text-sm">Alphabet, words & phonics</p>
+                    <div class="mt-3.5 flex flex-wrap justify-center gap-1.5">
+                        <span class="text-[10px] bg-white/20 text-white font-bold px-2.5 py-0.5 rounded-full">3+ I1</span>
+                        <span class="text-[10px] bg-white/20 text-white font-bold px-2.5 py-0.5 rounded-full">5+ I2–I4</span>
+                        <span class="text-[10px] bg-white/20 text-white font-bold px-2.5 py-0.5 rounded-full">7+ I5–I7</span>
+                    </div>
                 </div>
+                <span class="mt-6 inline-block bg-white text-red-600 px-5 py-2.5 rounded-full text-xs font-black group-hover:bg-red-50 shadow-md transition-colors">Acessar Cadernos →</span>
             </a>
         </div>
 
