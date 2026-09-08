@@ -181,6 +181,8 @@ export interface TabletSessionState {
     initialItemsCount: number;
     gauntletItemsSolved: number;
     isReviewMode?: boolean;
+    showConcreteAids?: boolean;
+    countedDots?: number[];
 }
 
 /**

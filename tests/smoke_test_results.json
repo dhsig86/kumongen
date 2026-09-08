@@ -138,9 +138,9 @@
   "networkErrors": [],
   "pageTimings": {
     "index.html": 140,
-    "matematica.html": 43,
+    "matematica.html": 45,
     "portugues.html": 51,
-    "ingles.html": 42,
-    "tablet.html": 151
+    "ingles.html": 45,
+    "tablet.html": 130
   }
 }

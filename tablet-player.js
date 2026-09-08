@@ -40,6 +40,9 @@
         lightClick() {
             return this.vibrate(12);
         }
+        light() {
+            return this.vibrate(12);
+        }
 
         // Duplo pulso suave de validação positiva [15ms vibra, 35ms pausa, 25ms vibra]
         success() {
@@ -188,6 +191,12 @@
             } catch (e) {
                 console.warn('AudioContext tone error', e);
             }
+        }
+
+        // Som de toque / contagem interativa suave
+        playBeep(freq = 440, duration = 0.08, type = 'sine') {
+            if (this.muted) return;
+            this.playTone(freq, duration, type, 0.15, 0);
         }
 
         // Acorde alegre de acerto (C5 - E5 - G5 - C6)
@@ -1182,7 +1191,9 @@
         gauntletCycles: 0,
         initialItemsCount: 10,
         gauntletItemsSolved: 0,
-        isReviewMode: false
+        isReviewMode: false,
+        showConcreteAids: true,
+        countedDots: []
     };
 
     // ============================================================
@@ -2860,6 +2871,7 @@
             Session.isTransitionLocked = false;
             Session.currentInput = '';
             Session.currentAttempts = 0;
+            Session.countedDots = [];
 
             const item = Session.items[Session.currentIndex];
             if (!item) return;
@@ -3125,6 +3137,7 @@
 
         // Renderizador: MATEMÁTICA
         renderMathCard(item, container) {
+            Session.countedDots = [];
             const calcRes = item.result !== undefined ? item.result : (item.operator === '+' ? item.operand1 + item.operand2 : item.operator === '-' ? item.operand1 - item.operand2 : item.operator === '×' || item.operator === '*' ? item.operand1 * item.operand2 : (item.operand2 !== 0 ? Math.floor(item.operand1 / item.operand2) : 0));
             let formulaHtml = '';
             if (item.missingPos === 'op1') {
@@ -3159,68 +3172,311 @@
                 `;
             }
 
-            container.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-4">
-                    <div class="text-4xl sm:text-5xl md:text-7xl font-black text-slate-800 flex items-center justify-center gap-3 sm:gap-4 select-none tracking-wider flex-wrap">
-                        ${formulaHtml}
-                    </div>
-                    <div id="cardFeedbackMsg" class="h-6 mt-4 text-xs font-bold text-slate-400">Digite a resposta no teclado abaixo</div>
-                </div>
-            `;
-        },
+            // Suporte Concreto para Adição Inicial (Nível M2 / Educação Infantil)
+            let concretePanelHtml = '';
+            const isM2Level = Session.levelId === 'm2' || (item.operator === '+' && item.operand1 <= 10 && item.operand2 <= 10 && Session.subjectKey === 'matematica');
+            if (isM2Level) {
+                let dotsAHtml = '';
+                for (let i = 0; i < item.operand1; i++) {
+                    dotsAHtml += `
+                        <button type="button" class="concrete-math-dot w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center font-black text-xs text-white transition-all cursor-pointer shadow-sm active:scale-90"
+                             data-math-dot-idx="${i}"
+                             title="Bolinha ${i+1}"
+                             style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: 2px solid #1d4ed8;">
+                            <span class="math-dot-num opacity-0"></span>
+                        </button>
+                    `;
+                }
 
-        // Renderizador: QUANTIDADE
-        renderQuantityCard(item, container) {
-            let circlesHtml = '';
-            for (let i = 0; i < item.value; i++) {
-                circlesHtml += `
-                    <div class="w-10 h-10 md:w-12 md:h-12 rounded-full shadow-md transform hover:scale-110 transition-transform" style="background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);border:2.5px solid #92400e;box-shadow:0 3px 6px rgba(180,83,9,0.3);"></div>
+                let dotsBHtml = '';
+                for (let j = 0; j < item.operand2; j++) {
+                    const globalIdx = item.operand1 + j;
+                    dotsBHtml += `
+                        <button type="button" class="concrete-math-dot w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center font-black text-xs text-white transition-all cursor-pointer shadow-sm active:scale-90"
+                             data-math-dot-idx="${globalIdx}"
+                             title="Bolinha ${globalIdx+1}"
+                             style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: 2px solid #047857;">
+                            <span class="math-dot-num opacity-0"></span>
+                        </button>
+                    `;
+                }
+
+                const aidsVisible = Session.showConcreteAids !== false;
+                concretePanelHtml = `
+                    <div class="w-full mt-3 flex flex-col items-center">
+                        <div class="flex items-center justify-between w-full max-w-xs px-2 mb-1.5">
+                            <span class="text-[11px] font-bold text-slate-500">Ajuda com bolinhas:</span>
+                            <button type="button" id="toggleConcreteAidBtn" class="text-[10px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200 transition-colors">
+                                <i class="fas ${aidsVisible ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                                <span>${aidsVisible ? 'Ocultar' : 'Mostrar'}</span>
+                            </button>
+                        </div>
+                        <div id="concreteMathPanel" class="${aidsVisible ? 'flex' : 'hidden'} flex-wrap items-center justify-center gap-2 sm:gap-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl shadow-inner max-w-sm w-full">
+                            <div class="flex flex-wrap items-center justify-center gap-1.5 p-2 bg-blue-50/70 rounded-xl border border-blue-200 min-w-[70px]">
+                                ${dotsAHtml}
+                            </div>
+                            <span class="text-xl font-black text-slate-400">+</span>
+                            <div class="flex flex-wrap items-center justify-center gap-1.5 p-2 bg-emerald-50/70 rounded-xl border border-emerald-200 min-w-[70px]">
+                                ${dotsBHtml}
+                            </div>
+                        </div>
+                    </div>
                 `;
             }
 
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-2">
-                    <div class="text-sm font-bold text-slate-700 mb-3">Conte quantas bolinhas amarelas há no quadro:</div>
-                    <div class="rounded-2xl p-5 flex flex-wrap items-center justify-center gap-3 max-w-sm shadow-inner min-h-[120px]" style="background-color:#ffffff;border:2px solid #cbd5e1;box-shadow:inset 0 2px 4px rgba(0,0,0,0.06);">
+                    <div class="text-4xl sm:text-5xl md:text-7xl font-black text-slate-800 flex items-center justify-center gap-3 sm:gap-4 select-none tracking-wider flex-wrap">
+                        ${formulaHtml}
+                    </div>
+                    ${concretePanelHtml}
+                    <div id="cardFeedbackMsg" class="h-6 mt-3 text-xs font-bold text-slate-400">Digite a resposta no teclado abaixo</div>
+                </div>
+            `;
+
+            if (isM2Level) {
+                const mathDots = container.querySelectorAll('.concrete-math-dot');
+                const toggleAidBtn = document.getElementById('toggleConcreteAidBtn');
+                const mathPanel = document.getElementById('concreteMathPanel');
+                const totalDots = item.operand1 + item.operand2;
+
+                if (toggleAidBtn && mathPanel) {
+                    toggleAidBtn.addEventListener('click', () => {
+                        Session.showConcreteAids = !Session.showConcreteAids;
+                        const isVis = Session.showConcreteAids;
+                        mathPanel.className = isVis ? 'flex flex-wrap items-center justify-center gap-2 sm:gap-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl shadow-inner max-w-sm w-full' : 'hidden';
+                        toggleAidBtn.innerHTML = `<i class="fas ${isVis ? 'fa-eye-slash' : 'fa-eye'}"></i> <span>${isVis ? 'Ocultar' : 'Mostrar'}</span>`;
+                    });
+                }
+
+                mathDots.forEach((btn) => {
+                    btn.addEventListener('click', () => {
+                        if (Session.isTransitionLocked) return;
+                        const idx = parseInt(btn.getAttribute('data-math-dot-idx'), 10);
+                        const pos = Session.countedDots.indexOf(idx);
+                        if (pos === -1) {
+                            Session.countedDots.push(idx);
+                            haptic.light();
+                            sound.playBeep(420 + Session.countedDots.length * 45, 0.08);
+                        } else {
+                            Session.countedDots.splice(pos, 1);
+                            haptic.light();
+                            sound.playBeep(360, 0.05);
+                        }
+
+                        mathDots.forEach((b) => {
+                            const bIdx = parseInt(b.getAttribute('data-math-dot-idx'), 10);
+                            const cPos = Session.countedDots.indexOf(bIdx);
+                            const numLabel = b.querySelector('.math-dot-num');
+                            if (cPos !== -1) {
+                                b.classList.add('ring-2', 'ring-amber-400', 'scale-105');
+                                if (numLabel) {
+                                    numLabel.textContent = String(cPos + 1);
+                                    numLabel.classList.remove('opacity-0');
+                                }
+                            } else {
+                                b.classList.remove('ring-2', 'ring-amber-400', 'scale-105');
+                                if (numLabel) {
+                                    numLabel.textContent = '';
+                                    numLabel.classList.add('opacity-0');
+                                }
+                            }
+                        });
+
+                        if (Session.countedDots.length === totalDots && (!Session.currentInput || Session.currentInput === '')) {
+                            Session.currentInput = String(totalDots);
+                            const ans = document.getElementById('activeAnswerBox');
+                            if (ans) {
+                                ans.innerHTML = `<span class="text-blue-700 font-black">${totalDots}</span>`;
+                            }
+                            const msg = document.getElementById('cardFeedbackMsg');
+                            if (msg) {
+                                msg.innerHTML = `<span class="text-emerald-600 font-bold">Juntou tudo: ${item.operand1} + ${item.operand2} = ${totalDots}! Confirme no [✓].</span>`;
+                            }
+                        }
+                    });
+                });
+            }
+        },
+
+        // Renderizador: QUANTIDADE
+        renderQuantityCard(item, container) {
+            Session.countedDots = [];
+            const targetVal = item.value;
+            let circlesHtml = '';
+            for (let i = 0; i < targetVal; i++) {
+                circlesHtml += `
+                    <button type="button" class="concrete-dot shadow-md cursor-pointer flex items-center justify-center text-white" 
+                         data-dot-index="${i}"
+                         title="Toque para contar"
+                         style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: 2.5px solid #92400e; box-shadow: 0 3px 6px rgba(180,83,9,0.35);">
+                        <span class="dot-num-label font-black text-sm md:text-base opacity-0 transition-opacity"></span>
+                    </button>
+                `;
+            }
+
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-2">
+                    <div class="text-xs sm:text-sm font-bold text-slate-700 mb-2 text-center">
+                        Toque nas bolinhas para contar uma a uma:
+                    </div>
+                    <div id="concreteQuantityGrid" class="rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-center gap-3 max-w-sm shadow-inner min-h-[110px] bg-white border-2 border-slate-200">
                         ${circlesHtml}
                     </div>
-                    <div class="mt-4 flex items-center gap-3">
-                        <span class="text-xl font-bold text-slate-600">Total:</span>
+
+                    <div class="mt-3 flex items-center gap-2 text-xs font-bold text-slate-500">
+                        <span id="countedDotsStatus">Bolinhas contadas: <strong class="text-amber-600">0</strong> de ${targetVal}</span>
+                        <button type="button" id="resetCountDotsBtn" class="ml-2 text-[10px] text-slate-400 hover:text-slate-600 underline cursor-pointer">
+                            Recomeçar
+                        </button>
+                    </div>
+
+                    <div class="mt-3 flex items-center gap-3">
+                        <span class="text-lg sm:text-xl font-black text-slate-700">Total:</span>
                         <div id="activeAnswerBox" class="w-20 h-16 bg-blue-50 border-4 border-blue-400 rounded-2xl flex items-center justify-center text-blue-700 font-black shadow-inner text-3xl answer-box-focused">
                             <span class="text-blue-300 font-light text-xl">?</span>
                         </div>
                     </div>
-                    <div id="cardFeedbackMsg" class="h-6 mt-2 text-xs font-bold text-slate-400">Digite o total no teclado</div>
+                    <div id="cardFeedbackMsg" class="h-6 mt-1 text-xs font-bold text-slate-400">Digite o total no teclado</div>
                 </div>
             `;
+
+            const dotButtons = container.querySelectorAll('.concrete-dot');
+            const statusEl = document.getElementById('countedDotsStatus');
+            const resetBtn = document.getElementById('resetCountDotsBtn');
+
+            const updateDotsUI = () => {
+                dotButtons.forEach((btn, idx) => {
+                    const countedIdx = Session.countedDots.indexOf(idx);
+                    const label = btn.querySelector('.dot-num-label');
+                    if (countedIdx !== -1) {
+                        btn.classList.add('concrete-dot-active');
+                        btn.style.background = 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)';
+                        btn.style.borderColor = '#b45309';
+                        if (label) {
+                            label.textContent = String(countedIdx + 1);
+                            label.classList.remove('opacity-0');
+                        }
+                    } else {
+                        btn.classList.remove('concrete-dot-active');
+                        btn.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+                        btn.style.borderColor = '#92400e';
+                        if (label) {
+                            label.textContent = '';
+                            label.classList.add('opacity-0');
+                        }
+                    }
+                });
+
+                const count = Session.countedDots.length;
+                if (statusEl) {
+                    statusEl.innerHTML = `Bolinhas contadas: <strong class="text-amber-600">${count}</strong> de ${targetVal}`;
+                }
+            };
+
+            dotButtons.forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    if (Session.isTransitionLocked) return;
+                    const idx = parseInt(btn.getAttribute('data-dot-index'), 10);
+                    const pos = Session.countedDots.indexOf(idx);
+                    if (pos === -1) {
+                        Session.countedDots.push(idx);
+                        const curCount = Session.countedDots.length;
+                        haptic.light();
+                        sound.playBeep(440 + curCount * 55, 0.08);
+                    } else {
+                        Session.countedDots.splice(pos, 1);
+                        haptic.light();
+                        sound.playBeep(380, 0.05);
+                    }
+                    updateDotsUI();
+
+                    if (Session.countedDots.length === targetVal && (!Session.currentInput || Session.currentInput === '')) {
+                        Session.currentInput = String(targetVal);
+                        const answerBox = document.getElementById('activeAnswerBox');
+                        if (answerBox) {
+                            answerBox.innerHTML = `<span class="text-blue-700 font-black">${targetVal}</span>`;
+                        }
+                        const msg = document.getElementById('cardFeedbackMsg');
+                        if (msg) {
+                            msg.innerHTML = '<span class="text-emerald-600 font-bold">Excelente contagem! Toque em [✓] para confirmar.</span>';
+                        }
+                    }
+                });
+            });
+
+            if (resetBtn) {
+                resetBtn.addEventListener('click', () => {
+                    Session.countedDots = [];
+                    updateDotsUI();
+                    if (Session.currentInput === String(targetVal)) {
+                        Session.currentInput = '';
+                        const answerBox = document.getElementById('activeAnswerBox');
+                        if (answerBox) {
+                            answerBox.innerHTML = '<span class="text-blue-300 font-light text-xl">?</span>';
+                        }
+                    }
+                });
+            }
         },
 
         // Renderizador: SEQUÊNCIA
         renderSequenceCard(item, container) {
+            const expectedVal = this.solveSequenceHole(item.sequence);
+            const isSmallSeq = item.sequence.every(v => v === '__' || (typeof v === 'number' && v <= 12));
+
             let seqHtml = '';
             item.sequence.forEach((val, i) => {
                 if (val === '__') {
+                    let towerHoleHtml = '';
+                    if (isSmallSeq && expectedVal > 0 && expectedVal <= 12) {
+                        for (let b = 0; b < expectedVal; b++) {
+                            towerHoleHtml += '<div class="concrete-block-hole"></div>';
+                        }
+                    }
                     seqHtml += `
-                        <div id="activeAnswerBox" class="w-14 h-16 md:w-20 md:h-20 bg-blue-100 border-4 border-dashed border-blue-500 rounded-2xl flex items-center justify-center text-blue-700 font-black text-2xl md:text-4xl shadow-inner animate-pulse">
-                            ?
+                        <div class="flex flex-col items-center gap-1.5 flex-shrink-0">
+                            <div id="activeAnswerBox" class="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-18 bg-blue-100 border-4 border-dashed border-blue-500 rounded-2xl flex items-center justify-center text-blue-700 font-black text-xl sm:text-2xl md:text-3xl shadow-inner animate-pulse" style="min-width: 48px; min-height: 54px;">
+                                ?
+                            </div>
+                            ${isSmallSeq ? `
+                                <div class="concrete-tower-col p-1 rounded-lg bg-blue-50/50 border border-dashed border-blue-300" title="Degrau que falta (${expectedVal} blocos)">
+                                    ${towerHoleHtml}
+                                </div>
+                            ` : ''}
                         </div>
                     `;
                 } else {
+                    let towerHtml = '';
+                    if (isSmallSeq && typeof val === 'number' && val <= 12) {
+                        for (let b = 0; b < val; b++) {
+                            towerHtml += '<div class="concrete-block-unit"></div>';
+                        }
+                    }
                     seqHtml += `
-                        <div class="w-14 h-16 md:w-20 md:h-20 bg-slate-100 border-2 border-slate-300 rounded-2xl flex items-center justify-center text-slate-800 font-bold text-xl md:text-3xl shadow-sm">
-                            ${val}
+                        <div class="flex flex-col items-center gap-1.5 flex-shrink-0">
+                            <div class="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-18 bg-slate-100 border-2 border-slate-300 rounded-2xl flex items-center justify-center text-slate-800 font-bold text-lg sm:text-xl md:text-2xl shadow-sm" style="min-width: 48px; min-height: 54px;">
+                                ${val}
+                            </div>
+                            ${isSmallSeq ? `
+                                <div class="concrete-tower-col p-1 rounded-lg bg-slate-50 border border-slate-200" title="Degrau ${val}">
+                                    ${towerHtml}
+                                </div>
+                            ` : ''}
                         </div>
                     `;
                 }
             });
 
             container.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-4">
-                    <div class="text-sm font-bold text-slate-500 mb-4">Descubra o número que falta na trilha:</div>
-                    <div class="flex flex-wrap items-center justify-center gap-2 md:gap-3">
+                <div class="flex flex-col items-center justify-center py-2">
+                    <div class="text-xs sm:text-sm font-bold text-slate-600 mb-3 text-center">
+                        ${isSmallSeq ? 'Observe a escada de blocos e descubra o número que falta:' : 'Descubra o número que falta na trilha:'}
+                    </div>
+                    <div class="flex flex-nowrap items-end justify-center gap-1.5 sm:gap-2.5 overflow-x-auto max-w-full py-1">
                         ${seqHtml}
                     </div>
-                    <div id="cardFeedbackMsg" class="h-6 mt-4 text-xs font-bold text-slate-400">Digite o número faltante</div>
+                    <div id="cardFeedbackMsg" class="h-6 mt-3 text-xs font-bold text-slate-400">Digite o número faltante no teclado</div>
                 </div>
             `;
         },
