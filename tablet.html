@@ -423,6 +423,25 @@
 
         /* Modo Normal não precisa de override (é o default) */
 
+        /* ── MODO FONTE BASTÃO ESCOLAR (CAIXA ALTA / ED. INFANTIL BNCC EF01LP11) ── */
+        body.font-bastao-mode #focusCardContainer,
+        body.font-bastao-mode #exerciseInstruction,
+        body.font-bastao-mode #mascotSpeechBubble,
+        body.font-bastao-mode .choice-btn,
+        body.font-bastao-mode .concrete-help-btn,
+        body.font-bastao-mode .concrete-count-label,
+        body.font-bastao-mode .step-label,
+        body.font-bastao-mode .audio-playback-label {
+            font-family: 'Century Gothic', 'Nunito', 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.05em;
+        }
+        #fontBastaoToggleBtn.active {
+            background-color: #ecfdf5 !important;
+            color: #047857 !important;
+            border: 1.5px solid #10b981 !important;
+        }
+
     </style>
 
 </head>
@@ -611,6 +630,11 @@
             <button id="headerPwaInstallBtn" class="pwa-install-btn hidden bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-400/50 text-indigo-300 text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 transition-all shadow-sm cursor-pointer" title="Instalar aplicativo no iPad/Tablet">
                 <i class="fas fa-download text-[10px] text-indigo-300"></i>
                 <span class="hidden sm:inline font-black">Instalar App</span>
+            </button>
+
+            <!-- Botão Fonte Bastão (Educação Infantil / Caixa Alta BNCC) -->
+            <button id="fontBastaoToggleBtn" class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors cursor-pointer border border-transparent" title="Modo Fonte Bastão (Caixa Alta para Alfabetização Infantil)" aria-label="Alternar Fonte Bastão">
+                <i class="fas fa-font text-sm"></i>
             </button>
 
             <!-- Botão de Diagnóstico de Som -->

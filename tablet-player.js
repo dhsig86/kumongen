@@ -1408,6 +1408,105 @@
     };
 
     // ============================================================
+    // 3.2 MODO FONTE BASTÃO (LETRA DE FORMA MAIÚSCULA / ED. INFANTIL BNCC EF01LP11)
+    // ============================================================
+    const FontBastaoManager = {
+        STORAGE_KEY: 'kumongen_font_bastao_enabled',
+
+        isEnabled() {
+            try {
+                const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
+                if (storage) {
+                    const saved = storage.getItem(this.STORAGE_KEY);
+                    if (saved !== null) {
+                        return saved === 'true';
+                    }
+                }
+            } catch (e) {}
+
+            // Se não houver escolha explícita gravada, ativa automaticamente para Ed. Infantil (4 a 7 anos)
+            try {
+                if (window.StudentProfileEngine && typeof window.StudentProfileEngine.getActive === 'function') {
+                    const active = window.StudentProfileEngine.getActive();
+                    if (active && (active.ageTier === 'age_4_5' || active.ageTier === 'age_6_7' || active.ageGroup === 'age_4_5' || active.ageGroup === 'age_6_7')) {
+                        return true;
+                    }
+                }
+            } catch (e) {}
+
+            return false;
+        },
+
+        setEnabled(enabled, isExplicitUserAction = false) {
+            const boolVal = !!enabled;
+            if (isExplicitUserAction) {
+                try {
+                    const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
+                    if (storage) {
+                        storage.setItem(this.STORAGE_KEY, boolVal ? 'true' : 'false');
+                    }
+                } catch (e) {}
+            }
+            this.applyToDOM(boolVal);
+            return boolVal;
+        },
+
+        toggle() {
+            const current = this.isEnabled();
+            const next = !current;
+            this.setEnabled(next, true);
+            if (typeof HapticEngine !== 'undefined' && typeof HapticEngine.light === 'function') {
+                HapticEngine.light();
+            }
+            if (typeof sound !== 'undefined' && typeof sound.playTone === 'function') {
+                sound.playTone(next ? 600 : 400, 0.08);
+            }
+            return next;
+        },
+
+        applyToDOM(enabled = null) {
+            const active = enabled !== null ? !!enabled : this.isEnabled();
+            if (typeof document !== 'undefined' && document.body) {
+                document.body.classList.toggle('font-bastao-mode', active);
+            }
+            const btn = document.getElementById('fontBastaoToggleBtn');
+            if (btn) {
+                btn.classList.toggle('active', active);
+                btn.classList.toggle('text-emerald-700', active);
+                btn.classList.toggle('bg-emerald-50', active);
+                btn.classList.toggle('border-emerald-400', active);
+                btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+                btn.title = active 
+                    ? 'Fonte Bastão Ativa (Caixa Alta / Ed. Infantil) - Clique para desativar' 
+                    : 'Ativar Modo Fonte Bastão (Caixa Alta para Alfabetização Infantil)';
+            }
+        },
+
+        onStudentChanged(student) {
+            try {
+                const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
+                const explicit = storage ? storage.getItem(this.STORAGE_KEY) : null;
+                if (explicit === null && student) {
+                    const isToddler = student.ageTier === 'age_4_5' || student.ageTier === 'age_6_7' || student.ageGroup === 'age_4_5' || student.ageGroup === 'age_6_7';
+                    this.applyToDOM(isToddler);
+                    return;
+                }
+            } catch (e) {}
+            this.applyToDOM();
+        },
+
+        init() {
+            const btn = document.getElementById('fontBastaoToggleBtn');
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    this.toggle();
+                });
+            }
+            this.applyToDOM();
+        }
+    };
+
+    // ============================================================
     // 4. CERTIFICADO OFICIAL EM PDF (jsPDF)
     // ============================================================
     async function generateCertificatePDF(certData) {
@@ -2349,6 +2448,7 @@
             this.loadInitialState();
             this.updateGamificationHeader();
             ReviewNotebookManager.updateHeaderUI();
+            FontBastaoManager.init();
         },
 
         bindTopNav() {
@@ -2579,6 +2679,7 @@
 
             this.updateGamificationHeader();
             ReviewNotebookManager.updateHeaderUI();
+            FontBastaoManager.onStudentChanged(student);
         },
 
         loadInitialState() {
@@ -4897,6 +4998,7 @@
     TabletPlayer.getSpokenInstructionForItem = getSpokenInstructionForItem;
     TabletPlayer.shouldAutoNarrate = shouldAutoNarrate;
     TabletPlayer.ReviewNotebook = ReviewNotebookManager;
+    TabletPlayer.FontBastao = FontBastaoManager;
     TabletPlayer.renderCard = function() {
         Session.isTransitionLocked = false;
         return this.renderCurrentQuestion();

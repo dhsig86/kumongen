@@ -968,6 +968,17 @@
         refreshPreview();
     }
 
+    function toggleFontBastaoSheet(enabled) {
+        const sheet = document.getElementById('a4-sheet');
+        if (sheet) {
+            sheet.classList.toggle('bastao-sheet-mode', !!enabled);
+        }
+        const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
+        if (storage) {
+            storage.setItem('kumongen_sheet_bastao', enabled ? 'true' : 'false');
+        }
+    }
+
     function init() {
         pageLeft = document.getElementById('pageLeft');
         pageRight = document.getElementById('pageRight');
@@ -996,6 +1007,14 @@
             });
         }
 
+        const bastaoCheckbox = document.getElementById('fontBastaoCheckbox');
+        const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
+        const savedBastao = storage ? storage.getItem('kumongen_sheet_bastao') === 'true' : false;
+        if (bastaoCheckbox) {
+            bastaoCheckbox.checked = savedBastao;
+        }
+        toggleFontBastaoSheet(savedBastao);
+
         if (zoomSpan) zoomSpan.innerText = Math.round(currentZoom * 100) + '%';
         if (zoomContainer) zoomContainer.style.transform = `scale(${currentZoom})`;
 
@@ -1008,6 +1027,7 @@
     }
 
     window.adjustZoom = KumonGen.adjustZoom;
+    window.toggleFontBastaoSheet = toggleFontBastaoSheet;
     window.switchPorTab = switchPorTab;
     window.selectPorWizardAge = selectPorWizardAge;
     window.selectPorWizardGoal = selectPorWizardGoal;

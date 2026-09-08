@@ -997,4 +997,29 @@ aside {
     min-width: 44px !important;
 }
 
+/* ===== MODO FONTE BASTÃO ESCOLAR (CAIXA ALTA / ED. INFANTIL BNCC EF01LP11) ===== */
+#a4-sheet.bastao-sheet-mode,
+#a4-sheet.bastao-sheet-mode .half-page,
+#a4-sheet.bastao-sheet-mode .instruction-text,
+#a4-sheet.bastao-sheet-mode .problem-text,
+#a4-sheet.bastao-sheet-mode .word-reading,
+#a4-sheet.bastao-sheet-mode .sentence-reading,
+#a4-sheet.bastao-sheet-mode .trace-word,
+#a4-sheet.bastao-sheet-mode span,
+#a4-sheet.bastao-sheet-mode p,
+#a4-sheet.bastao-sheet-mode h1,
+#a4-sheet.bastao-sheet-mode h2,
+#a4-sheet.bastao-sheet-mode h3 {
+    font-family: 'Century Gothic', 'Nunito', 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em;
+}
+
+#a4-sheet.bastao-sheet-mode .name-field,
+#a4-sheet.bastao-sheet-mode .date-field,
+#a4-sheet.bastao-sheet-mode .meta-info,
+#a4-sheet.bastao-sheet-mode .score-box {
+    text-transform: uppercase !important;
+}
+
 

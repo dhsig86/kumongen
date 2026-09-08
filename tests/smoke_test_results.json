@@ -137,10 +137,10 @@
   "consoleErrors": [],
   "networkErrors": [],
   "pageTimings": {
-    "index.html": 140,
-    "matematica.html": 45,
-    "portugues.html": 51,
+    "index.html": 139,
+    "matematica.html": 52,
+    "portugues.html": 42,
     "ingles.html": 45,
-    "tablet.html": 130
+    "tablet.html": 118
   }
 }

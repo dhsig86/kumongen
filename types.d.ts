@@ -213,6 +213,19 @@ export interface ReviewNotebookManagerInterface {
 }
 
 /**
+ * Motor do Modo Fonte Bastão Escolar (Caixa Alta / Ed. Infantil)
+ */
+export interface FontBastaoManagerInterface {
+    STORAGE_KEY: string;
+    isEnabled: () => boolean;
+    setEnabled: (enabled: boolean, isExplicitUserAction?: boolean) => boolean;
+    toggle: () => boolean;
+    applyToDOM: (enabled?: boolean | null) => void;
+    onStudentChanged: (student?: any) => void;
+    init: () => void;
+}
+
+/**
  * Configuração e Parâmetros de Síntese de Voz
  */
 export interface AudioEngineConfig {
@@ -270,6 +283,7 @@ declare global {
             testAudio?: (lang?: string) => void;
             showAudioDiagnosticsModal?: () => void;
             ReviewNotebook?: ReviewNotebookManagerInterface;
+            FontBastao?: FontBastaoManagerInterface;
             [key: string]: any;
         };
         SafeStorage: SafeStorageInterface;
@@ -277,6 +291,7 @@ declare global {
             open: () => void;
             close: () => void;
         };
+        toggleFontBastaoSheet?: (enabled: boolean) => void;
         jspdf?: any;
         KumonGen?: any;
         escapeHtml?: (str: any) => string;
