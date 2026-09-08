@@ -5,7 +5,7 @@
         matematica: [
             { id: 'm1', title: 'M1 · Quantidade', type: 'quantity', numbers: [1,2,3,4,5], instruction: 'Pinte a quantidade de círculos.' },
             { id: 'm2', title: 'M2 · Adição', type: 'math', operator: '+', operand: 1, range: [1,9], instruction: 'Resolva as adições.' },
-            { id: 'm3', title: 'M3 · Sequências', type: 'sequence', sequences: [[1,2,'__',4,5],[5,6,7,'__',9],[8,'__',10,11,12],['__',3,4,5,6],[2,4,'__',8,10],[10,20,'__',40,50],[5,10,15,'__',25],[3,6,'__',12,15],[1,'__',3,'__',5],[7,8,9,'__',11],[15,'__',17,18,19],[20,19,'__',17,16]], instruction: 'Complete a sequência.' },
+            { id: 'm3', title: 'M3 · Sequências', type: 'sequence', sequences: [[1,2,'__',4,5],[5,6,7,'__',9],[8,'__',10,11,12],['__',3,4,5,6],[2,4,'__',8,10],[10,20,'__',40,50],[5,10,15,'__',25],[3,6,'__',12,15],[1,2,3,'__',5],[7,8,9,'__',11],[15,'__',17,18,19],[20,19,'__',17,16]], instruction: 'Complete a sequência.' },
             { id: 'm4', title: 'M4 · Dezenas', type: 'tens', numbers: [11,12,13,14,15,16,17,18,19], instruction: 'Pinte os grupos de 10 e unidades.' },
             { id: 'm5', title: 'M5 · Comparação', type: 'compare', pairs: [[3,5],[7,2],[4,4],[6,9],[1,8],[5,5],[10,3],[2,7],[8,6],[9,1],[3,3],[6,4]], instruction: 'Circule o maior (ou igual).' },
             { id: 'm6', title: 'M6 · Subtração', type: 'math', operator: '-', operand: 1, range: [2,10], instruction: 'Resolva as subtrações.' },

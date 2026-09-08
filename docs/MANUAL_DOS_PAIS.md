@@ -75,23 +75,23 @@ O KumonGen oferece duas formas de praticar:
 * **M10 · Frações Visuais**: Reconhecimento de partes do todo através de formas geométricas.
 
 ### 🇧🇷 Português (P1 ao P8)
-* **P1 · Vogais & Traçado**: Reconhecimento e decalque guiado de A, E, I, O, U.
-* **P2 · Sílabas Simples**: Famílias silábicas diretas (BA, BE, BI, BO, BU...).
-* **P3 · Letras Faltantes**: Completar palavras de 2 sílabas com fonemas canônicos.
-* **P4 · Ditado Visual**: Associação entre imagem e escrita de palavras cotidianas.
-* **P5 · Separação Silábica**: Divisão rítmica de sílabas com apoio de palmas.
-* **P6 · Rimas & Sons**: Consciência fonológica e percepção de terminações parecidas.
-* **P7 · Leitura de Frases**: Compreensão de orações simples e estruturadas.
-* **P8 · Pontuação Básica**: Uso de ponto final, interrogação e exclamação.
+* **P1 · Alfabeto (Traçado)**: Reconhecimento e decalque caligráfico de A a Z com áudio fonético canônico pt-BR.
+* **P2 · Sílabas Simples**: Formação e percepção auditiva de famílias silábicas diretas canônicas (BA, BE, BI, BO, BU...).
+* **P3 · Palavras Curtas (2 Sílabas)**: Decodificação e montagem de palavras dissílabas simples formadas por sílabas diretas.
+* **P4 · Palavras de 3 a 4 Sílabas**: Decodificação e montagem de palavras trissílabas e polissílabas canônicas simples (CV+CV+CV).
+* **P5 · Sílabas Complexas**: Encontros consonantais com R (BRA, CRA...) e com L (BLA, CLA...).
+* **P6 · Dígrafos**: Treino e identificação de dígrafos essenciais da língua portuguesa (CH, LH, NH, QU, GU).
+* **P7 · Rimas & Sons Finais**: Consciência fonológica e percepção de rimas autênticas da infância brasileira.
+* **P8 · Frases Curtas**: Organização sintática e ordenação de blocos para formar frases afirmativas coerentes.
 
 ### 🇬🇧 Inglês / ESL (I1 ao I7)
-* **I1 · Alphabet & Phonics**: Sons individuais das letras em inglês.
-* **I2 · CVC Words**: Palavras simples de 3 letras (Cat, Dog, Sun, Bed).
-* **I3 · Numbers 1 to 20**: Escrita e leitura dos números em inglês.
-* **I4 · Animals & Colors**: Vocabulário estruturado de animais e cores primárias/secundárias.
-* **I5 · Simple Sentences**: Frases afirmativas curtas ("It is a red apple").
-* **I6 · Basic Questions**: Perguntas simples ("What is this?", "How many?").
-* **I7 · Opposites & Pairs**: Antônimos básicos (Big/Small, Hot/Cold, Up/Down).
+* **I1 · Alphabet (Trace)**: Reconhecimento e traçado caligráfico das letras do alfabeto em inglês com pronúncia nativa.
+* **I2 · CVC Words (3 Letters)**: Palavras decodificáveis formadas por Consoante-Vogal-Consoante com vogais curtas (Cat, Dog, Sun, Bed).
+* **I3 · Easy Words (4-5 Letters)**: Palavras de alta frequência com dígrafos e consonant blends (Fish, Frog, Duck, Star).
+* **I4 · Snap Words**: Palavras de visão direta essenciais das listas canônicas Dolch/Fry (The, And, Is, You, Come).
+* **I5 · CVCe (Magic E)**: Palavras com a regra do E silencioso que torna a vogal longa (Cake, Bike, Home, Tube).
+* **I6 · Simple Sentences**: Organização e leitura de sentenças curtas e naturais do inglês infantil em 3 blocos.
+* **I7 · Opposites (Antonyms)**: Identificação de opostos semânticos e antônimos de adjetivos essenciais (Hot/Cold, Big/Small).
 
 ---
 

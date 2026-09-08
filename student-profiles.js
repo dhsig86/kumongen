@@ -117,27 +117,27 @@
             title: 'Português',
             color: [217, 119, 6], // Amber-600
             levels: [
-                { id: 'p1', code: 'P1', title: 'Vogais & Sons' },
+                { id: 'p1', code: 'P1', title: 'Alfabeto (Traçado)' },
                 { id: 'p2', code: 'P2', title: 'Sílabas Simples' },
-                { id: 'p3', code: 'P3', title: 'Letras Faltantes' },
-                { id: 'p4', code: 'P4', title: 'Ditado Visual' },
-                { id: 'p5', code: 'P5', title: 'Separação Silábica' },
-                { id: 'p6', code: 'P6', title: 'Rimas & Fonemas' },
-                { id: 'p7', code: 'P7', title: 'Leitura de Frases' },
-                { id: 'p8', code: 'P8', title: 'Pontuação Básica' }
+                { id: 'p3', code: 'P3', title: 'Palavras Curtas (2 Sílabas)' },
+                { id: 'p4', code: 'P4', title: 'Palavras de 3 a 4 Sílabas' },
+                { id: 'p5', code: 'P5', title: 'Sílabas Complexas' },
+                { id: 'p6', code: 'P6', title: 'Dígrafos' },
+                { id: 'p7', code: 'P7', title: 'Rimas & Sons Finais' },
+                { id: 'p8', code: 'P8', title: 'Frases Curtas' }
             ]
         },
         ingles: {
             title: 'Inglês (ESL)',
             color: [5, 150, 105], // Emerald-600
             levels: [
-                { id: 'i1', code: 'I1', title: 'Alphabet & Phonics' },
-                { id: 'i2', code: 'I2', title: 'First Words & Colors' },
-                { id: 'i3', code: 'I3', title: 'Numbers 1 to 20' },
-                { id: 'i4', code: 'I4', title: 'Animals & Nature' },
-                { id: 'i5', code: 'I5', title: 'Simple Sentences' },
-                { id: 'i6', code: 'I6', title: 'Basic Questions' },
-                { id: 'i7', code: 'I7', title: 'Opposites & Pairs' }
+                { id: 'i1', code: 'I1', title: 'Alphabet (Trace)' },
+                { id: 'i2', code: 'I2', title: 'CVC Words (3 Letters)' },
+                { id: 'i3', code: 'I3', title: 'Easy Words (4-5 Letters)' },
+                { id: 'i4', code: 'I4', title: 'Snap Words' },
+                { id: 'i5', code: 'I5', title: 'CVCe (Magic E)' },
+                { id: 'i6', code: 'I6', title: 'Simple Sentences' },
+                { id: 'i7', code: 'I7', title: 'Opposites (Antonyms)' }
             ]
         }
     };

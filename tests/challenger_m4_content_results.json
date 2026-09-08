@@ -1,0 +1,187 @@
+{
+  "battery1_mass_sampling": {
+    "passed": true,
+    "totalItems": 12500,
+    "violations": [],
+    "perLevel": {
+      "m1": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "m2": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "m3": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "m4": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "m5": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "m6": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "m7": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "m8": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "m9": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "m10": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "p1": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "p2": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "p3": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "p4": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "p5": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "p6": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "p7": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "p8": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "i1": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "i2": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "i3": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "i4": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "i5": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "i6": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      },
+      "i7": {
+        "sampled": 500,
+        "violationsCount": 0,
+        "status": "PASS"
+      }
+    }
+  },
+  "battery2_mass_rotation_p4": {
+    "passed": true,
+    "leaks": [],
+    "details": {
+      "rotationCrash": false,
+      "leaksBeforeSelectLevel": 0,
+      "leaksAfterSelectLevel": 0,
+      "chLeaks": [],
+      "clLeaks": [],
+      "sampleLeakingWords": []
+    }
+  },
+  "battery3_doce_tosse_audit": {
+    "passed": true,
+    "scannedFilesCount": 61,
+    "tosseOccurrences": [],
+    "doceTosseOccurrences": []
+  },
+  "battery4_eval_harness_challenge": {
+    "passed": true,
+    "prngChallengeResults": {
+      "fixed_0.01": {
+        "sampleCount": 20,
+        "consecutiveDuplicates": 1
+      },
+      "fixed_0.5": {
+        "sampleCount": 20,
+        "consecutiveDuplicates": 2
+      },
+      "fixed_0.99": {
+        "sampleCount": 20,
+        "consecutiveDuplicates": 2
+      }
+    },
+    "mutationResults": {
+      "m6_negative_subtraction_caught": true,
+      "m9_inexact_division_caught": true,
+      "m3_double_hole_caught": true,
+      "eval_harness_blind_to_selectLevel_state": false
+    },
+    "finding": "Nenhuma cegueira detectada."
+  },
+  "battery5_distractor_oracles": {
+    "passed": true,
+    "p2Tested": 500,
+    "p2ViolationsCount": 0,
+    "p2Violations": [],
+    "i7Tested": 500,
+    "i7ViolationsCount": 0,
+    "i7Violations": []
+  },
+  "overallPass": true,
+  "timestamp": "2026-09-08T19:46:30.394Z"
+}

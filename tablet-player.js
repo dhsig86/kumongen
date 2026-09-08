@@ -2977,6 +2977,11 @@
             Session.currentAttempts = 0;
             Session.countedDots = [];
 
+            const prevAnswerBox = document.getElementById('activeAnswerBox');
+            if (prevAnswerBox) prevAnswerBox.classList.remove('hint-glow-pulse');
+            const prevCard = document.getElementById('focusCard');
+            if (prevCard) prevCard.classList.remove('card-feedback-success', 'card-feedback-wrong');
+
             const item = Session.items[Session.currentIndex];
             if (!item) return;
             const total = Session.items.length;
@@ -3652,7 +3657,7 @@
                 btn.addEventListener('click', () => {
                     if (Session.isTransitionLocked) return;
                     const op = btn.getAttribute('data-op');
-                    this.checkCompareAnswer(op, a, b);
+                    this.checkCompareAnswer(op, a, b, btn);
                 });
             });
         },
@@ -3660,19 +3665,40 @@
         // Renderizador: VIZINHOS (antes e depois)
         renderNeighborsCard(item, container) {
             const center = item.center;
+            // Se direction não estiver definida no item, balanceia de forma alternada (par = before, ímpar = after)
+            if (!item.direction) {
+                item.direction = (Session.currentIndex % 2 === 0) ? 'before' : 'after';
+            }
+            const isAfter = item.direction === 'after';
+            const questionText = isAfter 
+                ? `Quem é o vizinho que vem depois de ${center}?`
+                : `Quem é o vizinho que vem antes de ${center}?`;
+            const hintText = isAfter
+                ? 'Digite o número seguinte no teclado'
+                : 'Digite o número anterior no teclado';
+
+            const centerBoxHtml = `
+                <div class="w-24 h-24 bg-blue-600 text-white rounded-2xl flex items-center justify-center text-4xl font-black shadow-lg">
+                    ${center}
+                </div>
+            `;
+            const answerBoxHtml = `
+                <div id="activeAnswerBox" class="w-20 h-20 bg-blue-50 border-4 border-dashed border-blue-400 rounded-2xl flex items-center justify-center text-3xl font-black text-blue-600 shadow-inner answer-box-focused">
+                    ?
+                </div>
+            `;
+
+            const displayBlocks = isAfter 
+                ? `${centerBoxHtml} <i class="fas fa-arrow-right text-slate-300"></i> ${answerBoxHtml}`
+                : `${answerBoxHtml} <i class="fas fa-arrow-right text-slate-300"></i> ${centerBoxHtml}`;
+
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-4">
-                    <div class="text-sm font-bold text-slate-500 mb-4">Quem é o vizinho que vem antes de ${center}?</div>
+                    <div class="text-sm font-bold text-slate-500 mb-4">${questionText}</div>
                     <div class="flex items-center justify-center gap-4 mb-4 select-none">
-                        <div id="activeAnswerBox" class="w-20 h-20 bg-blue-50 border-4 border-dashed border-blue-400 rounded-2xl flex items-center justify-center text-3xl font-black text-blue-600 shadow-inner answer-box-focused">
-                            ?
-                        </div>
-                        <i class="fas fa-arrow-right text-slate-300"></i>
-                        <div class="w-24 h-24 bg-blue-600 text-white rounded-2xl flex items-center justify-center text-4xl font-black shadow-lg">
-                            ${center}
-                        </div>
+                        ${displayBlocks}
                     </div>
-                    <div id="cardFeedbackMsg" class="h-6 mt-2 text-xs font-bold text-slate-400">Digite o número anterior no teclado</div>
+                    <div id="cardFeedbackMsg" class="h-6 mt-2 text-xs font-bold text-slate-400">${hintText}</div>
                 </div>
             `;
         },
@@ -3921,10 +3947,9 @@
                         const built = assembled.join('');
                         if (built === word || built === parts.join('')) {
                             speakWord(word, lang, 1.04, 0.84);
-                            this.registerSuccess();
+                            this.registerSuccess(chipsWrapper);
                         } else {
-                            sound.playWrong();
-                            this.shakeCard();
+                            this.registerWrong(chipsWrapper);
                             setTimeout(() => {
                                 assembled = [];
                                 updateSlots();
@@ -3951,8 +3976,28 @@
 
         // Renderizador: IDENTIFICAÇÃO DE SÍLABA
         renderSyllableCard(item, container) {
-            const targetSyl = item.syllable;
-            const distractors = ['BA','DA','FA','GA','LA','MA','PA','RA','SA','TA'].filter(s => s !== targetSyl).sort(() => Math.random() - 0.5).slice(0, 3);
+            const targetSyl = item.syllable || 'BA';
+            // Extrai a terminação/vogal da sílaba alvo para forçar discriminação auditiva consonantal
+            const vowelMatch = targetSyl.match(/([AEIOUÁÉÍÓÚÂÊÔ])$/i);
+            const targetVowel = vowelMatch ? vowelMatch[1].toUpperCase() : 'A';
+
+            let candidatePool = [];
+            if (/^(CH|LH|NH|QU|GU)/i.test(targetSyl)) {
+                const digraphs = ['CH', 'LH', 'NH', 'QU', 'GU'];
+                candidatePool = digraphs.map(d => d + targetVowel);
+            } else if (/^(BR|CR|DR|FR|GR|PR|TR|VR|BL|CL|FL|GL|PL)/i.test(targetSyl)) {
+                const clusters = ['BR', 'CR', 'DR', 'FR', 'GR', 'PR', 'TR', 'BL', 'CL', 'FL', 'GL', 'PL'];
+                candidatePool = clusters.map(c => c + targetVowel);
+            } else {
+                const consonants = ['B','C','D','F','G','J','L','M','N','P','R','S','T','V','Z'];
+                candidatePool = consonants.map(c => c + targetVowel);
+            }
+
+            let distractors = candidatePool.filter(s => s !== targetSyl).sort(() => Math.random() - 0.5).slice(0, 3);
+            if (distractors.length < 3) {
+                const fallback = ['BA','DA','FA','GA','LA','MA','PA','RA','SA','TA'].filter(s => s !== targetSyl && !distractors.includes(s));
+                distractors = distractors.concat(fallback.slice(0, 3 - distractors.length));
+            }
             const options = [targetSyl, ...distractors].sort(() => Math.random() - 0.5);
 
             container.innerHTML = `
@@ -3993,10 +4038,9 @@
                     const chosen = btn.getAttribute('data-syl');
                     speakWord(chosen, 'pt-BR', 1.04, 0.84);
                     if (chosen === targetSyl) {
-                        this.registerSuccess();
+                        this.registerSuccess(btn);
                     } else {
-                        sound.playWrong();
-                        this.shakeCard();
+                        this.registerWrong(btn);
                     }
                 });
             });
@@ -4061,10 +4105,9 @@
                     if (Session.isTransitionLocked) return;
                     const chosen = btn.getAttribute('data-frac');
                     if (chosen === correctFraction) {
-                        this.registerSuccess();
+                        this.registerSuccess(btn);
                     } else {
-                        sound.playWrong();
-                        this.shakeCard();
+                        this.registerWrong(btn);
                     }
                 });
             });
@@ -4113,10 +4156,9 @@
                     const chosen = btn.getAttribute('data-word');
                     speakWord(chosen, 'pt-BR', 1.04, 0.84);
                     if (chosen === targetWord) {
-                        this.registerSuccess();
+                        this.registerSuccess(btn);
                     } else {
-                        sound.playWrong();
-                        this.shakeCard();
+                        this.registerWrong(btn);
                     }
                 });
             });
@@ -4209,10 +4251,9 @@
                         const targetStr = parts.join(' ');
                         if (builtStr === targetStr || builtStr === sentence) {
                             speakWord(sentence, lang, 1.04, 0.86);
-                            this.registerSuccess();
+                            this.registerSuccess(chipsWrapper);
                         } else {
-                            sound.playWrong();
-                            this.shakeCard();
+                            this.registerWrong(chipsWrapper);
                             setTimeout(() => {
                                 assembled = [];
                                 updateSlots();
@@ -4282,10 +4323,9 @@
                     const chosen = btn.getAttribute('data-word');
                     speakWord(chosen, 'en-US', 1.04, 0.84);
                     if (chosen === target) {
-                        this.registerSuccess();
+                        this.registerSuccess(btn);
                     } else {
-                        sound.playWrong();
-                        this.shakeCard();
+                        this.registerWrong(btn);
                     }
                 });
             });
@@ -4354,13 +4394,15 @@
             } else if (item.type === 'tens') {
                 expected = item.number;
             } else if (item.type === 'neighbors') {
-                expected = item.center - 1;
+                const isAfter = item.direction === 'after';
+                expected = isAfter ? item.center + 1 : item.center - 1;
             }
 
+            const enterBtn = document.querySelector('#virtualKeypad button[data-key="enter"]');
             if (expected !== null && entered === expected) {
-                this.registerSuccess();
+                this.registerSuccess(enterBtn);
             } else {
-                this.registerWrong();
+                this.registerWrong(enterBtn);
             }
         },
 
@@ -4380,20 +4422,20 @@
             return 0;
         },
 
-        checkCompareAnswer(op, a, b) {
+        checkCompareAnswer(op, a, b, triggerBtn) {
             if (Session.isTransitionLocked) return;
             let correctOp = '=';
             if (a > b) correctOp = '>';
             else if (a < b) correctOp = '<';
 
             if (op === correctOp) {
-                this.registerSuccess();
+                this.registerSuccess(triggerBtn);
             } else {
-                this.registerWrong();
+                this.registerWrong(triggerBtn);
             }
         },
 
-        registerSuccess() {
+        registerSuccess(triggerEl) {
             if (Session.isTransitionLocked) return;
             Session.isTransitionLocked = true;
 
@@ -4405,7 +4447,12 @@
             }
 
             sound.playSuccess();
-            this.pulseSuccessCard();
+            this.pulseSuccessCard(triggerEl);
+
+            const answerBox = document.getElementById('activeAnswerBox');
+            if (answerBox) {
+                answerBox.classList.remove('hint-glow-pulse');
+            }
 
             if (Session.currentAttempts === 0 && !Session.isGauntletPhase && !Session.isGauntlet) {
                 Session.roundCorrectFirstAttempt++;
@@ -4428,6 +4475,9 @@
             MascotEngine.onCorrect(currentStreak);
             if (currentStreak >= 3) {
                 sound.playStreakChord(currentStreak);
+            }
+            if (currentStreak >= 3 && currentStreak % 3 === 0) {
+                this.launchStreakSparks(currentStreak);
             }
 
             this.updateGamificationHeader();
@@ -4452,7 +4502,7 @@
             }, 650);
         },
 
-        registerWrong() {
+        registerWrong(triggerEl) {
             clearCardAutoplay();
             if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
                 try {
@@ -4460,11 +4510,14 @@
                 } catch (e) {}
             }
 
+            // Garante estritamente que a digitação permaneça destravada durante o erro
+            Session.isTransitionLocked = false;
+
             sound.playWrong();
             Session.currentAttempts++;
             Gamification.resetStreak();
             this.updateGamificationHeader();
-            this.shakeCard();
+            this.shakeCard(triggerEl);
             MascotEngine.onWrong();
 
             // Adiciona cópia limpa do exercício à fila do Gauntlet Kumon (sem duplicar)
@@ -4490,6 +4543,11 @@
                 msg.innerText = Session.isGauntletPhase ? 'Com calma e concentração você domina!' : 'Quase lá! Tente mais uma vez.';
                 msg.classList.remove('text-slate-400');
                 msg.classList.add('text-amber-500');
+            }
+
+            // Dica visual progressiva no 2º erro consecutivo na mesma questão
+            if (Session.currentAttempts >= 2) {
+                this.applyProgressiveHint(currentItem);
             }
 
             Session.currentInput = '';
@@ -4582,18 +4640,277 @@
             }
         },
 
-        shakeCard() {
+        shakeCard(triggerEl) {
             const card = document.getElementById('focusCard');
-            if (!card) return;
-            card.classList.add('animate-shake');
-            setTimeout(() => card.classList.remove('animate-shake'), 500);
+            if (card) {
+                card.classList.remove('card-feedback-success');
+                card.classList.remove('card-feedback-wrong');
+                // Força reflow para reiniciar animação CSS de forma confiável
+                void card.offsetWidth;
+                card.classList.add('card-feedback-wrong');
+                setTimeout(() => {
+                    card.classList.remove('card-feedback-wrong');
+                }, 450);
+            }
+
+            // Realce visual na tecla Enter ou botão de opção disparador
+            let keyBtn = triggerEl;
+            if (!keyBtn) {
+                keyBtn = document.querySelector('#virtualKeypad button[data-key="enter"]');
+            }
+            if (keyBtn && keyBtn.classList) {
+                keyBtn.classList.remove('key-feedback-emerald');
+                keyBtn.classList.remove('key-feedback-amber');
+                void keyBtn.offsetWidth;
+                keyBtn.classList.add('key-feedback-amber');
+                setTimeout(() => {
+                    keyBtn.classList.remove('key-feedback-amber');
+                }, 450);
+            }
         },
 
-        pulseSuccessCard() {
+        pulseSuccessCard(triggerEl) {
             const card = document.getElementById('focusCard');
-            if (!card) return;
-            card.classList.add('border-emerald-400', 'bg-emerald-50/20');
-            setTimeout(() => card.classList.remove('border-emerald-400', 'bg-emerald-50/20'), 600);
+            if (card) {
+                card.classList.remove('card-feedback-wrong');
+                card.classList.remove('card-feedback-success');
+                void card.offsetWidth;
+                card.classList.add('card-feedback-success');
+                setTimeout(() => {
+                    card.classList.remove('card-feedback-success');
+                }, 600);
+            }
+
+            // Realce visual na tecla Enter ou botão disparador
+            let keyBtn = triggerEl;
+            if (!keyBtn) {
+                keyBtn = document.querySelector('#virtualKeypad button[data-key="enter"]');
+            }
+            if (keyBtn && keyBtn.classList) {
+                keyBtn.classList.remove('key-feedback-amber');
+                keyBtn.classList.remove('key-feedback-emerald');
+                void keyBtn.offsetWidth;
+                keyBtn.classList.add('key-feedback-emerald');
+                setTimeout(() => {
+                    keyBtn.classList.remove('key-feedback-emerald');
+                }, 600);
+            }
+        },
+
+        applyProgressiveHint(item) {
+            if (!item) {
+                item = (Session.items && Session.items[Session.currentIndex]) || null;
+            }
+            if (!item) return;
+
+            // 1. Destaca a lacuna #activeAnswerBox com halo pulsante suave (.hint-glow-pulse)
+            const answerBox = document.getElementById('activeAnswerBox');
+            if (answerBox) {
+                answerBox.classList.add('hint-glow-pulse');
+            }
+
+            // 2. Reativação ou realce suave de apoio visual/concreto (bolinhas M1-M3, blocos M4, barras M10)
+            const concreteMathPanel = document.getElementById('concreteMathPanel');
+            const toggleAidBtn = document.getElementById('toggleConcreteAidBtn');
+            if (concreteMathPanel) {
+                if (concreteMathPanel.classList.contains('hidden')) {
+                    concreteMathPanel.classList.remove('hidden');
+                    concreteMathPanel.classList.add('flex');
+                    if (toggleAidBtn) {
+                        toggleAidBtn.innerHTML = '<i class="fas fa-eye-slash"></i> <span>Ocultar</span>';
+                    }
+                }
+                concreteMathPanel.classList.add('ring-2', 'ring-amber-300');
+            }
+
+            const concreteQuantityGrid = document.getElementById('concreteQuantityGrid');
+            if (concreteQuantityGrid) {
+                concreteQuantityGrid.classList.add('ring-2', 'ring-amber-400', 'rounded-2xl');
+            }
+
+            const container = document.getElementById('focusCardContainer');
+            if (container) {
+                // Realce em blocos de dezenas (M4)
+                const tensBox = container.querySelector('.bg-indigo-50');
+                if (tensBox) {
+                    tensBox.classList.add('ring-2', 'ring-amber-400');
+                }
+                // Realce em barras de fração (M10)
+                const fractionBar = container.querySelector('.max-w-sm.flex');
+                if (fractionBar) {
+                    fractionBar.classList.add('ring-2', 'ring-amber-400');
+                }
+            }
+
+            // 3. Texto de apoio sutil sem revelar a resposta diretamente e sem alterar geometria
+            const msg = document.getElementById('cardFeedbackMsg');
+            let hintText = '';
+
+            if (item.type === 'math') {
+                if (item.operator === '+') {
+                    hintText = '💡 Dica: Junte as quantidades ou conte as bolinhas para achar o total!';
+                } else if (item.operator === '-') {
+                    hintText = '💡 Dica: Pense em quanto tirar ou quanto falta para o total!';
+                } else if (item.operator === '×' || item.operator === '*') {
+                    hintText = '💡 Dica: Pense na tabuada como somas repetidas do mesmo número!';
+                } else if (item.operator === '÷' || item.operator === '/') {
+                    hintText = '💡 Dica: Pense em quantas vezes o menor cabe no maior!';
+                } else {
+                    hintText = '💡 Dica: Conte os apoios com calma e confira sua conta!';
+                }
+            } else if (item.type === 'quantity') {
+                hintText = '💡 Dica: Toque nas bolinhas com o dedinho para contar uma a uma!';
+            } else if (item.type === 'sequence') {
+                hintText = '💡 Dica: Veja de quanto em quanto os números estão mudando!';
+            } else if (item.type === 'neighbors') {
+                const isAfter = item.direction === 'after';
+                hintText = isAfter
+                    ? `💡 Dica: Qual número vem logo depois de ${item.center}?`
+                    : `💡 Dica: Qual número vem logo antes de ${item.center}?`;
+            } else if (item.type === 'tens') {
+                hintText = '💡 Dica: Junte a dezena com as unidades soltas para formar o número!';
+            } else if (item.type === 'fraction') {
+                hintText = '💡 Dica: Conte as partes pintadas (cima) e todas as partes (baixo)!';
+            } else if (item.type === 'syllables' || item.type === 'wordbuilding') {
+                hintText = '💡 Dica: Ouça o som com atenção e identifique os pedacinhos!';
+            } else if (item.type === 'rhyme') {
+                hintText = '💡 Dica: Palavras que rimam terminam com o mesmo som!';
+            } else if (item.type === 'sentence') {
+                const isEng = Session.subjectKey === 'ingles';
+                hintText = isEng ? '💡 Hint: Think about who does the action first!' : '💡 Dica: Quem faz a ação costuma iniciar a frase!';
+            } else if (item.type === 'opposite') {
+                hintText = '💡 Hint: Think of the opposite meaning of the highlighted word!';
+            } else {
+                hintText = '💡 Dica: Respire fundo e tente novamente com atenção!';
+            }
+
+            if (msg && hintText) {
+                msg.innerText = hintText;
+                msg.classList.remove('text-slate-400');
+                msg.classList.add('text-amber-600');
+            }
+
+            // Mascote companheiro encorajando com fala suave
+            if (typeof MascotEngine !== 'undefined' && MascotEngine.speak) {
+                MascotEngine.speak('Veja a dica com atenção! Vamos conseguir juntos.', 3000, false);
+            }
+        },
+
+        launchStreakSparks(currentStreak) {
+            const canvas = document.getElementById('confettiCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            // Se houver uma animação de faíscas anterior em andamento, cancela e limpa
+            if (this._streakSparkRafId) {
+                cancelAnimationFrame(this._streakSparkRafId);
+                this._streakSparkRafId = null;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            // Origem: centro do #focusCard
+            let originX = canvas.width / 2;
+            let originY = canvas.height * 0.42;
+            const focusCard = document.getElementById('focusCard');
+            if (focusCard) {
+                const rect = focusCard.getBoundingClientRect();
+                originX = rect.left + rect.width / 2;
+                originY = rect.top + rect.height * 0.45;
+            }
+
+            const palette = ['#fbbf24', '#f59e0b', '#10b981', '#34d399', '#fde047', '#ffffff', '#6ee7b7'];
+            const sparkCount = 26; // 20 a 30 partículas conforme especificação
+            const particles = [];
+
+            for (let i = 0; i < sparkCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 5.5 + 2.5;
+                const isStar = i % 2 === 0;
+                particles.push({
+                    x: originX,
+                    y: originY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - (Math.random() * 2 + 1),
+                    radius: isStar ? (Math.random() * 5 + 4) : (Math.random() * 3.5 + 2),
+                    innerRadius: isStar ? (Math.random() * 2 + 1.5) : 0,
+                    isStar: isStar,
+                    color: palette[Math.floor(Math.random() * palette.length)],
+                    alpha: 1.0,
+                    decay: Math.random() * 0.015 + 0.018,
+                    rotation: Math.random() * Math.PI * 2,
+                    rotSpeed: (Math.random() - 0.5) * 0.15
+                });
+            }
+
+            const self = this;
+            const startTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+            const maxDurationMs = 950;
+
+            function drawStar4(cx, cy, outerR, innerR, rot) {
+                const spikes = 4;
+                const step = Math.PI / spikes;
+                let r = rot || 0;
+                ctx.beginPath();
+                ctx.moveTo(cx + Math.cos(r) * outerR, cy + Math.sin(r) * outerR);
+                for (let s = 0; s < spikes; s++) {
+                    r += step;
+                    ctx.lineTo(cx + Math.cos(r) * innerR, cy + Math.sin(r) * innerR);
+                    r += step;
+                    ctx.lineTo(cx + Math.cos(r) * outerR, cy + Math.sin(r) * outerR);
+                }
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            function frame(now) {
+                const elapsed = now - startTime;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                let aliveCount = 0;
+                for (let i = 0; i < particles.length; i++) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vx *= 0.95;
+                    p.vy = (p.vy * 0.95) + 0.14;
+                    p.alpha -= p.decay;
+                    p.rotation += p.rotSpeed;
+
+                    if (p.alpha > 0.02) {
+                        aliveCount++;
+                        ctx.save();
+                        ctx.globalAlpha = Math.max(0, Math.min(1, p.alpha));
+                        ctx.fillStyle = p.color;
+                        ctx.shadowColor = p.color;
+                        ctx.shadowBlur = 8;
+
+                        if (p.isStar) {
+                            drawStar4(p.x, p.y, p.radius, p.innerRadius, p.rotation);
+                        } else {
+                            ctx.beginPath();
+                            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                        ctx.restore();
+                    }
+                }
+
+                if (aliveCount > 0 && elapsed < maxDurationMs) {
+                    self._streakSparkRafId = requestAnimationFrame(frame);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    if (self._streakSparkRafId) {
+                        cancelAnimationFrame(self._streakSparkRafId);
+                        self._streakSparkRafId = null;
+                    }
+                }
+            }
+
+            this._streakSparkRafId = requestAnimationFrame(frame);
         },
 
         // ============================================================

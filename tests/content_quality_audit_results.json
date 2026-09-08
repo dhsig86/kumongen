@@ -1,0 +1,805 @@
+{
+  "timestamp": "2026-09-08T19:48:03.444Z",
+  "environment": {
+    "nodeVersion": "v24.15.0",
+    "platform": "win32",
+    "arch": "x64"
+  },
+  "config": {
+    "sampleBatchSize": 20,
+    "passScoreThreshold": 90,
+    "dimWarnThreshold": 80,
+    "weights": {
+      "d1_bncc": 0.2,
+      "d2_kumon": 0.25,
+      "d3_correctness": 0.25,
+      "d4_concrete": 0.15,
+      "d5_variability": 0.15
+    },
+    "outputJsonPath": "C:\\Users\\drdhs\\OneDrive\\Documentos\\mathbook-main\\tests\\content_quality_audit_results.json",
+    "projectRoot": "C:\\Users\\drdhs\\OneDrive\\Documentos\\mathbook-main"
+  },
+  "summary": {
+    "totalLevels": 25,
+    "passedLevels": 25,
+    "failedLevels": 0,
+    "averageScore": 99.4,
+    "overallStatus": "PASS",
+    "durationMs": 19
+  },
+  "subjectSummaries": {
+    "matematica": {
+      "levelsCount": 10,
+      "passedCount": 10,
+      "averageScore": 99.3,
+      "status": "PASS"
+    },
+    "portugues": {
+      "levelsCount": 8,
+      "passedCount": 8,
+      "averageScore": 99.5,
+      "status": "PASS"
+    },
+    "ingles": {
+      "levelsCount": 7,
+      "passedCount": 7,
+      "averageScore": 99.4,
+      "status": "PASS"
+    }
+  },
+  "levels": [
+    {
+      "id": "M1",
+      "code": "M1",
+      "subject": "matematica",
+      "title": "M1 · Quantidade",
+      "bncc": "EI03ET07",
+      "age": "4-5 anos",
+      "sct": 60,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 98,
+        "d5_variability": 100,
+        "weighted": 99.7
+      },
+      "metrics": {
+        "entropy": 1,
+        "uniqueCount": 5,
+        "consecDuplicates": 1
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 98,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "M2",
+      "code": "M2",
+      "subject": "matematica",
+      "title": "M2 · Adição",
+      "bncc": "EF01MA06",
+      "age": "5-6 anos",
+      "sct": 75,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 95,
+        "d5_variability": 100,
+        "weighted": 99.3
+      },
+      "metrics": {
+        "entropy": 0.949,
+        "uniqueCount": 9,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 95,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "M3",
+      "code": "M3",
+      "subject": "matematica",
+      "title": "M3 · Sequências",
+      "bncc": "EF01MA10",
+      "age": "5-6 anos",
+      "sct": 90,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 95,
+        "d5_variability": 100,
+        "weighted": 99.3
+      },
+      "metrics": {
+        "entropy": 0.982,
+        "uniqueCount": 12,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 95,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "M4",
+      "code": "M4",
+      "subject": "matematica",
+      "title": "M4 · Dezenas",
+      "bncc": "EF01MA01",
+      "age": "6-7 anos",
+      "sct": 90,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 98,
+        "d5_variability": 100,
+        "weighted": 99.7
+      },
+      "metrics": {
+        "entropy": 1,
+        "uniqueCount": 10,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 98,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "M5",
+      "code": "M5",
+      "subject": "matematica",
+      "title": "M5 · Comparação",
+      "bncc": "EF01MA05",
+      "age": "6-7 anos",
+      "sct": 75,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 95,
+        "d5_variability": 100,
+        "weighted": 99.3
+      },
+      "metrics": {
+        "entropy": 0.982,
+        "uniqueCount": 12,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 95,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "M6",
+      "code": "M6",
+      "subject": "matematica",
+      "title": "M6 · Subtração",
+      "bncc": "EF01MA06",
+      "age": "6-7 anos",
+      "sct": 90,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 95,
+        "d5_variability": 100,
+        "weighted": 99.3
+      },
+      "metrics": {
+        "entropy": 0.973,
+        "uniqueCount": 9,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 95,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "M7",
+      "code": "M7",
+      "subject": "matematica",
+      "title": "M7 · Vizinhos",
+      "bncc": "EF01MA01",
+      "age": "6-7 anos",
+      "sct": 90,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 95,
+        "d5_variability": 100,
+        "weighted": 99.3
+      },
+      "metrics": {
+        "entropy": 0.955,
+        "uniqueCount": 11,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 95,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "M8",
+      "code": "M8",
+      "subject": "matematica",
+      "title": "M8 · Multiplicação",
+      "bncc": "EF02MA07",
+      "age": "7-8 anos",
+      "sct": 120,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 95,
+        "d5_variability": 100,
+        "weighted": 99.3
+      },
+      "metrics": {
+        "entropy": 0.924,
+        "uniqueCount": 9,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 95,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "M9",
+      "code": "M9",
+      "subject": "matematica",
+      "title": "M9 · Divisão",
+      "bncc": "EF03MA07",
+      "age": "8-9 anos",
+      "sct": 120,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 95,
+        "d5_variability": 90,
+        "weighted": 97.8
+      },
+      "metrics": {
+        "entropy": 0.844,
+        "uniqueCount": 8,
+        "consecDuplicates": 4
+      },
+      "weakestDimension": {
+        "name": "Variabilidade/Entropia",
+        "score": 90,
+        "notes": [
+          "Entropia moderada (0.844)",
+          "Repetições imediatas pontuais (4)"
+        ]
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "M10",
+      "code": "M10",
+      "subject": "matematica",
+      "title": "M10 · Frações",
+      "bncc": "EF04MA09",
+      "age": "9-10 anos",
+      "sct": 150,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 98,
+        "d5_variability": 100,
+        "weighted": 99.7
+      },
+      "metrics": {
+        "entropy": 1,
+        "uniqueCount": 20,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 98,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "P1",
+      "code": "P1",
+      "subject": "portugues",
+      "title": "P1 · Alfabeto (traçado)",
+      "bncc": "EI03EF09",
+      "age": "4-5 anos",
+      "sct": 90,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 98,
+        "d5_variability": 100,
+        "weighted": 99.7
+      },
+      "metrics": {
+        "entropy": 0.884,
+        "uniqueCount": 15,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 98,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "P2",
+      "code": "P2",
+      "subject": "portugues",
+      "title": "P2 · Sílabas simples",
+      "bncc": "EF01LP08",
+      "age": "5-6 anos",
+      "sct": 75,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 98,
+        "d5_variability": 100,
+        "weighted": 99.7
+      },
+      "metrics": {
+        "entropy": 0.977,
+        "uniqueCount": 19,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 98,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "P3",
+      "code": "P3",
+      "subject": "portugues",
+      "title": "P3 · Palavras curtas (2 sílabas)",
+      "bncc": "EF01LP02",
+      "age": "6-7 anos",
+      "sct": 90,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 95,
+        "d5_variability": 100,
+        "weighted": 99.3
+      },
+      "metrics": {
+        "entropy": 0.954,
+        "uniqueCount": 18,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 95,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "P4",
+      "code": "P4",
+      "subject": "portugues",
+      "title": "P4 · Palavras com 3 ou 4 sílabas",
+      "bncc": "EF01LP02",
+      "age": "6-7 anos",
+      "sct": 105,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 95,
+        "d5_variability": 100,
+        "weighted": 99.3
+      },
+      "metrics": {
+        "entropy": 0.954,
+        "uniqueCount": 18,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 95,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "P5",
+      "code": "P5",
+      "subject": "portugues",
+      "title": "P5 · Sílabas complexas",
+      "bncc": "EF02LP04",
+      "age": "6-7 anos",
+      "sct": 90,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 98,
+        "d5_variability": 100,
+        "weighted": 99.7
+      },
+      "metrics": {
+        "entropy": 0.977,
+        "uniqueCount": 19,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 98,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "P6",
+      "code": "P6",
+      "subject": "portugues",
+      "title": "P6 · Dígrafos",
+      "bncc": "EF02LP04",
+      "age": "7-8 anos",
+      "sct": 90,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 98,
+        "d5_variability": 100,
+        "weighted": 99.7
+      },
+      "metrics": {
+        "entropy": 0.907,
+        "uniqueCount": 16,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 98,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "P7",
+      "code": "P7",
+      "subject": "portugues",
+      "title": "P7 · Rimas & Sons Finais",
+      "bncc": "EF01LP19",
+      "age": "6-7 anos",
+      "sct": 75,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 98,
+        "d5_variability": 100,
+        "weighted": 99.7
+      },
+      "metrics": {
+        "entropy": 1,
+        "uniqueCount": 20,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 98,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "P8",
+      "code": "P8",
+      "subject": "portugues",
+      "title": "P8 · Frases Curtas",
+      "bncc": "EF01LP07",
+      "age": "7-8 anos",
+      "sct": 120,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 95,
+        "d5_variability": 100,
+        "weighted": 99.3
+      },
+      "metrics": {
+        "entropy": 1,
+        "uniqueCount": 20,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 95,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "I1",
+      "code": "I1",
+      "subject": "ingles",
+      "title": "I1 · Alphabet (trace)",
+      "bncc": "EF01LI01",
+      "age": "4-6 anos",
+      "sct": 90,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 98,
+        "d5_variability": 100,
+        "weighted": 99.7
+      },
+      "metrics": {
+        "entropy": 0.884,
+        "uniqueCount": 15,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 98,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "I2",
+      "code": "I2",
+      "subject": "ingles",
+      "title": "I2 · CVC Words (3 letters)",
+      "bncc": "EF01LI02",
+      "age": "5-7 anos",
+      "sct": 75,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 95,
+        "d5_variability": 100,
+        "weighted": 99.3
+      },
+      "metrics": {
+        "entropy": 0.931,
+        "uniqueCount": 17,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 95,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "I3",
+      "code": "I3",
+      "subject": "ingles",
+      "title": "I3 · Easy words (4-5 letters)",
+      "bncc": "EF02LI02",
+      "age": "6-8 anos",
+      "sct": 90,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 95,
+        "d5_variability": 100,
+        "weighted": 99.3
+      },
+      "metrics": {
+        "entropy": 0.954,
+        "uniqueCount": 18,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 95,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "I4",
+      "code": "I4",
+      "subject": "ingles",
+      "title": "I4 · Snap Words",
+      "bncc": "EF02LI03",
+      "age": "6-8 anos",
+      "sct": 90,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 95,
+        "d5_variability": 100,
+        "weighted": 99.3
+      },
+      "metrics": {
+        "entropy": 0.931,
+        "uniqueCount": 17,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 95,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "I5",
+      "code": "I5",
+      "subject": "ingles",
+      "title": "I5 · CVCe (Magic E)",
+      "bncc": "EF03LI02",
+      "age": "7-9 anos",
+      "sct": 90,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 95,
+        "d5_variability": 100,
+        "weighted": 99.3
+      },
+      "metrics": {
+        "entropy": 0.907,
+        "uniqueCount": 16,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 95,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "I6",
+      "code": "I6",
+      "subject": "ingles",
+      "title": "I6 · Simple Sentences",
+      "bncc": "EF03LI04",
+      "age": "7-9 anos",
+      "sct": 120,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 95,
+        "d5_variability": 100,
+        "weighted": 99.3
+      },
+      "metrics": {
+        "entropy": 1,
+        "uniqueCount": 20,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 95,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    },
+    {
+      "id": "I7",
+      "code": "I7",
+      "subject": "ingles",
+      "title": "I7 · Opposites",
+      "bncc": "EF04LI03",
+      "age": "8-10 anos",
+      "sct": 90,
+      "samplesEvaluated": 20,
+      "scores": {
+        "d1_bncc": 100,
+        "d2_kumon": 100,
+        "d3_correctness": 100,
+        "d4_concrete": 98,
+        "d5_variability": 100,
+        "weighted": 99.7
+      },
+      "metrics": {
+        "entropy": 1,
+        "uniqueCount": 20,
+        "consecDuplicates": 0
+      },
+      "weakestDimension": {
+        "name": "Apoio Concreto",
+        "score": 98,
+        "notes": []
+      },
+      "status": "PASS",
+      "passed": true
+    }
+  ]
+}

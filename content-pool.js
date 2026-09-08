@@ -260,8 +260,8 @@ const POOL_MAT_SEQUENCIAS = [
     [10,20,'__',40,50], [30,40,50,'__',70], [50,'__',70,80,90],
     // Sequências decrescentes
     [20,19,'__',17,16], [10,9,8,'__',6], [15,14,'__',12,11],
-    // Com dupla lacuna
-    [1,'__',3,'__',5], ['__',4,'__',6,7], [10,'__',12,'__',14],
+    // Sequências complementares com lacuna única
+    [1,2,3,'__',5], [3,4,5,'__',7], [10,11,'__',13,14],
 ];
 
 const POOL_MAT_COMPARACAO = [
@@ -315,7 +315,9 @@ const POOL_PT_RIMAS = [
     { word: 'CÃO', target: 'BOTÃO', options: ['BOTÃO', 'GATO', 'OSSO'], rhymeEnding: 'ÃO' },
     { word: 'BICO', target: 'RICO', options: ['RICO', 'PENA', 'VOO'], rhymeEnding: 'ICO' },
     { word: 'VENTO', target: 'TALENTO', options: ['TALENTO', 'BRISA', 'FOLHA'], rhymeEnding: 'ENTO' },
-    { word: 'DOCE', target: 'TOSSE', options: ['TOSSE', 'AÇÚCAR', 'BOLO'], rhymeEnding: 'OCE' },
+    { word: 'BOLO', target: 'TIJOLO', options: ['TIJOLO', 'SUCO', 'CAMA'], rhymeEnding: 'OLO' },
+    { word: 'PIPOCA', target: 'MINHOCA', options: ['MINHOCA', 'PANELA', 'DADO'], rhymeEnding: 'OCA' },
+    { word: 'CAFÉ', target: 'BONÉ', options: ['BONÉ', 'LEITE', 'MESA'], rhymeEnding: 'É' },
     { word: 'RUA', target: 'LUA', options: ['LUA', 'CARRO', 'CASA'], rhymeEnding: 'UA' }
 ];
 
@@ -326,7 +328,7 @@ const POOL_PT_FRASES = [
     { sentence: 'A MENINA COMEU MAÇÃ', parts: ['A MENINA', 'COMEU', 'MAÇÃ'] },
     { sentence: 'O SOL BRILHA NO CÉU', parts: ['O SOL', 'BRILHA', 'NO CÉU'] },
     { sentence: 'O SAPO PULA NA LAGOA', parts: ['O SAPO', 'PULA', 'NA LAGOA'] },
-    { sentence: 'EU GOSTO DE DESENHAR', parts: ['EU GOSTO', 'DE', 'DESENHAR'] },
+    { sentence: 'EU GOSTO DE DESENHAR', parts: ['EU', 'GOSTO DE', 'DESENHAR'] },
     { sentence: 'O PASSARINHO CANTA FELIZ', parts: ['O PASSARINHO', 'CANTA', 'FELIZ'] },
     { sentence: 'O PEIXE NADA NO RIO', parts: ['O PEIXE', 'NADA', 'NO RIO'] },
     { sentence: 'O LIVRO TEM HISTÓRIAS', parts: ['O LIVRO', 'TEM', 'HISTÓRIAS'] },
@@ -334,7 +336,7 @@ const POOL_PT_FRASES = [
     { sentence: 'O BARCO NAVEGA NO MAR', parts: ['O BARCO', 'NAVEGA', 'NO MAR'] },
     { sentence: 'A BORBOLETA VOA NO JARDIM', parts: ['A BORBOLETA', 'VOA', 'NO JARDIM'] },
     { sentence: 'O MENINO CHUTA A BOLA', parts: ['O MENINO', 'CHUTA', 'A BOLA'] },
-    { sentence: 'A MAÇÃ É VERMELHA E DOCE', parts: ['A MAÇÃ É', 'VERMELHA', 'E DOCE'] },
+    { sentence: 'A MAÇÃ É MUITO DOCE', parts: ['A MAÇÃ', 'É', 'MUITO DOCE'] },
     { sentence: 'A ESTRELA BRILHA NA NOITE', parts: ['A ESTRELA', 'BRILHA', 'NA NOITE'] },
     { sentence: 'O VENTO SOPRA AS FOLHAS', parts: ['O VENTO', 'SOPRA', 'AS FOLHAS'] },
     { sentence: 'O COELHO COME CENOURA', parts: ['O COELHO', 'COME', 'CENOURA'] },
@@ -351,25 +353,25 @@ const POOL_PT_FRASES = [
 // INGLÊS — Sentenças & Opostos Extras
 // ============================================================
 const POOL_EN_SENTENCES = [
-    { sentence: 'I SEE A CAT', parts: ['I SEE', 'A CAT'] },
+    { sentence: 'I SEE A CAT', parts: ['I', 'SEE', 'A CAT'] },
     { sentence: 'THE DOG IS BIG', parts: ['THE DOG', 'IS', 'BIG'] },
     { sentence: 'I LIKE RED APPLES', parts: ['I LIKE', 'RED', 'APPLES'] },
     { sentence: 'THE SUN IS HOT', parts: ['THE SUN', 'IS', 'HOT'] },
-    { sentence: 'SHE HAS A DOLL', parts: ['SHE HAS', 'A', 'DOLL'] },
+    { sentence: 'SHE HAS A DOLL', parts: ['SHE', 'HAS', 'A DOLL'] },
     { sentence: 'WE PLAY IN THE PARK', parts: ['WE PLAY', 'IN THE', 'PARK'] },
     { sentence: 'HE CAN RUN FAST', parts: ['HE CAN', 'RUN', 'FAST'] },
     { sentence: 'THE BIRD CAN FLY', parts: ['THE BIRD', 'CAN', 'FLY'] },
     { sentence: 'LOOK AT THE MOON', parts: ['LOOK AT', 'THE', 'MOON'] },
-    { sentence: 'THIS IS MY BOOK', parts: ['THIS IS', 'MY', 'BOOK'] },
+    { sentence: 'THIS IS MY BOOK', parts: ['THIS', 'IS', 'MY BOOK'] },
     { sentence: 'THE FISH CAN SWIM', parts: ['THE FISH', 'CAN', 'SWIM'] },
-    { sentence: 'I LOVE MY FAMILY', parts: ['I LOVE', 'MY', 'FAMILY'] },
+    { sentence: 'I LOVE MY FAMILY', parts: ['I', 'LOVE', 'MY FAMILY'] },
     { sentence: 'THE SKY IS BLUE', parts: ['THE SKY', 'IS', 'BLUE'] },
     { sentence: 'SHE READS A GOOD BOOK', parts: ['SHE READS', 'A GOOD', 'BOOK'] },
     { sentence: 'WE EAT SWEET FRUIT', parts: ['WE EAT', 'SWEET', 'FRUIT'] },
-    { sentence: 'THE GREEN FROG JUMPS', parts: ['THE GREEN FROG', 'JUMPS'] },
-    { sentence: 'I HAVE TWO HANDS', parts: ['I HAVE', 'TWO', 'HANDS'] },
+    { sentence: 'THE FROG JUMPS HIGH', parts: ['THE FROG', 'JUMPS', 'HIGH'] },
+    { sentence: 'I HAVE TWO HANDS', parts: ['I', 'HAVE', 'TWO HANDS'] },
     { sentence: 'THE CAR IS VERY FAST', parts: ['THE CAR', 'IS VERY', 'FAST'] },
-    { sentence: 'HE DRINKS COLD MILK', parts: ['HE DRINKS', 'COLD', 'MILK'] },
+    { sentence: 'HE DRINKS COLD MILK', parts: ['HE', 'DRINKS', 'COLD MILK'] },
     { sentence: 'THE FLOWERS ARE PRETTY', parts: ['THE FLOWERS', 'ARE', 'PRETTY'] },
     { sentence: 'I CAN JUMP HIGH', parts: ['I CAN', 'JUMP', 'HIGH'] },
     { sentence: 'THE RABBIT IS WHITE', parts: ['THE RABBIT', 'IS', 'WHITE'] },
@@ -378,30 +380,30 @@ const POOL_EN_SENTENCES = [
 ];
 
 const POOL_EN_OPPOSITES = [
-    { word: 'BIG', target: 'SMALL', options: ['SMALL', 'HOT', 'RED'], icon: '🐘 / 🐭' },
-    { word: 'HOT', target: 'COLD', options: ['COLD', 'FAST', 'SUN'], icon: '🔥 / ❄️' },
-    { word: 'HAPPY', target: 'SAD', options: ['SAD', 'BIG', 'BLUE'], icon: '😊 / 😢' },
+    { word: 'BIG', target: 'SMALL', options: ['SMALL', 'HOT', 'SLOW'], icon: '🐘 / 🐭' },
+    { word: 'HOT', target: 'COLD', options: ['COLD', 'FAST', 'BIG'], icon: '🔥 / ❄️' },
+    { word: 'HAPPY', target: 'SAD', options: ['SAD', 'COLD', 'FAST'], icon: '😊 / 😢' },
     { word: 'UP', target: 'DOWN', options: ['DOWN', 'IN', 'OUT'], icon: '⬆️ / ⬇️' },
-    { word: 'DAY', target: 'NIGHT', options: ['NIGHT', 'RAIN', 'MOON'], icon: '☀️ / 🌙' },
-    { word: 'FAST', target: 'SLOW', options: ['SLOW', 'COLD', 'RUN'], icon: '🏎️ / 🐢' },
-    { word: 'OPEN', target: 'CLOSED', options: ['CLOSED', 'BOX', 'DOOR'], icon: '📖 / 📕' },
+    { word: 'DAY', target: 'NIGHT', options: ['NIGHT', 'SLOW', 'COLD'], icon: '☀️ / 🌙' },
+    { word: 'FAST', target: 'SLOW', options: ['SLOW', 'COLD', 'BIG'], icon: '🏎️ / 🐢' },
+    { word: 'OPEN', target: 'CLOSED', options: ['CLOSED', 'COLD', 'FAST'], icon: '📖 / 📕' },
     { word: 'IN', target: 'OUT', options: ['OUT', 'ON', 'OFF'], icon: '📥 / 📤' },
-    { word: 'HARD', target: 'SOFT', options: ['SOFT', 'ROCK', 'TALL'], icon: '🪨 / 🧸' },
-    { word: 'TALL', target: 'SHORT', options: ['SHORT', 'LITTLE', 'TREE'], icon: '🦒 / 🦔' },
-    { word: 'HEAVY', target: 'LIGHT', options: ['LIGHT', 'STRONG', 'BIG'], icon: '🐘 / 🪶' },
-    { word: 'WET', target: 'DRY', options: ['DRY', 'WATER', 'RAIN'], icon: '🌧️ / 🌵' },
-    { word: 'CLEAN', target: 'DIRTY', options: ['DIRTY', 'FRESH', 'SHINY'], icon: '✨ / 🧼' },
-    { word: 'FULL', target: 'EMPTY', options: ['EMPTY', 'CUP', 'PLENTY'], icon: '🥛 / 🫙' },
-    { word: 'NEAR', target: 'FAR', options: ['FAR', 'CLOSE', 'HERE'], icon: '📍 / 🔭' },
-    { word: 'EARLY', target: 'LATE', options: ['LATE', 'FIRST', 'CLOCK'], icon: '⏰ / 🌙' },
-    { word: 'STRONG', target: 'WEAK', options: ['WEAK', 'BOLD', 'FAST'], icon: '💪 / 🍃' },
-    { word: 'OLD', target: 'YOUNG', options: ['YOUNG', 'TIME', 'WISE'], icon: '👴 / 👶' },
-    { word: 'DARK', target: 'LIGHT', options: ['LIGHT', 'SHADOW', 'SUN'], icon: '🌑 / 💡' },
-    { word: 'FRONT', target: 'BACK', options: ['BACK', 'DOOR', 'SIDE'], icon: '🚪 / 🔙' },
-    { word: 'QUIET', target: 'LOUD', options: ['LOUD', 'NOISE', 'CALM'], icon: '🤫 / 📢' },
-    { word: 'SWEET', target: 'SOUR', options: ['SOUR', 'SUGAR', 'CANDY'], icon: '🍭 / 🍋' },
-    { word: 'GOOD', target: 'BAD', options: ['BAD', 'GREAT', 'NICE'], icon: '👍 / 👎' },
-    { word: 'RICH', target: 'POOR', options: ['POOR', 'GOLD', 'COIN'], icon: '💎 / 🪙' }
+    { word: 'HARD', target: 'SOFT', options: ['SOFT', 'FAST', 'COLD'], icon: '🪨 / 🧸' },
+    { word: 'TALL', target: 'SHORT', options: ['SHORT', 'HOT', 'SLOW'], icon: '🦒 / 🦔' },
+    { word: 'HEAVY', target: 'LIGHT', options: ['LIGHT', 'FAST', 'BIG'], icon: '🐘 / 🪶' },
+    { word: 'WET', target: 'DRY', options: ['DRY', 'SLOW', 'COLD'], icon: '🌧️ / 🌵' },
+    { word: 'CLEAN', target: 'DIRTY', options: ['DIRTY', 'FAST', 'COLD'], icon: '✨ / 🧼' },
+    { word: 'FULL', target: 'EMPTY', options: ['EMPTY', 'HOT', 'SLOW'], icon: '🥛 / 🫙' },
+    { word: 'NEAR', target: 'FAR', options: ['FAR', 'HOT', 'BIG'], icon: '📍 / 🔭' },
+    { word: 'EARLY', target: 'LATE', options: ['LATE', 'SLOW', 'COLD'], icon: '⏰ / 🌙' },
+    { word: 'STRONG', target: 'WEAK', options: ['WEAK', 'COLD', 'FAST'], icon: '💪 / 🍃' },
+    { word: 'OLD', target: 'YOUNG', options: ['YOUNG', 'COLD', 'FAST'], icon: '👴 / 👶' },
+    { word: 'DARK', target: 'LIGHT', options: ['LIGHT', 'SLOW', 'BIG'], icon: '🌑 / 💡' },
+    { word: 'FRONT', target: 'BACK', options: ['BACK', 'SLOW', 'FAST'], icon: '🚪 / 🔙' },
+    { word: 'QUIET', target: 'LOUD', options: ['LOUD', 'COLD', 'SLOW'], icon: '🤫 / 📢' },
+    { word: 'SWEET', target: 'SOUR', options: ['SOUR', 'DARK', 'HARD'], icon: '🍭 / 🍋' },
+    { word: 'GOOD', target: 'BAD', options: ['BAD', 'FAST', 'COLD'], icon: '👍 / 👎' },
+    { word: 'RICH', target: 'POOR', options: ['POOR', 'FAST', 'COLD'], icon: '💎 / 🪙' }
 ];
 
 // Exportação universal para compatibilidade com browser e node

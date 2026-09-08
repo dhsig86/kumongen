@@ -157,6 +157,53 @@
             animation: shakeSoft 0.45s ease-in-out;
         }
 
+        /* ── FEEDBACKS VISUAIS SENSORIAIS (R3 / M3) ── */
+        /* Pulso elástico com mola suave e glow esmeralda no acerto */
+        @keyframes cardSuccessPulse {
+            0% { transform: scale(1); }
+            30% { transform: scale(1.025); }
+            60% { transform: scale(0.99); }
+            100% { transform: scale(1); }
+        }
+
+        .card-feedback-success {
+            animation: cardSuccessPulse 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border-color: #10b981 !important;
+            box-shadow: 0 0 24px rgba(16, 185, 129, 0.45) !important;
+        }
+
+        /* Shake suave e halo âmbar sutil no erro */
+        @keyframes cardWrongShake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+
+        .card-feedback-wrong {
+            animation: cardWrongShake 0.45s ease-in-out;
+            border-color: #f59e0b !important;
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.35) !important;
+        }
+
+        /* Micro-feedback nas teclas do teclado virtual e botões de opções de escolha */
+        .key-feedback-emerald {
+            border-color: #10b981 !important;
+            background-color: #059669 !important;
+            color: #ffffff !important;
+            box-shadow: 0 0 16px rgba(16, 185, 129, 0.65) !important;
+            transform: scale(0.95);
+            transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+        }
+
+        .key-feedback-amber {
+            border-color: #f59e0b !important;
+            background-color: rgba(245, 158, 11, 0.22) !important;
+            color: #b45309 !important;
+            box-shadow: 0 0 14px rgba(245, 158, 11, 0.5) !important;
+            transform: scale(0.95);
+            transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+        }
+
         /* Botões do teclado virtual touch ergonômico */
         .keypad-btn {
             height: 56px;
@@ -200,6 +247,23 @@
 
         .answer-box-focused {
             animation: focusHalo 2.5s ease-in-out infinite;
+        }
+
+        /* Dica visual progressiva no 2º erro consecutivo: halo pulsante suave na lacuna */
+        @keyframes hintGlowPulse {
+            0%, 100% {
+                box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.35), inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+                border-color: #f59e0b !important;
+            }
+            50% {
+                box-shadow: 0 0 0 8px rgba(245, 158, 11, 0.65), 0 0 18px rgba(245, 158, 11, 0.45), inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+                border-color: #d97706 !important;
+            }
+        }
+
+        .hint-glow-pulse {
+            animation: hintGlowPulse 1.8s ease-in-out infinite !important;
+            border-color: #f59e0b !important;
         }
 
         /* ── MODO PAISAGEM (LANDSCAPE) ERGONÔMICO PARA TABLETS ── */
