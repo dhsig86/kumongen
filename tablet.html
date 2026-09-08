@@ -266,6 +266,39 @@
             border-color: #f59e0b !important;
         }
 
+        /* Chips e Seletor de Handicap (Tactile Clarity) */
+        .handicap-chip-btn {
+            cursor: pointer;
+            background: #f8fafc;
+            border: 1.5px solid #cbd5e1;
+            color: #334155;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.15s ease;
+        }
+        .handicap-chip-btn:hover {
+            background: #eff6ff;
+            border-color: #93c5fd;
+            color: #1d4ed8;
+        }
+        .handicap-chip-btn:active {
+            transform: scale(0.94);
+        }
+        .handicap-chip-btn.active {
+            background: #2563eb !important;
+            border-color: #1d4ed8 !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35) !important;
+        }
+
+        /* Splash/Lobby no Card de Foco Central */
+        #focusCard.splash-card-mode {
+            max-width: 620px !important;
+            padding: 1.25rem 1.5rem !important;
+            border-width: 2.5px !important;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.08) !important;
+        }
+
         /* ── MODO PAISAGEM (LANDSCAPE) ERGONÔMICO PARA TABLETS ── */
         @media (orientation: landscape) and (min-width: 680px) {
             #playerWorkspace {
@@ -360,6 +393,21 @@
                 height: 40px !important;
                 font-size: 1.2rem !important;
                 border-radius: 0.6rem !important;
+            }
+        }
+
+        /* ── RESPONSIVO: TABLETS EM RETRATO (IPAD ≤ 820px) ── */
+        @media (max-width: 820px) {
+            header {
+                padding-left: 0.75rem !important;
+                padding-right: 0.75rem !important;
+                gap: 0.35rem !important;
+            }
+            header > div {
+                gap: 0.35rem !important;
+            }
+            #pickerLevelTitle {
+                max-width: 120px !important;
             }
         }
 
@@ -600,7 +648,7 @@
             </a>
 
             <div class="flex items-center gap-1.5">
-                <span class="hidden md:inline-flex text-xs font-black text-blue-400 uppercase tracking-widest mr-1">
+                <span class="hidden lg:inline-flex text-xs font-black text-blue-400 uppercase tracking-widest mr-1">
                     <i class="fas fa-tablet-alt mr-1"></i> TABLET
                 </span>
 
@@ -610,6 +658,48 @@
                     <span id="pickerLevelTitle" class="truncate max-w-[120px] sm:max-w-[160px] md:max-w-[200px] text-gray-800 font-black">M1 · Quantidade</span>
                     <i class="fas fa-chevron-down text-[9px] text-gray-400"></i>
                 </button>
+
+                <!-- Botão Seletor Rápido de Handicap (Foco / Misto) -->
+                <div class="relative" id="handicapContainer">
+                    <button type="button" id="handicapQuickBtn" class="bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-400 text-blue-700 text-xs md:text-sm font-black rounded-xl px-2 md:px-2.5 py-1.5 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95" title="Trocar parcela ou modo de handicap (+1..+9, Misto)">
+                        <span id="handicapBadge" class="flex items-center gap-1">
+                            <i class="fas fa-sliders-h text-[10px] text-blue-500"></i>
+                            <span id="handicapBadgeText">+1</span>
+                        </span>
+                        <i class="fas fa-chevron-down text-[8px] text-blue-400"></i>
+                    </button>
+
+                    <!-- Popover Flutuante de Troca Rápida de Handicap -->
+                    <div id="handicapPopover" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:65;min-width:230px;background:var(--modal-bg);border:2px solid var(--modal-border);color:var(--text-primary);" class="rounded-2xl p-3 shadow-2xl backdrop-blur-md">
+                        <div class="flex items-center justify-between pb-2 mb-2 border-b border-gray-200">
+                            <span class="text-[11px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1">
+                                <i class="fas fa-bullseye text-blue-500"></i> Handicap / Parcela
+                            </span>
+                            <span id="handicapPopoverCurrent" class="text-xs font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">+1</span>
+                        </div>
+                        <div class="text-[10px] font-bold text-gray-400 mb-1.5">Foco Específico (Kumon):</div>
+                        <div class="grid grid-cols-5 gap-1 mb-2.5" id="handicapFocusGrid">
+                            <button type="button" class="handicap-chip-btn py-1.5 rounded-lg text-xs font-black text-center" data-mode="focus" data-value="1">+1</button>
+                            <button type="button" class="handicap-chip-btn py-1.5 rounded-lg text-xs font-black text-center" data-mode="focus" data-value="2">+2</button>
+                            <button type="button" class="handicap-chip-btn py-1.5 rounded-lg text-xs font-black text-center" data-mode="focus" data-value="3">+3</button>
+                            <button type="button" class="handicap-chip-btn py-1.5 rounded-lg text-xs font-black text-center" data-mode="focus" data-value="4">+4</button>
+                            <button type="button" class="handicap-chip-btn py-1.5 rounded-lg text-xs font-black text-center" data-mode="focus" data-value="5">+5</button>
+                            <button type="button" class="handicap-chip-btn py-1.5 rounded-lg text-xs font-black text-center" data-mode="focus" data-value="6">+6</button>
+                            <button type="button" class="handicap-chip-btn py-1.5 rounded-lg text-xs font-black text-center" data-mode="focus" data-value="7">+7</button>
+                            <button type="button" class="handicap-chip-btn py-1.5 rounded-lg text-xs font-black text-center" data-mode="focus" data-value="8">+8</button>
+                            <button type="button" class="handicap-chip-btn py-1.5 rounded-lg text-xs font-black text-center" data-mode="focus" data-value="9">+9</button>
+                        </div>
+                        <div class="text-[10px] font-bold text-gray-400 mb-1.5">Modos Mistos Balanceados:</div>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <button type="button" class="handicap-chip-btn py-1.5 px-2 rounded-xl text-xs font-black flex items-center justify-center gap-1" data-mode="mixed_basic">
+                                <span>🎲 1 a 5</span>
+                            </button>
+                            <button type="button" class="handicap-chip-btn py-1.5 px-2 rounded-xl text-xs font-black flex items-center justify-center gap-1" data-mode="mixed_full">
+                                <span>🏆 Master 1-9</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Selects nativos mantidos ocultos/sincronizados para compatibilidade de automação -->
                 <div class="hidden">

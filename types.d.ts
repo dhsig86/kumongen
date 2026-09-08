@@ -137,6 +137,13 @@ export interface TracingExerciseItem {
     example?: boolean;
 }
 
+export type HandicapMode = 'focus' | 'mixed_basic' | 'mixed_full';
+
+export interface HandicapConfig {
+    mode: HandicapMode;
+    value?: number;
+}
+
 /**
  * Item Genérico de Exercício (União Discriminada)
  */
@@ -151,7 +158,7 @@ export interface KumonSubject {
     title?: string;
     icon?: string;
     levels: KumonLevel[];
-    generate: (level: KumonLevel, count: number) => ExerciseItem[];
+    generate: (level: KumonLevel, count: number, options?: { handicap?: HandicapConfig; [key: string]: any }) => ExerciseItem[];
 }
 
 /**
@@ -161,6 +168,7 @@ export interface TabletSessionState {
     subjectKey: SubjectKey | string;
     levelId: string;
     studentName: string;
+    handicap?: HandicapConfig;
     items: ExerciseItem[];
     currentIndex: number;
     currentInput: string;
@@ -270,6 +278,9 @@ declare global {
         TabletPlayer: {
             init?: () => void;
             startRound?: () => void;
+            showSplashLobby?: () => void;
+            openSplashLobby?: () => void;
+            updateHandicapHeaderBadge?: () => void;
             Session?: TabletSessionState | any;
             sound?: any;
             Gamification?: any;

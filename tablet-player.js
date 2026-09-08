@@ -1170,6 +1170,14 @@
     const Session = {
         subjectKey: 'matematica',
         levelId: 'm2',
+        handicap: (() => {
+            try {
+                const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
+                const saved = storage ? storage.getItem('kumongen_tablet_handicap') : null;
+                if (saved) return JSON.parse(saved);
+            } catch (e) {}
+            return { mode: 'focus', value: 1 };
+        })(),
         studentName: (window.StudentProfileEngine && window.StudentProfileEngine.getActive()) ? window.StudentProfileEngine.getActive().name : ((window.SafeStorage ? window.SafeStorage.getItem('kumongen_student_name') : (typeof localStorage !== 'undefined' ? localStorage.getItem('kumongen_student_name') : null)) || 'Super Aluno'),
         items: [],
         currentIndex: 0,
@@ -2149,14 +2157,16 @@
         modal: null,
         selectedSubject: null,
         selectedLevel: null,
+        selectedHandicap: null,
         currentStep: 1,
         _eventsBound: false,
 
         show() {
             this.modal = document.getElementById('taskWizardModal');
             if (!this.modal) return;
-            this.selectedSubject = null;
-            this.selectedLevel = null;
+            this.selectedSubject = Session.subjectKey || 'matematica';
+            this.selectedLevel = Session.levelId || 'm2';
+            this.selectedHandicap = Session.handicap ? { ...Session.handicap } : { mode: 'focus', value: 1 };
             this.bindGlobalEvents();
             this.renderStep1();
             this.modal.style.display = 'flex';
@@ -2189,6 +2199,9 @@
             try {
                 (window.SafeStorage || localStorage).setItem('kumongen-wizard-done', 'true');
             } catch (e) {}
+            if (!Session.items || Session.items.length === 0) {
+                TabletPlayer.startRound();
+            }
         },
 
         renderStep1() {
@@ -2349,6 +2362,67 @@
             };
             const sc = subjectColors[this.selectedSubject] || subjectColors.matematica;
 
+            if (!this.selectedHandicap) {
+                this.selectedHandicap = Session.handicap ? { ...Session.handicap } : { mode: 'focus', value: 1 };
+            }
+
+            const op = (level && level.operator) || '+';
+            const isMathOp = (this.selectedSubject === 'matematica' && level && (level.type === 'math' || ['m2','m3','m4','m5','m6','m7','m8','m9'].includes(level.id)));
+
+            let focusBtns = [];
+            if (op === '×' || op === '*' || op === '÷' || op === '/') {
+                focusBtns = [2, 3, 4, 5, 6, 7, 8, 9];
+            } else {
+                focusBtns = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+            }
+
+            const getOpSymbol = (val) => {
+                if (op === '×' || op === '*') return `×${val}`;
+                if (op === '÷' || op === '/') return `÷${val}`;
+                if (op === '-') return `-${val}`;
+                return `+${val}`;
+            };
+
+            const handicapSection = isMathOp ? `
+                <div class="mt-3 text-left">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-xs font-black text-gray-700 flex items-center gap-1.5">
+                            <i class="fas fa-bullseye" style="color:${sc.color}"></i> Escolha o Handicap (Parcela):
+                        </span>
+                        <span id="wizardHandicapPreview" class="text-xs font-black px-2 py-0.5 rounded-full" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
+                            ${this.selectedHandicap.mode === 'focus' ? getOpSymbol(this.selectedHandicap.value || 1) : (this.selectedHandicap.mode === 'mixed_basic' ? '🎲 Misto 1-5' : '🏆 Master 1-9')}
+                        </span>
+                    </div>
+
+                    <div class="text-[10px] font-bold text-gray-500 mb-1">1. Foco Específico (Kumon):</div>
+                    <div class="grid grid-cols-5 gap-1 mb-2.5">
+                        ${focusBtns.map(n => {
+                            const isAct = (this.selectedHandicap.mode === 'focus' && Number(this.selectedHandicap.value) === n);
+                            return `
+                                <button type="button" class="wizard-handicap-btn py-1.5 rounded-xl text-xs font-black border transition-all text-center cursor-pointer active:scale-95 ${isAct ? 'bg-blue-600 text-white border-blue-700 shadow-sm' : 'bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200'}" data-mode="focus" data-value="${n}">
+                                    ${getOpSymbol(n)}
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+
+                    <div class="text-[10px] font-bold text-gray-500 mb-1">2. Modos Mistos Balanceados:</div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" class="wizard-handicap-btn py-2 px-2.5 rounded-xl text-xs font-black border transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${this.selectedHandicap.mode === 'mixed_basic' ? 'bg-blue-600 text-white border-blue-700 shadow-sm' : 'bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200'}" data-mode="mixed_basic">
+                            <i class="fas fa-dice"></i> <span>Misto Básico (${op === '×' || op === '÷' ? '2 a 5' : '1 a 5'})</span>
+                        </button>
+                        <button type="button" class="wizard-handicap-btn py-2 px-2.5 rounded-xl text-xs font-black border transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${this.selectedHandicap.mode === 'mixed_full' ? 'bg-blue-600 text-white border-blue-700 shadow-sm' : 'bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200'}" data-mode="mixed_full">
+                            <i class="fas fa-trophy text-amber-500"></i> <span>Kumon Master (${op === '×' || op === '÷' ? '2 a 9' : '1 a 9'})</span>
+                        </button>
+                    </div>
+                </div>
+            ` : `
+                <div class="mt-2 text-left bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs text-slate-600 flex items-center gap-2">
+                    <i class="fas fa-info-circle text-blue-500"></i>
+                    <span>Modo de Progressão Padrão ativo para este nível.</span>
+                </div>
+            `;
+
             this.modal.innerHTML = `
                 <div class="wizard-card-modal bg-white p-5 md:p-6 text-center" style="border: 2px solid ${sc.border};">
                     <button type="button" id="wizardCloseBtn3" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold transition-all cursor-pointer z-10 active:scale-90" title="Fechar (ESC)">
@@ -2360,32 +2434,35 @@
                             <img src="${mascot.avatar}" alt="${mascot.name}" class="w-full h-full rounded-full object-cover border-2 border-white">
                         </div>
                         <span class="inline-block text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full mb-1" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">Passo 3 de 3</span>
-                        <h3 class="text-xl font-black text-gray-900 mb-1">Tudo pronto!</h3>
+                        <h3 class="text-xl font-black text-gray-900 mb-0.5">Configurar Missão</h3>
+                        <p class="text-xs text-gray-500">Ajuste o desafio antes de começar!</p>
                     </div>
 
                     <div class="flex-1 overflow-y-auto min-h-0 pr-1">
-                        <div class="rounded-2xl p-4 mb-4 text-left shadow-sm" style="background:${sc.bg};border:1px solid ${sc.border};">
-                            <div class="flex items-center gap-3 mb-2">
+                        <div class="rounded-2xl p-3 text-left shadow-sm mb-2" style="background:${sc.bg};border:1px solid ${sc.border};">
+                            <div class="flex items-center gap-3">
                                 <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black flex-shrink-0 shadow-sm" style="background:${sc.color};color:#fff;">${(this.selectedLevel || '').toUpperCase()}</span>
                                 <div class="min-w-0 flex-1">
                                     <div class="text-sm font-black text-gray-900">${sc.label}</div>
                                     <div class="text-xs text-gray-600 truncate">${level ? level.title : ''}</div>
                                 </div>
                             </div>
-                            <div class="text-xs text-gray-500 flex items-center gap-1.5 mt-1">
+                            <div class="text-[11px] text-gray-500 flex items-center gap-1.5 mt-1 pt-1 border-t border-blue-100/50">
                                 <i class="fas fa-user text-gray-400"></i> ${(window.escapeHtml ? window.escapeHtml(Session.studentName) : Session.studentName)}
                                 <span class="mx-1">·</span>
-                                <img src="${mascot.avatar}" alt="${mascot.name}" class="w-4 h-4 rounded-full inline"> ${mascot.name}
+                                <img src="${mascot.avatar}" alt="${mascot.name}" class="w-3.5 h-3.5 rounded-full inline"> ${mascot.name}
                             </div>
                         </div>
+
+                        ${handicapSection}
                     </div>
 
-                    <div class="flex-shrink-0 flex flex-col gap-2 mt-2">
+                    <div class="flex-shrink-0 flex flex-col gap-2 mt-3 pt-2 border-t border-gray-100">
                         <button type="button" id="wizardStartBtn" class="w-full py-3.5 font-black text-base rounded-2xl shadow-lg transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2" style="background:${sc.color};color:#fff;">
-                            <i class="fas fa-play"></i> Começar Tarefa
+                            <i class="fas fa-rocket"></i> Iniciar Missão
                         </button>
 
-                        <div class="flex items-center justify-between gap-2 mt-1">
+                        <div class="flex items-center justify-between gap-2">
                             <button type="button" id="wizardBack2Btn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 active:scale-95">
                                 <i class="fas fa-arrow-left"></i> Voltar
                             </button>
@@ -2408,15 +2485,61 @@
 
             const backBtn = document.getElementById('wizardBack2Btn');
             if (backBtn) backBtn.addEventListener('click', () => this.renderStep2());
+
+            // Listeners dos botões de Handicap no Wizard
+            this.modal.querySelectorAll('.wizard-handicap-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const mode = btn.getAttribute('data-mode');
+                    const val = btn.getAttribute('data-value');
+                    if (mode === 'focus') {
+                        this.selectedHandicap = { mode: 'focus', value: parseInt(val, 10) || 1 };
+                    } else if (mode === 'mixed_basic') {
+                        this.selectedHandicap = { mode: 'mixed_basic' };
+                    } else if (mode === 'mixed_full') {
+                        this.selectedHandicap = { mode: 'mixed_full' };
+                    }
+
+                    // Atualiza classes ativas nos botões do modal
+                    this.modal.querySelectorAll('.wizard-handicap-btn').forEach(b => {
+                        const bMode = b.getAttribute('data-mode');
+                        const bVal = b.getAttribute('data-value');
+                        let isAct = false;
+                        if (this.selectedHandicap.mode === 'focus' && bMode === 'focus') {
+                            isAct = (Number(bVal) === Number(this.selectedHandicap.value));
+                        } else if (this.selectedHandicap.mode === bMode) {
+                            isAct = true;
+                        }
+                        if (isAct) {
+                            b.className = b.className.replace(/bg-slate-50|hover:bg-blue-50|text-slate-700|border-slate-200/g, '').trim() + ' bg-blue-600 text-white border-blue-700 shadow-sm';
+                        } else {
+                            b.className = b.className.replace(/bg-blue-600|text-white|border-blue-700|shadow-sm/g, '').trim() + ' bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200';
+                        }
+                    });
+
+                    const prev = document.getElementById('wizardHandicapPreview');
+                    if (prev) {
+                        prev.innerText = (this.selectedHandicap.mode === 'focus') ? getOpSymbol(this.selectedHandicap.value || 1) : (this.selectedHandicap.mode === 'mixed_basic' ? '🎲 Misto 1-5' : '🏆 Master 1-9');
+                    }
+                });
+            });
         },
 
         confirm() {
-            Session.subjectKey = this.selectedSubject;
-            Session.levelId = this.selectedLevel;
-            localStorage.setItem('kumongen-wizard-done', 'true');
-            this.close();
+            Session.subjectKey = this.selectedSubject || 'matematica';
+            Session.levelId = this.selectedLevel || 'm2';
+            if (this.selectedHandicap) {
+                Session.handicap = { ...this.selectedHandicap };
+                try {
+                    (window.SafeStorage || localStorage).setItem('kumongen_tablet_handicap', JSON.stringify(Session.handicap));
+                } catch (e) {}
+            }
+            try {
+                (window.SafeStorage || localStorage).setItem('kumongen-wizard-done', 'true');
+            } catch (e) {}
+            if (this.modal) this.modal.style.display = 'none';
             TabletPlayer.populateSubjects();
             TabletPlayer.populateLevels();
+            TabletPlayer.updateHandicapHeaderBadge();
             TabletPlayer.startRound();
         }
     };
@@ -2465,10 +2588,64 @@
                 headerMascotBtn.addEventListener('click', () => MascotEngine.showPickerModal());
             }
 
-            // Botão Nova Tarefa (abre wizard)
+            // Botão Nova Tarefa (abre wizard/splash)
             const newTaskBtn = document.getElementById('newTaskBtn');
             if (newTaskBtn) {
-                newTaskBtn.addEventListener('click', () => TaskWizard.show());
+                newTaskBtn.addEventListener('click', () => this.showSplashLobby());
+            }
+
+            // Quick-Badge & Popover de Handicap
+            const handicapBtn = document.getElementById('handicapQuickBtn');
+            const handicapPopover = document.getElementById('handicapPopover');
+            if (handicapBtn && handicapPopover) {
+                handicapBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isOpen = handicapPopover.style.display !== 'none';
+                    handicapPopover.style.display = isOpen ? 'none' : 'block';
+                    if (!isOpen) {
+                        this.updateHandicapHeaderBadge();
+                    }
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (handicapPopover.style.display !== 'none' && !handicapPopover.contains(e.target) && e.target !== handicapBtn) {
+                        handicapPopover.style.display = 'none';
+                    }
+                });
+
+                handicapPopover.querySelectorAll('.handicap-chip-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const mode = btn.getAttribute('data-mode');
+                        const val = btn.getAttribute('data-value');
+                        if (mode === 'focus') {
+                            Session.handicap = { mode: 'focus', value: parseInt(val, 10) || 1 };
+                        } else if (mode === 'mixed_basic') {
+                            Session.handicap = { mode: 'mixed_basic' };
+                        } else if (mode === 'mixed_full') {
+                            Session.handicap = { mode: 'mixed_full' };
+                        }
+                        try {
+                            (window.SafeStorage || localStorage).setItem('kumongen_tablet_handicap', JSON.stringify(Session.handicap));
+                        } catch (err) {}
+
+                        this.updateHandicapHeaderBadge();
+                        handicapPopover.style.display = 'none';
+
+                        // Regenera perguntas restantes se já estiver em rodada
+                        const sub = window.KumonSubjects ? window.KumonSubjects[Session.subjectKey] : null;
+                        if (sub && Session.items && Session.items.length > 0) {
+                            const level = sub.levels.find(l => l.id === Session.levelId) || sub.levels[0];
+                            if (level) {
+                                const remainingCount = Math.max(1, Session.items.length - Session.currentIndex);
+                                const newItems = sub.generate(level, remainingCount, { handicap: Session.handicap });
+                                if (newItems && newItems.length) {
+                                    Session.items.splice(Session.currentIndex, remainingCount, ...newItems);
+                                    this.renderCurrentQuestion();
+                                }
+                            }
+                        }
+                    });
+                });
             }
 
             // Botão Caderno de Revisão (Spaced Repetition)
@@ -2712,12 +2889,81 @@
             this.populateSubjects();
             this.populateLevels();
 
-            // Primeira abertura ou sem sessão salva: mostra wizard
-            const wizardDone = localStorage.getItem('kumongen-wizard-done');
-            if (!wizardDone && !hasUrlParams) {
-                TaskWizard.show();
+            // Abertura sem parâmetros de treino na URL: exibe Splash/Lobby
+            if (!hasUrlParams) {
+                this.showSplashLobby();
             } else {
                 this.startRound();
+            }
+        },
+
+        showSplashLobby() {
+            TaskWizard.show();
+        },
+
+        openSplashLobby() {
+            this.showSplashLobby();
+        },
+
+        updateHandicapHeaderBadge() {
+            const badgeTextEl = document.getElementById('handicapBadgeText');
+            const popoverCurrentEl = document.getElementById('handicapPopoverCurrent');
+            const quickBtn = document.getElementById('handicapQuickBtn');
+            const focusGrid = document.getElementById('handicapFocusGrid');
+            if (!badgeTextEl) return;
+
+            const sub = window.KumonSubjects ? window.KumonSubjects[Session.subjectKey] : null;
+            const level = sub && sub.levels ? sub.levels.find(l => l.id === Session.levelId) : null;
+            const op = (level && level.operator) || '+';
+
+            const getOpSymbol = (val) => {
+                if (op === '×' || op === '*') return `×${val}`;
+                if (op === '÷' || op === '/') return `÷${val}`;
+                if (op === '-') return `-${val}`;
+                return `+${val}`;
+            };
+
+            const h = Session.handicap || { mode: 'focus', value: 1 };
+            let label = '+1';
+            if (h.mode === 'focus') {
+                const val = h.value !== undefined ? h.value : 1;
+                label = getOpSymbol(val);
+            } else if (h.mode === 'mixed_basic') {
+                label = '🎲 Misto 1-5';
+            } else if (h.mode === 'mixed_full') {
+                label = '🏆 Master 1-9';
+            }
+
+            badgeTextEl.innerText = label;
+            if (popoverCurrentEl) popoverCurrentEl.innerText = label;
+
+            // Se o operador mudou no grid do popover, atualiza os símbolos dos botões
+            if (focusGrid) {
+                focusGrid.querySelectorAll('.handicap-chip-btn[data-mode="focus"]').forEach(btn => {
+                    const val = btn.getAttribute('data-value');
+                    btn.innerText = getOpSymbol(val);
+                });
+            }
+
+            // Atualiza classes ativas nos chips do popover
+            const popover = document.getElementById('handicapPopover');
+            if (popover) {
+                popover.querySelectorAll('.handicap-chip-btn').forEach(btn => {
+                    const bMode = btn.getAttribute('data-mode');
+                    const bVal = btn.getAttribute('data-value');
+                    let isAct = false;
+                    if (h.mode === 'focus' && bMode === 'focus') {
+                        isAct = (Number(bVal) === Number(h.value));
+                    } else if (h.mode === bMode) {
+                        isAct = true;
+                    }
+                    btn.classList.toggle('active', isAct);
+                });
+            }
+
+            if (quickBtn) {
+                const isMathOp = (Session.subjectKey === 'matematica' && (!level || level.type === 'math' || !['m1', 'm10'].includes(level.id)));
+                quickBtn.style.display = isMathOp ? 'flex' : 'none';
             }
         },
 
@@ -2903,8 +3149,14 @@
             const level = sub.levels.find(l => l.id === Session.levelId) || sub.levels[0];
             if (!level) return;
 
-            // Gera 10 exercícios para uma rodada rápida e focada
-            const generated = sub.generate(level, 10);
+            // Garante que o teclado e o card estejam no modo normal
+            const focusCard = document.getElementById('focusCard');
+            if (focusCard) focusCard.classList.remove('splash-card-mode');
+            const keypad = document.getElementById('keypadWrapper');
+            if (keypad) keypad.style.display = '';
+
+            // Gera 10 exercícios para uma rodada rápida e focada respeitando handicap
+            const generated = sub.generate(level, 10, { handicap: Session.handicap });
             Session.items = generated && generated.length ? generated : [{ type: 'math', operand1: 2, operator: '+', operand2: 1 }];
             Session.currentIndex = 0;
             Session.currentInput = '';
@@ -2926,6 +3178,9 @@
 
             // Inicia cronômetro
             this.startTimer();
+
+            // Atualiza badge de handicap no header
+            this.updateHandicapHeaderBadge();
 
             // Atualiza barra de progresso e exibe card
             this.renderCurrentQuestion();
@@ -5183,7 +5438,7 @@
             if (evoBtn) {
                 evoBtn.addEventListener('click', () => {
                     modal.style.display = 'none';
-                    TaskWizard.show();
+                    this.showSplashLobby();
                 });
             }
 
@@ -5219,7 +5474,7 @@
                         <p class="text-sm text-gray-600 mb-6 max-w-sm mx-auto">Escolha o que deseja fazer a seguir:</p>
                         <div class="flex flex-wrap items-center justify-center gap-3 max-w-md mx-auto">
                             <button type="button" id="idleNewTaskBtn" class="px-6 py-3.5 font-bold text-sm rounded-2xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2" style="background: var(--accent); color: #fff;">
-                                <i class="fas fa-plus-circle"></i> Nova Tarefa
+                                <i class="fas fa-plus-circle"></i> Nova Missão
                             </button>
                             <a href="index.html" class="px-6 py-3.5 font-bold text-sm rounded-2xl border-2 border-slate-300 bg-white text-slate-700 hover:bg-slate-50 shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2">
                                 <i class="fas fa-home"></i> Voltar ao Início
@@ -5228,7 +5483,7 @@
                     </div>
                 `;
                 const btn = document.getElementById('idleNewTaskBtn');
-                if (btn) btn.addEventListener('click', () => TaskWizard.show());
+                if (btn) btn.addEventListener('click', () => this.showSplashLobby());
             }
         },
 

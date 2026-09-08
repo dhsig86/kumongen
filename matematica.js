@@ -47,7 +47,8 @@
         compMin: 1,
         compMax: 10,
         compCount: 4,
-        neighborCenters: [3,5,7,10,12,15,18,20,25,30,42,50]
+        neighborCenters: [3,5,7,10,12,15,18,20,25,30,42,50],
+        handicap: null
     };
 
     // ---------- PERSISTÊNCIA (LOCAL STORAGE) ----------
@@ -80,7 +81,7 @@
     }
 
     // ---------- FUNÇÕES DE GERAÇÃO DE ITENS ----------
-    function generateItemsForLevel(level, count) {
+    function generateItemsForLevel(level, count, options = {}) {
         if (!level) return [];
         const target = count || (itemsPerPage * 2);
 
@@ -97,16 +98,42 @@
 
             case 'math': {
                 const isLevelActive = (currentLevelId === level.id);
-                const op = (isLevelActive && customParams.operator) ? customParams.operator : (level.operator || '+');
-                const op2 = (isLevelActive && customParams.operand !== undefined) ? customParams.operand : ((level.operand !== undefined) ? level.operand : 1);
-                const minVal = (isLevelActive && customParams.min !== undefined) ? customParams.min : ((level.range && level.range[0] !== undefined) ? level.range[0] : 1);
-                const maxVal = (isLevelActive && customParams.max !== undefined) ? customParams.max : ((level.range && level.range[1] !== undefined) ? level.range[1] : 10);
-                const isMissingHole = !!(isLevelActive && customParams.mathMissingHole);
-                const isMixed = !!(isLevelActive && customParams.mathMixedTables);
+                const optHandicap = (options && options.handicap) || null;
+                let handicapMode = null;
+                let handicapVal = null;
+                if (optHandicap) {
+                    if (typeof optHandicap === 'object') {
+                        handicapMode = optHandicap.mode || 'focus';
+                        if (optHandicap.value !== undefined && optHandicap.value !== null) {
+                            handicapVal = Number(optHandicap.value);
+                        }
+                    } else if (typeof optHandicap === 'number' || (!isNaN(Number(optHandicap)) && optHandicap !== '')) {
+                        handicapMode = 'focus';
+                        handicapVal = Number(optHandicap);
+                    }
+                }
+
+                const op = (options && options.operator) || ((isLevelActive && customParams.operator) ? customParams.operator : (level.operator || '+'));
+                const defaultOp2 = (isLevelActive && customParams.operand !== undefined) ? customParams.operand : ((level.operand !== undefined) ? level.operand : 1);
+                const baseOp2 = (handicapMode === 'focus' && handicapVal !== null) ? handicapVal : defaultOp2;
+
+                const minVal = (options && options.min !== undefined) ? options.min : ((isLevelActive && customParams.min !== undefined) ? customParams.min : ((level.range && level.range[0] !== undefined) ? level.range[0] : 1));
+                const maxVal = (options && options.max !== undefined) ? options.max : ((isLevelActive && customParams.max !== undefined) ? customParams.max : ((level.range && level.range[1] !== undefined) ? level.range[1] : 10));
+                const isMissingHole = (options && options.mathMissingHole !== undefined) ? options.mathMissingHole : !!(isLevelActive && customParams.mathMissingHole);
+                const isMixed = (handicapMode === 'mixed_basic' || handicapMode === 'mixed_full') || !!(isLevelActive && customParams.mathMixedTables);
 
                 if (op === '÷' || op === '/') {
                     for (let i = 0; i < target; i++) {
-                        const effectiveDivisor = isMixed ? (Math.floor(Math.random() * 8) + 2) : Math.max(1, op2 || 2);
+                        let effectiveDivisor;
+                        if (handicapMode === 'focus' && handicapVal !== null) {
+                            effectiveDivisor = Math.max(1, handicapVal);
+                        } else if (handicapMode === 'mixed_basic') {
+                            effectiveDivisor = Math.floor(Math.random() * 4) + 2; // 2 a 5
+                        } else if (handicapMode === 'mixed_full' || isMixed) {
+                            effectiveDivisor = Math.floor(Math.random() * 8) + 2; // 2 a 9
+                        } else {
+                            effectiveDivisor = Math.max(1, baseOp2 || 2);
+                        }
                         const quotient = Math.floor(Math.random() * 10) + 1;
                         const dividend = effectiveDivisor * quotient;
                         const itemObj = {
@@ -136,7 +163,27 @@
                     
                     lastA = a;
                     let displayA = a;
-                    const effectiveOp2 = (isMixed && (op === '×' || op === '*')) ? (Math.floor(Math.random() * 8) + 2) : op2;
+                    let effectiveOp2;
+                    if (handicapMode === 'focus' && handicapVal !== null) {
+                        effectiveOp2 = handicapVal;
+                    } else if (handicapMode === 'mixed_basic') {
+                        if (op === '×' || op === '*') {
+                            effectiveOp2 = Math.floor(Math.random() * 4) + 2; // 2 a 5
+                        } else {
+                            effectiveOp2 = Math.floor(Math.random() * 5) + 1; // 1 a 5
+                        }
+                    } else if (handicapMode === 'mixed_full') {
+                        if (op === '×' || op === '*') {
+                            effectiveOp2 = Math.floor(Math.random() * 8) + 2; // 2 a 9
+                        } else {
+                            effectiveOp2 = Math.floor(Math.random() * 9) + 1; // 1 a 9
+                        }
+                    } else if (isMixed && (op === '×' || op === '*')) {
+                        effectiveOp2 = Math.floor(Math.random() * 8) + 2;
+                    } else {
+                        effectiveOp2 = baseOp2;
+                    }
+
                     if (op === '-' && !customParams.allowNegative) {
                         displayA = Math.max(a, effectiveOp2);
                     }

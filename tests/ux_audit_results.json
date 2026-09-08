@@ -1,14 +1,14 @@
 {
   "metadata": {
     "title": "KumonGen UX/UI Audit Results",
-    "generatedAt": "2026-09-08T19:49:53.408Z",
+    "generatedAt": "2026-09-08T22:32:32.775Z",
     "viewportsTested": 6,
     "pagesTested": 5,
     "scenariosTested": 11
   },
   "summary": {
-    "total": 94,
-    "passed": 94,
+    "total": 97,
+    "passed": 97,
     "failed": 0,
     "warnings": 0,
     "passRate": "100.0%"
@@ -190,6 +190,10 @@
     },
     {
       "status": "PASS",
+      "message": "[Tablet Retrato (iPad)] Task Wizard não excede largura do viewport"
+    },
+    {
+      "status": "PASS",
       "message": "[Tablet Retrato (iPad)] Level Picker não excede largura do viewport"
     },
     {
@@ -198,11 +202,19 @@
     },
     {
       "status": "PASS",
+      "message": "[Tablet Paisagem (iPad)] Task Wizard não excede largura do viewport"
+    },
+    {
+      "status": "PASS",
       "message": "[Tablet Paisagem (iPad)] Level Picker não excede largura do viewport"
     },
     {
       "status": "PASS",
       "message": "[Tablet Paisagem (iPad)] Level Picker não excede altura do viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[Desktop 1280×800] Task Wizard não excede largura do viewport"
     },
     {
       "status": "PASS",
