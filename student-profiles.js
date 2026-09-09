@@ -1433,7 +1433,7 @@
                 }).join('');
 
                 modal.innerHTML = `
-                    <div style="background:white;border-radius:24px;max-width:440px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);border:4px solid #f59e0b;overflow:hidden;margin:auto;box-sizing:border-box;" onclick="event.stopPropagation()">
+                    <div style="background:white;color:#0f172a;border-radius:24px;max-width:440px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);border:4px solid #f59e0b;overflow:hidden;margin:auto;box-sizing:border-box;" onclick="event.stopPropagation()">
                         <!-- Header Fixo -->
                         <div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:white;">
                             <div style="display:flex;align-items:center;gap:8px;">
@@ -1448,11 +1448,11 @@
                         </div>
 
                         <!-- Corpo Rolar com Campos -->
-                        <div style="padding:16px 18px;overflow-y:auto;flex:1;min-height:0;">
+                        <div style="padding:16px 18px;overflow-y:auto;flex:1;min-height:0;color:#0f172a;">
                             <form id="studentProfileForm" style="display:flex;flex-direction:column;gap:14px;">
                                 <div>
                                     <label style="font-size:10px;font-weight:900;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px;">Nome da Criança <span style="color:#ef4444;">*</span></label>
-                                    <input type="text" id="inputStudentName" required maxlength="25" placeholder="Ex: Theo, Alice, Lucas..." value="${escapeHtml(currentName)}" style="width:100%;padding:10px 14px;font-size:15px;font-weight:bold;background:#f8fafc;border:2px solid #cbd5e1;border-radius:14px;outline:none;box-sizing:border-box;transition:all 0.2s;">
+                                    <input type="text" id="inputStudentName" required maxlength="25" placeholder="Ex: Theo, Alice, Lucas..." value="${escapeHtml(currentName)}" style="width:100%;padding:10px 14px;font-size:15px;font-weight:bold;color:#0f172a !important;-webkit-text-fill-color:#0f172a !important;background:#ffffff !important;border:2px solid #cbd5e1;border-radius:14px;outline:none;box-sizing:border-box;transition:all 0.2s;">
                                 </div>
 
                                 <div>

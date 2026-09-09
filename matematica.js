@@ -512,11 +512,19 @@
         levelListDiv.innerHTML = html;
     }
 
+    function updateTabletLink() {
+        const btn = document.getElementById('matPracticeTabletBtn');
+        if (btn) {
+            btn.href = `tablet.html?subject=matematica&level=${currentLevelId}`;
+        }
+    }
+
     window.selectLevel = function(id) {
         currentLevelId = id;
         saveState();
         renderLevelList();
         updateParamPanel();
+        updateTabletLink();
         refreshPreview();
     };
 
@@ -634,6 +642,7 @@
 
         renderLevelList();
         updateParamPanel();
+        updateTabletLink();
         refreshPreview();
 
         const linesSelect = document.getElementById('linesPerPage');

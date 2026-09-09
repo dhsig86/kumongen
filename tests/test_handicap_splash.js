@@ -274,6 +274,104 @@ async function runTests() {
         });
         assert(isLobbyOpenFromIdle, 'Clicar em #idleNewTaskBtn abre o Splash/Lobby para nova seleção');
 
+        // -------------------------------------------------------------
+        // CENÁRIO 8: Entrada via URL com matéria e nível (ex: vindo de matematica.html)
+        // -------------------------------------------------------------
+        console.log('\n[CENÁRIO 8] Entrada via URL com parâmetros (tablet.html?subject=matematica&level=m2)');
+        await page.goto(`${baseUrl}/tablet.html?subject=matematica&level=m2`, { waitUntil: 'networkidle' });
+        await page.waitForTimeout(400);
+
+        const step3Direct = await page.evaluate(() => {
+            const h = document.querySelector('#taskWizardModal h3');
+            return h ? h.innerText : '';
+        });
+        assert(step3Direct.includes('Configurar Missão'), 'Abertura com ?level=m2 abre diretamente no Passo 3');
+
+        const previewDirectText = await page.evaluate(() => {
+            const p = document.getElementById('wizardHandicapPreview');
+            return p ? p.innerText : '';
+        });
+        assert(previewDirectText.includes('Aleatória'), 'Passo 3 inicia com modo Aleatória (Kumon Master) por padrão');
+
+        // Clica em iniciar missão sem alterar nada e valida que gerou operações variadas (não fixas em 1)
+        await page.click('#wizardStartBtn');
+        await page.waitForTimeout(400);
+
+        const itemsDiverse = await page.evaluate(() => {
+            const s = window.TabletPlayer.Session;
+            if (!s || !s.items || s.items.length === 0) return false;
+            const op2Values = new Set(s.items.map(it => it.operand2));
+            return op2Values.size >= 3; // Em 10 contas de soma aleatória, deve haver pelo menos 3 operandos diferentes
+        });
+        assert(itemsDiverse, 'Soma Aleatória gerou parcelas diversificadas (não travadas em +1)');
+
+        // -------------------------------------------------------------
+        // CENÁRIO 9: Contraste do Campo de Nome de Perfil em index.html
+        // -------------------------------------------------------------
+        console.log('\n[CENÁRIO 9] Verificação de Contraste no Campo de Nome de Perfil (index.html)');
+        const indexPage = await context.newPage();
+        await indexPage.goto(`${baseUrl}/index.html`, { waitUntil: 'networkidle' });
+        await indexPage.waitForTimeout(400);
+
+        // Abre modal de novo perfil
+        await indexPage.evaluate(() => {
+            if (window.openStudentProfiles) window.openStudentProfiles('form');
+        });
+        await indexPage.waitForTimeout(400);
+
+        const inputStyle = await indexPage.evaluate(() => {
+            const input = document.getElementById('inputStudentName');
+            if (!input) return null;
+            const computed = window.getComputedStyle(input);
+            return {
+                color: computed.color,
+                bgColor: computed.backgroundColor
+            };
+        });
+        assert(inputStyle !== null, 'Campo #inputStudentName existe no modal de perfil');
+        // rgb(15, 23, 42) é #0f172a
+        const isNotWhiteText = inputStyle && inputStyle.color !== 'rgb(255, 255, 255)';
+        assert(isNotWhiteText, `Texto do input tem alto contraste (cor computada: ${inputStyle ? inputStyle.color : 'null'})`);
+        await indexPage.close();
+
+        // -------------------------------------------------------------
+        // CENÁRIO 10: Modal Final em Formato Paisagem (Tablet Landscape)
+        // -------------------------------------------------------------
+        console.log('\n[CENÁRIO 10] Redesign e Rolagem do Modal Final em Formato Paisagem (1024×600)');
+        await page.setViewportSize({ width: 1024, height: 600 });
+        await page.waitForTimeout(300);
+
+        // Dispara modal final de rodada
+        await page.evaluate(() => {
+            window.TabletPlayer.finishRound();
+        });
+        await page.waitForTimeout(400);
+
+        const modalState = await page.evaluate(() => {
+            const modal = document.getElementById('roundFinishedModal');
+            if (!modal || modal.style.display === 'none') return null;
+            const card = modal.querySelector('.tablet-modal-card');
+            const rect = card ? card.getBoundingClientRect() : null;
+            const computed = window.getComputedStyle(modal);
+            return {
+                visible: true,
+                overflowY: computed.overflowY,
+                zIndex: computed.zIndex,
+                cardHeight: rect ? rect.height : 0,
+                cardTop: rect ? rect.top : 0
+            };
+        });
+
+        assert(modalState && modalState.visible, 'Modal final (#roundFinishedModal) exibido com sucesso');
+        assert(modalState && modalState.overflowY === 'auto', 'Modal backdrop possui overflow-y: auto para rolagem');
+        assert(modalState && Number(modalState.zIndex) >= 50, 'Z-Index do modal final (>=50) fica acima do cabeçalho');
+        assert(modalState && modalState.cardTop >= 0, 'Topo do card do modal não fica cortado fora da tela (top >= 0)');
+        assert(modalState && modalState.cardHeight < 580, `Card em formato 2 colunas tem altura compacta (${modalState ? modalState.cardHeight : 0}px < 580px)`);
+
+        // Fecha modal
+        await page.click('#closeSummaryBtn');
+        await page.waitForTimeout(300);
+
     } catch (err) {
         console.error('Erro fatal durante execução do teste:', err);
         assert(false, `Exceção não tratada: ${err.message}`);

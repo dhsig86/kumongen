@@ -51,6 +51,24 @@
                 justify-content: center !important;
             }
         }
+        /* Contraste dos Modais de Perfil no index.html */
+        #studentProfileModalContainer,
+        #studentProfileManagerModal {
+            color: #0f172a !important;
+        }
+        #studentProfileModalContainer input[type="text"],
+        #studentProfileModalContainer input[type="search"],
+        #studentProfileManagerModal input[type="text"],
+        #studentProfileManagerModal input[type="search"] {
+            color: #0f172a !important;
+            background-color: #ffffff !important;
+            -webkit-text-fill-color: #0f172a !important;
+        }
+        #studentProfileModalContainer input::placeholder,
+        #studentProfileManagerModal input::placeholder {
+            color: #64748b !important;
+            -webkit-text-fill-color: #64748b !important;
+        }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4 py-12 text-white">

@@ -1176,7 +1176,7 @@
                 const saved = storage ? storage.getItem('kumongen_tablet_handicap') : null;
                 if (saved) return JSON.parse(saved);
             } catch (e) {}
-            return { mode: 'focus', value: 1 };
+            return { mode: 'mixed_full' };
         })(),
         studentName: (window.StudentProfileEngine && window.StudentProfileEngine.getActive()) ? window.StudentProfileEngine.getActive().name : ((window.SafeStorage ? window.SafeStorage.getItem('kumongen_student_name') : (typeof localStorage !== 'undefined' ? localStorage.getItem('kumongen_student_name') : null)) || 'Super Aluno'),
         items: [],
@@ -2161,14 +2161,25 @@
         currentStep: 1,
         _eventsBound: false,
 
-        show() {
+        show(opts = {}) {
             this.modal = document.getElementById('taskWizardModal');
             if (!this.modal) return;
-            this.selectedSubject = Session.subjectKey || 'matematica';
-            this.selectedLevel = Session.levelId || 'm2';
-            this.selectedHandicap = Session.handicap ? { ...Session.handicap } : { mode: 'focus', value: 1 };
+            this.selectedSubject = (opts && opts.subject) || Session.subjectKey || 'matematica';
+            this.selectedLevel = (opts && opts.level) || Session.levelId || 'm2';
+            if (Session.handicap) {
+                this.selectedHandicap = { ...Session.handicap };
+            } else {
+                this.selectedHandicap = { mode: 'mixed_full' };
+            }
             this.bindGlobalEvents();
-            this.renderStep1();
+            const targetStep = (opts && opts.step) ? opts.step : 1;
+            if (targetStep === 3) {
+                this.renderStep3();
+            } else if (targetStep === 2) {
+                this.renderStep2();
+            } else {
+                this.renderStep1();
+            }
             this.modal.style.display = 'flex';
         },
 
@@ -2214,7 +2225,7 @@
             ].filter(s => window.KumonSubjects[s.key]);
 
             this.modal.innerHTML = `
-                <div class="wizard-card-modal bg-white p-5 md:p-6 text-center border-2 border-amber-400">
+                <div class="wizard-card-modal bg-white p-5 md:p-6 text-center border-2 border-amber-400 my-auto">
                     <button type="button" id="wizardCloseBtn1" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold transition-all cursor-pointer z-10 active:scale-90" title="Fechar (ESC)">
                         <i class="fas fa-times"></i>
                     </button>
@@ -2276,7 +2287,7 @@
             const sc = subjectColors[this.selectedSubject] || subjectColors.matematica;
 
             this.modal.innerHTML = `
-                <div class="wizard-card-modal bg-white p-5 md:p-6 text-center" style="border: 2px solid ${sc.border};">
+                <div class="wizard-card-modal bg-white p-5 md:p-6 text-center my-auto" style="border: 2px solid ${sc.border};">
                     <button type="button" id="wizardCloseBtn2" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold transition-all cursor-pointer z-10 active:scale-90" title="Fechar (ESC)">
                         <i class="fas fa-times"></i>
                     </button>
@@ -2363,7 +2374,7 @@
             const sc = subjectColors[this.selectedSubject] || subjectColors.matematica;
 
             if (!this.selectedHandicap) {
-                this.selectedHandicap = Session.handicap ? { ...Session.handicap } : { mode: 'focus', value: 1 };
+                this.selectedHandicap = Session.handicap ? { ...Session.handicap } : { mode: 'mixed_full' };
             }
 
             const op = (level && level.operator) || '+';
@@ -2383,37 +2394,72 @@
                 return `+${val}`;
             };
 
+            const opName = (op === '+' ? 'Soma' : (op === '-' ? 'Subtração' : (op === '×' || op === '*' ? 'Multiplicação' : 'Divisão')));
+            const isFullSelected = (this.selectedHandicap.mode === 'mixed_full');
+            const isBasicSelected = (this.selectedHandicap.mode === 'mixed_basic');
+            const isFocusSelected = (this.selectedHandicap.mode === 'focus');
+            const currentVal = (isFocusSelected ? (this.selectedHandicap.value || 1) : null);
+
+            let previewLabel = '🏆 ' + opName + ' Aleatória (1-9)';
+            if (isFocusSelected) {
+                previewLabel = `🎯 Parcela Fixa ${getOpSymbol(currentVal)}`;
+            } else if (isBasicSelected) {
+                previewLabel = `🎲 ${opName} Fácil (1-5)`;
+            }
+
             const handicapSection = isMathOp ? `
                 <div class="mt-3 text-left">
-                    <div class="flex items-center justify-between mb-1.5">
+                    <div class="flex items-center justify-between mb-2">
                         <span class="text-xs font-black text-gray-700 flex items-center gap-1.5">
-                            <i class="fas fa-bullseye" style="color:${sc.color}"></i> Escolha o Handicap (Parcela):
+                            <i class="fas fa-bullseye" style="color:${sc.color}"></i> Desafio de ${opName}:
                         </span>
-                        <span id="wizardHandicapPreview" class="text-xs font-black px-2 py-0.5 rounded-full" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
-                            ${this.selectedHandicap.mode === 'focus' ? getOpSymbol(this.selectedHandicap.value || 1) : (this.selectedHandicap.mode === 'mixed_basic' ? '🎲 Misto 1-5' : '🏆 Master 1-9')}
+                        <span id="wizardHandicapPreview" class="text-xs font-black px-2.5 py-0.5 rounded-full shadow-sm" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
+                            ${previewLabel}
                         </span>
                     </div>
 
-                    <div class="text-[10px] font-bold text-gray-500 mb-1">1. Foco Específico (Kumon):</div>
-                    <div class="grid grid-cols-5 gap-1 mb-2.5">
+                    <!-- 1. Modos de Soma / Operação Variada (Recomendado Kumon Master) -->
+                    <div class="text-[10px] font-black text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                        <i class="fas fa-random text-blue-500"></i> Desafio com Contas Variadas (Recomendado):
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                        <button type="button" class="wizard-handicap-btn p-2.5 rounded-2xl border-2 transition-all flex items-center gap-2.5 cursor-pointer active:scale-95 text-left ${isFullSelected ? 'bg-blue-50 border-blue-600 shadow-sm ring-2 ring-blue-500/20' : 'bg-slate-50 hover:bg-slate-100 border-slate-200'}" data-mode="mixed_full">
+                            <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0 ${isFullSelected ? 'bg-blue-600 text-white shadow-sm' : 'bg-amber-100 text-amber-700'}">
+                                <i class="fas fa-trophy"></i>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="font-black text-xs text-gray-900 leading-tight">🎲 ${opName} Aleatória (${op === '×' || op === '÷' ? '2 a 9' : '1 a 9'})</div>
+                                <div class="text-[10px] text-gray-500 leading-tight mt-0.5">Kumon Master: contas sortidas sem fixar em +1</div>
+                            </div>
+                        </button>
+
+                        <button type="button" class="wizard-handicap-btn p-2.5 rounded-2xl border-2 transition-all flex items-center gap-2.5 cursor-pointer active:scale-95 text-left ${isBasicSelected ? 'bg-blue-50 border-blue-600 shadow-sm ring-2 ring-blue-500/20' : 'bg-slate-50 hover:bg-slate-100 border-slate-200'}" data-mode="mixed_basic">
+                            <div class="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0 ${isBasicSelected ? 'bg-blue-600 text-white shadow-sm' : 'bg-blue-100 text-blue-700'}">
+                                <i class="fas fa-dice"></i>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="font-black text-xs text-gray-900 leading-tight">🎲 ${opName} Fácil (${op === '×' || op === '÷' ? '2 a 5' : '1 a 5'})</div>
+                                <div class="text-[10px] text-gray-500 leading-tight mt-0.5">Contas suaves com parcelas menores</div>
+                            </div>
+                        </button>
+                    </div>
+
+                    <!-- 2. Treino Focado em Parcela Única -->
+                    <div class="text-[10px] font-black text-gray-500 uppercase tracking-wide mb-1 flex items-center justify-between">
+                        <span>🎯 Ou escolha um número fixo (Treino Focado):</span>
+                    </div>
+                    <div class="grid grid-cols-5 sm:grid-cols-9 gap-1.5 mb-1">
                         ${focusBtns.map(n => {
-                            const isAct = (this.selectedHandicap.mode === 'focus' && Number(this.selectedHandicap.value) === n);
+                            const isAct = (isFocusSelected && Number(this.selectedHandicap.value) === n);
                             return `
-                                <button type="button" class="wizard-handicap-btn py-1.5 rounded-xl text-xs font-black border transition-all text-center cursor-pointer active:scale-95 ${isAct ? 'bg-blue-600 text-white border-blue-700 shadow-sm' : 'bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200'}" data-mode="focus" data-value="${n}">
+                                <button type="button" class="wizard-handicap-btn py-2 rounded-xl text-xs font-black border transition-all text-center cursor-pointer active:scale-95 ${isAct ? 'bg-blue-600 text-white border-blue-700 shadow-md ring-2 ring-blue-500/30' : 'bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200'}" data-mode="focus" data-value="${n}">
                                     ${getOpSymbol(n)}
                                 </button>
                             `;
                         }).join('')}
                     </div>
-
-                    <div class="text-[10px] font-bold text-gray-500 mb-1">2. Modos Mistos Balanceados:</div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button type="button" class="wizard-handicap-btn py-2 px-2.5 rounded-xl text-xs font-black border transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${this.selectedHandicap.mode === 'mixed_basic' ? 'bg-blue-600 text-white border-blue-700 shadow-sm' : 'bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200'}" data-mode="mixed_basic">
-                            <i class="fas fa-dice"></i> <span>Misto Básico (${op === '×' || op === '÷' ? '2 a 5' : '1 a 5'})</span>
-                        </button>
-                        <button type="button" class="wizard-handicap-btn py-2 px-2.5 rounded-xl text-xs font-black border transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${this.selectedHandicap.mode === 'mixed_full' ? 'bg-blue-600 text-white border-blue-700 shadow-sm' : 'bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200'}" data-mode="mixed_full">
-                            <i class="fas fa-trophy text-amber-500"></i> <span>Kumon Master (${op === '×' || op === '÷' ? '2 a 9' : '1 a 9'})</span>
-                        </button>
+                    <div class="text-[9px] text-gray-400 text-center">
+                        Exemplo: ao tocar em +3, todas as questões terão a parcela 3.
                     </div>
                 </div>
             ` : `
@@ -2424,7 +2470,7 @@
             `;
 
             this.modal.innerHTML = `
-                <div class="wizard-card-modal bg-white p-5 md:p-6 text-center" style="border: 2px solid ${sc.border};">
+                <div class="wizard-card-modal bg-white p-5 md:p-6 text-center my-auto" style="border: 2px solid ${sc.border};">
                     <button type="button" id="wizardCloseBtn3" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold transition-all cursor-pointer z-10 active:scale-90" title="Fechar (ESC)">
                         <i class="fas fa-times"></i>
                     </button>
@@ -2498,28 +2544,7 @@
                     } else if (mode === 'mixed_full') {
                         this.selectedHandicap = { mode: 'mixed_full' };
                     }
-
-                    // Atualiza classes ativas nos botões do modal
-                    this.modal.querySelectorAll('.wizard-handicap-btn').forEach(b => {
-                        const bMode = b.getAttribute('data-mode');
-                        const bVal = b.getAttribute('data-value');
-                        let isAct = false;
-                        if (this.selectedHandicap.mode === 'focus' && bMode === 'focus') {
-                            isAct = (Number(bVal) === Number(this.selectedHandicap.value));
-                        } else if (this.selectedHandicap.mode === bMode) {
-                            isAct = true;
-                        }
-                        if (isAct) {
-                            b.className = b.className.replace(/bg-slate-50|hover:bg-blue-50|text-slate-700|border-slate-200/g, '').trim() + ' bg-blue-600 text-white border-blue-700 shadow-sm';
-                        } else {
-                            b.className = b.className.replace(/bg-blue-600|text-white|border-blue-700|shadow-sm/g, '').trim() + ' bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200';
-                        }
-                    });
-
-                    const prev = document.getElementById('wizardHandicapPreview');
-                    if (prev) {
-                        prev.innerText = (this.selectedHandicap.mode === 'focus') ? getOpSymbol(this.selectedHandicap.value || 1) : (this.selectedHandicap.mode === 'mixed_basic' ? '🎲 Misto 1-5' : '🏆 Master 1-9');
-                    }
+                    this.renderStep3();
                 });
             });
         },
@@ -2867,7 +2892,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             const qSub = urlParams.get('subject');
             const qLvl = urlParams.get('level');
-            const hasUrlParams = !!(qSub || qLvl);
+            const autoStart = urlParams.get('autostart') === 'true';
 
             if (qSub && window.KumonSubjects && window.KumonSubjects[qSub]) {
                 Session.subjectKey = qSub;
@@ -2889,20 +2914,39 @@
             this.populateSubjects();
             this.populateLevels();
 
-            // Abertura sem parâmetros de treino na URL: exibe Splash/Lobby
-            if (!hasUrlParams) {
-                this.showSplashLobby();
-            } else {
+            if (!Session.handicap) {
+                Session.handicap = { mode: 'mixed_full' };
+            }
+
+            // Prepara itens no background para consistência de dados e testes
+            const sub = window.KumonSubjects ? window.KumonSubjects[Session.subjectKey] : null;
+            const level = sub && sub.levels ? sub.levels.find(l => l.id === Session.levelId) : null;
+            if (sub && level && (!Session.items || Session.items.length === 0)) {
+                Session.items = sub.generate(level, 10, { handicap: Session.handicap });
+                Session.initialItemsCount = Session.items.length;
+            }
+            this.updateHandicapHeaderBadge();
+
+            // Abertura com autostart explícito (ex: testes automatizados rápidos)
+            if (autoStart) {
                 this.startRound();
+            } else {
+                // SEMPRE acolhe o usuário no Splash/Wizard permitindo ajustar o handicap!
+                const targetStep = qLvl ? 3 : (qSub ? 2 : 1);
+                this.showSplashLobby({
+                    subject: qSub || Session.subjectKey,
+                    level: qLvl || Session.levelId,
+                    step: targetStep
+                });
             }
         },
 
-        showSplashLobby() {
-            TaskWizard.show();
+        showSplashLobby(opts = {}) {
+            TaskWizard.show(opts);
         },
 
-        openSplashLobby() {
-            this.showSplashLobby();
+        openSplashLobby(opts = {}) {
+            this.showSplashLobby(opts);
         },
 
         updateHandicapHeaderBadge() {
@@ -5346,71 +5390,78 @@
                 : (res.accuracy === 100 ? '🏆 100% de Acerto de Primeira!' : 'Rodada Concluída!');
 
             modal.innerHTML = `
-                <div class="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl text-center border border-slate-200/90 relative modal-enter max-h-[90vh] overflow-y-auto">
-                    <div class="flex items-center justify-center gap-3 mb-3">
-                        <div class="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr ${MascotEngine.getCurrent().ringGradient} shadow-sm flex-shrink-0">
-                            <img src="${MascotEngine.getCurrent().avatar}" alt="${MascotEngine.getCurrent().name}" class="w-full h-full rounded-full object-cover border-2 border-white shadow-inner">
-                        </div>
-                        <div class="w-14 h-14 ${res.isGauntletMastered ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'} rounded-full flex items-center justify-center text-2xl shadow-inner flex-shrink-0">
-                            <i class="fas ${res.isGauntletMastered ? 'fa-shield-alt text-amber-500' : 'fa-trophy text-amber-500'}"></i>
-                        </div>
-                    </div>
-                    <span class="inline-block ${res.isGauntletMastered ? 'bg-amber-500/15 text-amber-800 border border-amber-300' : 'bg-emerald-500/15 text-emerald-800 border border-emerald-300'} text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-1">
-                        ${headerBadgeText}
-                    </span>
-                    <h3 class="text-xl font-bold text-slate-900">Parabéns, ${(window.escapeHtml ? window.escapeHtml(Session.studentName) : Session.studentName)}!</h3>
-                    <p class="text-xs text-slate-500 mt-0.5">${level ? level.title : ''} · ${sub ? sub.title : ''}</p>
-                    <div class="${res.isGauntletMastered ? 'bg-amber-50 border border-amber-200 text-amber-900' : 'bg-emerald-50 border border-emerald-200 text-emerald-800'} rounded-xl px-3 py-2 text-xs font-semibold my-2.5">
-                        "${res.isGauntletMastered ? 'Parabéns pela persistência! Você concluiu todas as questões!' : MascotEngine.getCurrent().cheerFinish}"
-                    </div>
-
-                    <!-- Painel de Métricas -->
-                    <div class="grid grid-cols-3 gap-3 my-4">
-                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-center">
-                            <span class="text-2xl font-black ${res.isGauntletMastered ? 'text-amber-500' : 'text-blue-600'}">
-                                ${res.isGauntletMastered ? '100%' : `${res.accuracy}%`}
+                <div class="summary-modal-card tablet-modal-card bg-white rounded-3xl p-5 sm:p-6 md:p-7 w-full shadow-2xl border border-slate-200/90 relative modal-enter my-auto">
+                    <div class="summary-modal-grid items-center text-center">
+                        <!-- Coluna 1: Celebração e Mascote -->
+                        <div class="summary-modal-left flex flex-col items-center">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-13 h-13 sm:w-14 sm:h-14 rounded-full p-0.5 bg-gradient-to-tr ${MascotEngine.getCurrent().ringGradient} shadow-sm flex-shrink-0">
+                                    <img src="${MascotEngine.getCurrent().avatar}" alt="${MascotEngine.getCurrent().name}" class="w-full h-full rounded-full object-cover border-2 border-white shadow-inner">
+                                </div>
+                                <div class="w-13 h-13 sm:w-14 sm:h-14 ${res.isGauntletMastered ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'} rounded-full flex items-center justify-center text-2xl shadow-inner flex-shrink-0">
+                                    <i class="fas ${res.isGauntletMastered ? 'fa-shield-alt text-amber-500' : 'fa-trophy text-amber-500'}"></i>
+                                </div>
+                            </div>
+                            <span class="inline-block ${res.isGauntletMastered ? 'bg-amber-500/15 text-amber-800 border border-amber-300' : 'bg-emerald-500/15 text-emerald-800 border border-emerald-300'} text-[10px] font-bold uppercase tracking-wider px-3 py-0.5 rounded-full mb-1">
+                                ${headerBadgeText}
                             </span>
-                            <span class="block text-[10px] font-bold text-slate-400 uppercase mt-1">
-                                ${res.isGauntletMastered ? 'Conclusão' : 'Precisão'}
-                            </span>
-                            ${res.isGauntletMastered ? `<span class="block text-[9px] text-slate-400">1ª tent: ${res.accuracy}%</span>` : ''}
-                        </div>
-                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-center">
-                            <span class="text-2xl font-black ${beatSCT ? 'text-emerald-600' : 'text-slate-700'}">${timeFormatted}</span>
-                            <span class="block text-[10px] font-bold text-slate-400 uppercase mt-1">Tempo Real</span>
-                        </div>
-                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-center">
-                            <span class="text-2xl font-black text-amber-500">+${res.bonusStars + Session.roundCorrectFirstAttempt} ★</span>
-                            <span class="block text-[10px] font-bold text-slate-400 uppercase mt-1">Estrelas</span>
-                        </div>
-                    </div>
-
-                    ${beatSCT ? `
-                        <div class="bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 text-xs font-bold text-emerald-700 flex items-center justify-center gap-2 mb-3">
-                            <i class="fas fa-bolt text-emerald-500"></i> Concluído dentro da meta de tempo sugerida!
-                        </div>
-                    ` : ''}
-
-                    ${badgesHtml}
-
-                    <!-- Ações Principais -->
-                    <div class="flex flex-col gap-3 mt-5">
-                        <button id="downloadCertBtn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-bold text-sm rounded-2xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
-                            <i class="fas fa-certificate text-base"></i> Baixar Certificado (PDF)
-                        </button>
-
-                        <div class="grid grid-cols-2 gap-3">
-                            <button id="playAgainBtn" class="py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-95">
-                                <i class="fas fa-redo"></i> Jogar Novamente
-                            </button>
-                            <button id="newTaskSummaryBtn" type="button" class="py-3 font-bold text-sm rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-95" style="background: var(--accent); color: #fff;">
-                                <i class="fas fa-plus-circle"></i> Nova Tarefa
-                            </button>
+                            <h3 class="text-xl sm:text-2xl font-black text-slate-900 leading-tight">Parabéns, ${(window.escapeHtml ? window.escapeHtml(Session.studentName) : Session.studentName)}!</h3>
+                            <p class="text-xs text-slate-500 mt-0.5">${level ? level.title : ''} · ${sub ? sub.title : ''}</p>
+                            <div class="${res.isGauntletMastered ? 'bg-amber-50 border border-amber-200 text-amber-900' : 'bg-emerald-50 border border-emerald-200 text-emerald-800'} rounded-xl px-3 py-2 text-xs font-semibold my-2 w-full text-center md:text-left">
+                                "${res.isGauntletMastered ? 'Parabéns pela persistência! Você concluiu todas as questões!' : MascotEngine.getCurrent().cheerFinish}"
+                            </div>
+                            ${badgesHtml}
                         </div>
 
-                        <button id="closeSummaryBtn" type="button" class="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer">
-                            <i class="fas fa-times"></i> Fechar
-                        </button>
+                        <!-- Coluna 2: Métricas e Ações -->
+                        <div class="flex flex-col gap-2.5">
+                            <!-- Painel de Métricas -->
+                            <div class="grid grid-cols-3 gap-2 text-center">
+                                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-2.5">
+                                    <span class="text-xl sm:text-2xl font-black ${res.isGauntletMastered ? 'text-amber-500' : 'text-blue-600'}">
+                                        ${res.isGauntletMastered ? '100%' : `${res.accuracy}%`}
+                                    </span>
+                                    <span class="block text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase mt-0.5">
+                                        ${res.isGauntletMastered ? 'Conclusão' : 'Precisão'}
+                                    </span>
+                                    ${res.isGauntletMastered ? `<span class="block text-[8px] text-slate-400">1ª tent: ${res.accuracy}%</span>` : ''}
+                                </div>
+                                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-2.5">
+                                    <span class="text-xl sm:text-2xl font-black ${beatSCT ? 'text-emerald-600' : 'text-slate-700'}">${timeFormatted}</span>
+                                    <span class="block text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase mt-0.5">Tempo Real</span>
+                                </div>
+                                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-2.5">
+                                    <span class="text-xl sm:text-2xl font-black text-amber-500">+${res.bonusStars + Session.roundCorrectFirstAttempt} ★</span>
+                                    <span class="block text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase mt-0.5">Estrelas</span>
+                                </div>
+                            </div>
+
+                            ${beatSCT ? `
+                                <div class="bg-emerald-50 border border-emerald-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-emerald-700 flex items-center justify-center gap-1.5">
+                                    <i class="fas fa-bolt text-emerald-500"></i> Concluído dentro da meta sugerida!
+                                </div>
+                            ` : ''}
+
+                            <!-- Ações Principais -->
+                            <div class="flex flex-col gap-2 mt-1">
+                                <button id="downloadCertBtn" class="w-full py-2.5 sm:py-3 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                                    <i class="fas fa-certificate text-base"></i> Baixar Certificado (PDF)
+                                </button>
+
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button id="playAgainBtn" class="py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-95">
+                                        <i class="fas fa-redo"></i> Jogar de Novo
+                                    </button>
+                                    <button id="newTaskSummaryBtn" type="button" class="py-2.5 font-bold text-xs sm:text-sm rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-95" style="background: var(--accent); color: #fff;">
+                                        <i class="fas fa-plus-circle"></i> Nova Missão
+                                    </button>
+                                </div>
+
+                                <button id="closeSummaryBtn" type="button" class="w-full py-1.5 sm:py-2 bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer">
+                                    <i class="fas fa-times"></i> Fechar
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;

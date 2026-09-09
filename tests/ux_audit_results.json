@@ -1,16 +1,16 @@
 {
   "metadata": {
     "title": "KumonGen UX/UI Audit Results",
-    "generatedAt": "2026-09-08T22:32:32.775Z",
+    "generatedAt": "2026-09-09T01:44:33.076Z",
     "viewportsTested": 6,
     "pagesTested": 5,
     "scenariosTested": 11
   },
   "summary": {
-    "total": 97,
-    "passed": 97,
+    "total": 95,
+    "passed": 95,
     "failed": 0,
-    "warnings": 0,
+    "warnings": 1,
     "passRate": "100.0%"
   },
   "bugs": [],
@@ -397,12 +397,9 @@
       "message": "[Tablet Retrato] Teclado virtual visível na carga inicial (exercício numérico M1)"
     },
     {
-      "status": "PASS",
-      "message": "[Tablet] Dígito \"5\" registrado no answer box"
-    },
-    {
-      "status": "PASS",
-      "message": "[Tablet] Backspace removeu dígito do answer box"
+      "status": "WARN",
+      "message": "[Tablet] #activeAnswerBox não renderizado — exercício pode ser de tipo seleção/arrasto",
+      "details": ""
     }
   ]
 }
