@@ -578,57 +578,132 @@
         const cleanText = text.trim();
         if (!cleanText) return;
 
-        try {
-            if (window.speechSynthesis.paused) {
-                window.speechSynthesis.resume();
-            }
-            // Limpa enfileiramento anterior síncronamente
-            if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
-                window.speechSynthesis.cancel();
-            }
-
-            const voice = findBestVoice(lang);
-            const textToSpeak = prepareSpeechText(cleanText, lang, voice);
-
-            const utterance = new SpeechSynthesisUtterance(textToSpeak.slice(0, 300));
-            utterance.lang = (voice && voice.lang) ? voice.lang : lang;
-            if (voice) {
-                utterance.voice = voice;
-            }
-            utterance.pitch = pitch;
-            utterance.rate = rate;
-
-            // Mantém na pool para evitar que o Garbage Collector do V8 silencie a voz no meio da frase
-            _utterancePool.add(utterance);
-
-            const cleanup = () => {
-                _utterancePool.delete(utterance);
-                if (btnEl) {
-                    btnEl.classList.remove('ring-4', 'ring-emerald-400/80', 'animate-pulse');
+        const doSpeak = () => {
+            try {
+                if (window.speechSynthesis.paused) {
+                    window.speechSynthesis.resume();
                 }
-            };
-
-            utterance.onstart = () => {
-                if (btnEl) {
-                    btnEl.classList.add('ring-4', 'ring-emerald-400/80');
+                // Limpa enfileiramento anterior síncronamente
+                if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+                    window.speechSynthesis.cancel();
                 }
-            };
-            utterance.onend = cleanup;
-            utterance.onerror = (err) => {
-                cleanup();
-                if (err && err.error !== 'interrupted' && err.error !== 'canceled') {
-                    console.warn('[KumonGen Speech] Falha de síntese:', err.error || err);
-                }
-            };
 
-            startSpeechWatchdog();
-            window.speechSynthesis.speak(utterance);
-            if (window.speechSynthesis.paused) {
-                window.speechSynthesis.resume();
+                const voice = findBestVoice(lang);
+                const textToSpeak = prepareSpeechText(cleanText, lang, voice);
+
+                const utterance = new SpeechSynthesisUtterance(textToSpeak.slice(0, 300));
+                utterance.lang = (voice && voice.lang) ? voice.lang : lang;
+                if (voice) {
+                    utterance.voice = voice;
+                }
+                utterance.pitch = pitch;
+                utterance.rate = rate;
+
+                // Mantém na pool para evitar que o Garbage Collector do V8 silencie a voz no meio da frase
+                _utterancePool.add(utterance);
+
+                const cleanup = () => {
+                    _utterancePool.delete(utterance);
+                    if (btnEl) {
+                        btnEl.classList.remove('ring-4', 'ring-emerald-400/80', 'animate-pulse');
+                    }
+                };
+
+                utterance.onstart = () => {
+                    if (btnEl) {
+                        btnEl.classList.add('ring-4', 'ring-emerald-400/80');
+                    }
+                };
+                utterance.onend = cleanup;
+                utterance.onerror = (err) => {
+                    cleanup();
+                    if (err && err.error !== 'interrupted' && err.error !== 'canceled') {
+                        console.warn('[KumonGen Speech] Falha de síntese:', err.error || err);
+                        // Mostra dica de configuração se o erro for persistente no Android
+                        _showTtsHintIfNeeded(err.error || 'unknown');
+                    }
+                };
+
+                startSpeechWatchdog();
+                window.speechSynthesis.speak(utterance);
+                if (window.speechSynthesis.paused) {
+                    window.speechSynthesis.resume();
+                }
+
+                // Watchdog anti-silêncio para Android Chrome: se 2s após speak() não disparou onstart,
+                // tenta novamente sem voz forçada (usa default do sistema)
+                let _startFired = false;
+                const origOnStart = utterance.onstart;
+                utterance.onstart = function() { _startFired = true; if (origOnStart) origOnStart.call(this); };
+                setTimeout(() => {
+                    if (!_startFired && !sound.muted && _utterancePool.has(utterance)) {
+                        // Retry: cancel e tenta sem forçar voz (deixa o sistema decidir)
+                        try {
+                            window.speechSynthesis.cancel();
+                            const retryUtterance = new SpeechSynthesisUtterance(textToSpeak.slice(0, 300));
+                            retryUtterance.lang = lang;
+                            retryUtterance.pitch = pitch;
+                            retryUtterance.rate = rate;
+                            _utterancePool.delete(utterance);
+                            _utterancePool.add(retryUtterance);
+                            retryUtterance.onend = () => { _utterancePool.delete(retryUtterance); cleanup(); };
+                            retryUtterance.onerror = () => { _utterancePool.delete(retryUtterance); cleanup(); _showTtsHintIfNeeded('retry-failed'); };
+                            window.speechSynthesis.speak(retryUtterance);
+                        } catch (retryErr) {
+                            cleanup();
+                        }
+                    }
+                }, 2000);
+            } catch (e) {
+                console.warn('[KumonGen Speech] SpeechSynthesis error:', e);
+                if (btnEl) btnEl.classList.remove('ring-4', 'ring-emerald-400/80', 'animate-pulse');
             }
-        } catch (e) {
-            console.warn('[KumonGen Speech] SpeechSynthesis error:', e);
-            if (btnEl) btnEl.classList.remove('ring-4', 'ring-emerald-400/80', 'animate-pulse');
+        };
+
+        // Android Chrome: vozes podem não estar carregadas ainda (getVoices() retorna [])
+        // Aguarda até 500ms pelo evento voiceschanged antes de falar
+        const voices = loadAvailableVoices();
+        if (voices.length === 0 && window.speechSynthesis.onvoiceschanged !== undefined) {
+            let resolved = false;
+            const onVoices = () => {
+                if (resolved) return;
+                resolved = true;
+                loadAvailableVoices();
+                doSpeak();
+            };
+            window.speechSynthesis.onvoiceschanged = onVoices;
+            // Fallback: se voiceschanged não disparar em 500ms, fala mesmo assim (sem voz explícita)
+            setTimeout(() => {
+                if (!resolved) {
+                    resolved = true;
+                    doSpeak();
+                }
+            }, 500);
+        } else {
+            doSpeak();
+        }
+    }
+
+    // Contador de falhas consecutivas para evitar spam de notificação
+    let _ttsHintShownAt = 0;
+    function _showTtsHintIfNeeded(errorType) {
+        const now = Date.now();
+        if (now - _ttsHintShownAt < 30000) return; // Max 1 dica a cada 30s
+        _ttsHintShownAt = now;
+
+        // Verifica se realmente não há vozes
+        const voices = loadAvailableVoices();
+        if (voices.length > 0) return; // Se tem vozes, o problema é outro
+
+        // Exibe dica sutil no balão do mascote
+        const bubble = document.getElementById('mascotSpeechText');
+        if (bubble) {
+            bubble.innerText = '🔇 Sem vozes de áudio. Vá em Configurações > Idioma > Texto-para-fala e baixe "Google TTS" com pt-BR.';
+            setTimeout(() => {
+                if (bubble.innerText.startsWith('🔇')) {
+                    bubble.innerText = 'Sua vez! ✏️';
+                }
+            }, 8000);
         }
     }
 
@@ -745,7 +820,7 @@
      * Determina se o enunciado deve ser narrado automaticamente para o aluno atual
      */
     function shouldAutoNarrate() {
-        if (sound && sound.isMuted) return false;
+        if (sound && sound.muted) return false;
 
         // Preferência explícita no storage (se o responsável ativou ou desativou)
         const pref = window.SafeStorage ? window.SafeStorage.getItem('kumongen_auto_narrate_instructions') : null;
@@ -766,7 +841,7 @@
      */
     function speakCurrentInstruction(userTriggered = false) {
         if (!userTriggered && !shouldAutoNarrate()) return;
-        if (sound && sound.isMuted && !userTriggered) return;
+        if (sound && sound.muted && !userTriggered) return;
 
         if (!Session.items || !Session.items[Session.currentIndex]) return;
         const item = Session.items[Session.currentIndex];
