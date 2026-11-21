@@ -48,7 +48,10 @@
     };
 
     let currentLevelId = 'i1';
+    let currentStage = 1;
     let itemsPerPage = 8;
+    let previewSheetIdx = 0;
+    let lastGeneratedItems = [];
     let currentZoom = 0.7;
 
     let pageLeft, pageRight, levelListDiv, paramPanel, zoomSpan, zoomContainer;
@@ -354,17 +357,26 @@
         wordRepeat: 2
     };
 
-    function generateItemsForLevel(level, count) {
+    function generateItemsForLevel(level, count, options = {}) {
         if (!level) return [];
         const target = count || (itemsPerPage * 2);
+
+        let effOpts = options && typeof options === 'object' ? { ...options } : {};
+        if (effOpts.stage !== undefined && typeof window !== 'undefined' && window.KumonProgression) {
+            const stageOpts = window.KumonProgression.stageToGeneratorOptions('ingles', level.id, effOpts.stage);
+            effOpts = Object.assign({}, stageOpts, effOpts);
+        }
+        const poolRatio = (effOpts.poolRatio && effOpts.poolRatio > 0 && effOpts.poolRatio <= 1) ? effOpts.poolRatio : 1;
 
         let baseItems = [];
 
         switch (level.type) {
             case 'trace': {
-                const letters = (customParams.traceSelected && customParams.traceSelected.length > 0)
-                    ? customParams.traceSelected
-                    : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+                const letters = Array.isArray(effOpts.traceSubset) && effOpts.traceSubset.length > 0
+                    ? effOpts.traceSubset
+                    : ((customParams.traceSelected && customParams.traceSelected.length > 0)
+                        ? customParams.traceSelected
+                        : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''));
                 letters.forEach(letter => {
                     for (let i = 0; i < (customParams.traceRepeat || 2); i++) {
                         baseItems.push({ type: 'trace', char: letter });
@@ -393,7 +405,8 @@
                         ? customParams.wordList
                         : DEFAULT_WORDS_I5;
                 }
-                wordsToUse.forEach(wordObj => {
+                const sliceLen = poolRatio < 1 ? Math.max(8, Math.ceil(wordsToUse.length * poolRatio)) : wordsToUse.length;
+                wordsToUse.slice(0, sliceLen).forEach(wordObj => {
                     for (let i = 0; i < (customParams.wordRepeat || 1); i++) {
                         baseItems.push({ type: 'word', word: wordObj.word, parts: wordObj.parts });
                     }
@@ -402,7 +415,8 @@
             }
 
             case 'sentence': {
-                const pool = [...DEFAULT_SENTENCES_I6].sort(() => Math.random() - 0.5);
+                const sliceLen = poolRatio < 1 ? Math.max(6, Math.ceil(DEFAULT_SENTENCES_I6.length * poolRatio)) : DEFAULT_SENTENCES_I6.length;
+                const pool = [...DEFAULT_SENTENCES_I6.slice(0, sliceLen)].sort(() => Math.random() - 0.5);
                 while (baseItems.length < target) {
                     for (let i = 0; i < pool.length && baseItems.length < target; i++) {
                         const st = pool[i];
@@ -417,7 +431,8 @@
             }
 
             case 'opposite': {
-                const pool = [...DEFAULT_OPPOSITES_I7].sort(() => Math.random() - 0.5);
+                const sliceLen = poolRatio < 1 ? Math.max(6, Math.ceil(DEFAULT_OPPOSITES_I7.length * poolRatio)) : DEFAULT_OPPOSITES_I7.length;
+                const pool = [...DEFAULT_OPPOSITES_I7.slice(0, sliceLen)].sort(() => Math.random() - 0.5);
                 while (baseItems.length < target) {
                     for (let i = 0; i < pool.length && baseItems.length < target; i++) {
                         const op = pool[i];
@@ -669,6 +684,22 @@
         levelListDiv.innerHTML = html;
     }
 
+    function refreshDifficultySlider() {
+        if (window.KumonGen && typeof window.KumonGen.renderPcDifficultySlider === 'function') {
+            currentStage = window.KumonGen.renderPcDifficultySlider({
+                containerId: 'pcDifficultySliderContainer',
+                subjectKey: 'ingles',
+                levelId: currentLevelId,
+                tabletBtnId: 'engPracticeTabletBtn',
+                accentColor: '#dc2626',
+                onStageApplied: (nextStage) => {
+                    currentStage = nextStage;
+                    refreshPreview();
+                }
+            });
+        }
+    }
+
     window.selectLevel = function(id) {
         const previousLevel = currentLevelId;
         currentLevelId = id;
@@ -813,21 +844,41 @@
 
         saveState();
         renderLevelList();
+        refreshDifficultySlider();
         updateParamPanel();
         refreshPreview();
     };
+
+    function renderCurrentSheetOnly() {
+        const level = LevelLibrary.ingles.find(l => l.id === currentLevelId);
+        if (!level || !pageLeft || !pageRight) return;
+        previewSheetIdx = KumonGen.renderPreviewPagerSlice({
+            subjectKey: 'ingles',
+            level,
+            allItems: lastGeneratedItems,
+            pageLeft,
+            pageRight,
+            linesPerPage: itemsPerPage,
+            sheetIdx: previewSheetIdx,
+            onSheetChange: (nextIdx) => {
+                previewSheetIdx = nextIdx;
+                renderCurrentSheetOnly();
+            },
+            refreshFn: refreshPreview
+        });
+    }
 
     function refreshPreview() {
         if (!pageLeft || !pageRight) return;
         const level = LevelLibrary.ingles.find(l => l.id === currentLevelId);
         if (!level) return;
 
-        const allItems = generateItemsForLevel(level, itemsPerPage * 2);
-        const leftItems = allItems.slice(0, itemsPerPage);
-        const rightItems = allItems.slice(itemsPerPage, itemsPerPage * 2);
-
-        KumonGen.buildPage(pageLeft, level, 1, leftItems);
-        KumonGen.buildPage(pageRight, level, 2, rightItems);
+        const totalPages = KumonGen.getTotalPagesRequested ? KumonGen.getTotalPagesRequested() : 2;
+        const genOpts = { stage: currentStage };
+        lastGeneratedItems = (typeof KumonGen.composeWorksheetItems === 'function')
+            ? KumonGen.composeWorksheetItems({ subjectKey: 'ingles', level, totalCount: totalPages * itemsPerPage, generatorFn: generateItemsForLevel, genOpts })
+            : generateItemsForLevel(level, totalPages * itemsPerPage, genOpts);
+        renderCurrentSheetOnly();
     }
 
     // ===== CONTROLES DE ABAS & WIZARD (KUMON 3.0) =====
@@ -893,6 +944,7 @@
 
         saveState();
         renderLevelList();
+        refreshDifficultySlider();
         updateParamPanel();
         refreshPreview();
     }
@@ -938,20 +990,55 @@
 
         loadSavedState();
 
+        try {
+            const urlP = new URLSearchParams(window.location.search);
+            const qLvl = urlP.get('level');
+            if (qLvl && LevelLibrary.ingles.some(l => l.id === qLvl)) {
+                currentLevelId = qLvl;
+            }
+            if (urlP.get('mode') === 'weakness') {
+                if (typeof KumonGen !== 'undefined' && typeof KumonGen.setPedagogicalConfig === 'function') {
+                    KumonGen.setPedagogicalConfig({ sheetSourceMode: 'weakness_only' }, { persist: false });
+                }
+                const acc = document.getElementById('paperAssemblerAccordion');
+                if (acc) acc.open = true;
+            }
+        } catch (e) {}
+
         KumonGen.initRefs();
 
         if (customParams.traceSelected.length === 0) {
             customParams.traceSelected = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
         }
 
+        refreshDifficultySlider();
         renderLevelList();
         updateParamPanel();
         refreshPreview();
+
+        window.addEventListener('kumongen:student_changed', () => {
+            refreshDifficultySlider();
+            refreshPreview();
+        });
+        window.addEventListener('kumongen:stage_changed', (e) => {
+            if (e && e.detail && e.detail.subjectKey === 'ingles') {
+                refreshDifficultySlider();
+                refreshPreview();
+            }
+        });
 
         const linesSelect = document.getElementById('linesPerPage');
         if (linesSelect) {
             linesSelect.addEventListener('change', (e) => {
                 itemsPerPage = parseInt(e.target.value);
+                previewSheetIdx = 0;
+                refreshPreview();
+            });
+        }
+        const pagesSelect = document.getElementById('pagesPerBook');
+        if (pagesSelect) {
+            pagesSelect.addEventListener('change', () => {
+                previewSheetIdx = 0;
                 refreshPreview();
             });
         }
@@ -984,7 +1071,21 @@
     
     window.printSheet = () => {
         const level = LevelLibrary.ingles.find(l => l.id === currentLevelId);
-        KumonGen.printSheet('Inglês', level ? level.title : '');
+        const totalPages = KumonGen.getTotalPagesRequested ? KumonGen.getTotalPagesRequested() : 2;
+        const genOpts = { stage: currentStage };
+        const makeBatch = (cnt) => (typeof KumonGen.composeWorksheetItems === 'function')
+            ? KumonGen.composeWorksheetItems({ subjectKey: 'ingles', level, totalCount: cnt, generatorFn: generateItemsForLevel, genOpts })
+            : generateItemsForLevel(level, cnt, genOpts);
+        const allItems = (lastGeneratedItems && lastGeneratedItems.length >= totalPages * itemsPerPage)
+            ? lastGeneratedItems.slice(0, totalPages * itemsPerPage)
+            : makeBatch(totalPages * itemsPerPage);
+        KumonGen.printSheet('Inglês', level ? level.title : '', {
+            allItems,
+            level,
+            totalPages,
+            linesPerPage: itemsPerPage,
+            makeVariationFn: makeBatch
+        });
     };
 
     window.generatePDF = () => {
@@ -993,10 +1094,15 @@
 
         const pagesEl = document.getElementById('pagesPerBook');
         const totalPages = pagesEl ? parseInt(pagesEl.value) : 2;
+        const genOpts = { stage: currentStage };
+        const makeBatch = (cnt) => (typeof KumonGen.composeWorksheetItems === 'function')
+            ? KumonGen.composeWorksheetItems({ subjectKey: 'ingles', level, totalCount: cnt, generatorFn: generateItemsForLevel, genOpts })
+            : generateItemsForLevel(level, cnt, genOpts);
+        const allItems = (lastGeneratedItems && lastGeneratedItems.length >= totalPages * itemsPerPage)
+            ? lastGeneratedItems.slice(0, totalPages * itemsPerPage)
+            : makeBatch(totalPages * itemsPerPage);
 
-        const allItems = generateItemsForLevel(level, totalPages * itemsPerPage);
-
-        KumonGen.generatePDF('a4-sheet', 'Inglês', level.title, totalPages, allItems, level, itemsPerPage);
+        KumonGen.generatePDF('a4-sheet', 'Inglês', level.title, totalPages, allItems, level, itemsPerPage, { makeVariationFn: makeBatch });
     };
 
     window.generateWeeklyPackagePDF = () => {
@@ -1004,7 +1110,10 @@
         if (!level) return;
 
         const totalPages = 10; // 5 dias x 2 páginas por dia
-        const allItems = generateItemsForLevel(level, totalPages * itemsPerPage);
+        const genOpts = { stage: currentStage };
+        const allItems = (typeof KumonGen.composeWorksheetItems === 'function')
+            ? KumonGen.composeWorksheetItems({ subjectKey: 'ingles', level, totalCount: totalPages * itemsPerPage, generatorFn: generateItemsForLevel, genOpts })
+            : generateItemsForLevel(level, totalPages * itemsPerPage, genOpts);
 
         KumonGen.generateWeeklyPackagePDF('a4-sheet', 'Inglês', level.title, allItems, level, itemsPerPage);
     };

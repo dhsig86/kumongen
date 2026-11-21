@@ -354,14 +354,14 @@
         /* Ajustes específicos para Retrato (iPad 1024px+, 1180px+) */
         @media (orientation: portrait) and (min-height: 800px) {
             #focusCard {
-                padding: 2.25rem 2rem !important;
+                padding: 1.25rem 1.5rem !important;
             }
             .keypad-btn {
-                height: 64px !important;
-                font-size: 1.65rem !important;
+                height: 52px !important;
+                font-size: 1.5rem !important;
             }
             #keypadWrapper {
-                margin-bottom: 1.75rem !important;
+                margin-bottom: 0.5rem !important;
             }
         }
 
@@ -414,11 +414,11 @@
                 gap: 0.3rem !important;
                 flex-shrink: 0 !important;
             }
-            #soundDiagBtn, #headerAddProfileBtn, #headerMascotBtn, #trophyBtn {
-                display: none !important;
-            }
-            #newTaskBtn span {
-                display: none !important;
+            /* Botões migrados para #tabletSettingsDrawer devem permanecer visíveis na gaveta */
+            #tabletSettingsDrawer #sctTimerDisplay {
+                padding: 0.45rem 0.65rem !important;
+                font-size: 0.72rem !important;
+                white-space: nowrap !important;
             }
             #pickerLevelTitle {
                 max-width: 95px !important;
@@ -546,6 +546,14 @@
         body[data-screen-mode="compact"] #sctTimerDisplay {
             padding: 0.15rem 0.35rem !important;
             font-size: 0.6rem !important;
+        }
+        body[data-screen-mode="compact"] #tabletSettingsDrawer #sctTimerDisplay {
+            padding: 0.45rem 0.65rem !important;
+            font-size: 0.72rem !important;
+            white-space: nowrap !important;
+        }
+        @media (max-width: 639px) {
+            .tablet-drawer-label { display: none; }
         }
         body[data-screen-mode="compact"] header .fas {
             font-size: 0.75rem !important;
@@ -691,168 +699,194 @@
         </div>
     </div>
 
-    <header class="backdrop-blur px-3 md:px-6 py-2.5 flex items-center justify-between flex-shrink-0 z-50" style="background: var(--header-bg); border-bottom: 1px solid var(--header-border);">
-        <!-- Lado Esquerdo: Voltar + Seletor de Matéria e Nível -->
-        <div class="flex items-center gap-2 md:gap-3">
-            <a href="index.html" class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900 transition-colors" title="Voltar ao início">
+    <header class="backdrop-blur px-3 md:px-6 py-2.5 flex items-center justify-between gap-2 flex-shrink-0 z-50" style="background: var(--header-bg); border-bottom: 1px solid var(--header-border);">
+        <!-- Lado Esquerdo: Voltar + Nível e Degrau Atual -->
+        <div class="flex items-center gap-1.5 md:gap-2.5 min-w-0">
+            <a href="index.html" class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900 transition-colors flex-shrink-0" title="Voltar ao início">
                 <i class="fas fa-arrow-left text-sm"></i>
             </a>
 
-            <div class="flex items-center gap-1.5">
-                <span class="hidden lg:inline-flex text-xs font-black text-blue-400 uppercase tracking-widest mr-1">
-                    <i class="fas fa-tablet-alt mr-1"></i> TABLET
-                </span>
+            <button type="button" id="openLevelPickerBtn" class="bg-gray-100 hover:bg-gray-200 border border-gray-300 hover:border-blue-400 text-gray-800 text-xs md:text-sm font-bold rounded-xl px-2.5 md:px-3 py-1.5 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 min-w-0">
+                <span id="pickerSubjectDot" class="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm flex-shrink-0"></span>
+                <span id="pickerLevelTitle" class="truncate max-w-[100px] sm:max-w-[155px] md:max-w-[200px] text-gray-800 font-black">M2 · Adição</span>
+                <span id="headerStagePill" class="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 flex-shrink-0">+1</span>
+                <i class="fas fa-chevron-down text-[9px] text-gray-400 flex-shrink-0"></i>
+            </button>
 
-                <!-- Botão Seletor Visual de Nível Touch-First -->
-                <button type="button" id="openLevelPickerBtn" class="bg-gray-100 hover:bg-gray-200 border border-gray-300 hover:border-blue-400 text-gray-800 text-xs md:text-sm font-bold rounded-xl px-2.5 md:px-3 py-1.5 flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95">
-                    <span id="pickerSubjectDot" class="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm flex-shrink-0"></span>
-                    <span id="pickerLevelTitle" class="truncate max-w-[120px] sm:max-w-[160px] md:max-w-[200px] text-gray-800 font-black">M1 · Quantidade</span>
-                    <i class="fas fa-chevron-down text-[9px] text-gray-400"></i>
-                </button>
-
-                <!-- Botão Seletor Rápido de Handicap (Foco / Misto) -->
-                <div class="relative" id="handicapContainer">
-                    <button type="button" id="handicapQuickBtn" class="bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-400 text-blue-700 text-xs md:text-sm font-black rounded-xl px-2 md:px-2.5 py-1.5 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95" title="Trocar parcela ou modo de handicap (+1..+9, Misto)">
-                        <span id="handicapBadge" class="flex items-center gap-1">
-                            <i class="fas fa-sliders-h text-[10px] text-blue-500"></i>
-                            <span id="handicapBadgeText">+1</span>
-                        </span>
-                        <i class="fas fa-chevron-down text-[8px] text-blue-400"></i>
-                    </button>
-
-                    <!-- Popover Flutuante de Troca Rápida de Handicap -->
-                    <div id="handicapPopover" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:65;min-width:230px;background:var(--modal-bg);border:2px solid var(--modal-border);color:var(--text-primary);" class="rounded-2xl p-3 shadow-2xl backdrop-blur-md">
-                        <div class="flex items-center justify-between pb-2 mb-2 border-b border-gray-200">
-                            <span class="text-[11px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1">
-                                <i class="fas fa-bullseye text-blue-500"></i> Handicap / Parcela
-                            </span>
-                            <span id="handicapPopoverCurrent" class="text-xs font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">+1</span>
-                        </div>
-                        <div class="text-[10px] font-bold text-gray-400 mb-1.5">Foco Específico (Kumon):</div>
-                        <div class="grid grid-cols-5 gap-1 mb-2.5" id="handicapFocusGrid">
-                            <button type="button" class="handicap-chip-btn py-1.5 rounded-lg text-xs font-black text-center" data-mode="focus" data-value="1">+1</button>
-                            <button type="button" class="handicap-chip-btn py-1.5 rounded-lg text-xs font-black text-center" data-mode="focus" data-value="2">+2</button>
-                            <button type="button" class="handicap-chip-btn py-1.5 rounded-lg text-xs font-black text-center" data-mode="focus" data-value="3">+3</button>
-                            <button type="button" class="handicap-chip-btn py-1.5 rounded-lg text-xs font-black text-center" data-mode="focus" data-value="4">+4</button>
-                            <button type="button" class="handicap-chip-btn py-1.5 rounded-lg text-xs font-black text-center" data-mode="focus" data-value="5">+5</button>
-                            <button type="button" class="handicap-chip-btn py-1.5 rounded-lg text-xs font-black text-center" data-mode="focus" data-value="6">+6</button>
-                            <button type="button" class="handicap-chip-btn py-1.5 rounded-lg text-xs font-black text-center" data-mode="focus" data-value="7">+7</button>
-                            <button type="button" class="handicap-chip-btn py-1.5 rounded-lg text-xs font-black text-center" data-mode="focus" data-value="8">+8</button>
-                            <button type="button" class="handicap-chip-btn py-1.5 rounded-lg text-xs font-black text-center" data-mode="focus" data-value="9">+9</button>
-                        </div>
-                        <div class="text-[10px] font-bold text-gray-400 mb-1.5">Modos Mistos Balanceados:</div>
-                        <div class="grid grid-cols-2 gap-1.5">
-                            <button type="button" class="handicap-chip-btn py-1.5 px-2 rounded-xl text-xs font-black flex items-center justify-center gap-1" data-mode="mixed_basic">
-                                <span>🎲 1 a 5</span>
-                            </button>
-                            <button type="button" class="handicap-chip-btn py-1.5 px-2 rounded-xl text-xs font-black flex items-center justify-center gap-1" data-mode="mixed_full">
-                                <span>🏆 Master 1-9</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Selects nativos mantidos ocultos/sincronizados para compatibilidade de automação -->
-                <div class="hidden">
-                    <select id="subjectSelect">
-                        <option value="matematica">Matemática</option>
-                        <option value="portugues">Português</option>
-                        <option value="ingles">Inglês</option>
-                    </select>
-                    <select id="levelSelect"></select>
+            <!-- Selects nativos mantidos ocultos/sincronizados para compatibilidade -->
+            <div class="hidden">
+                <select id="subjectSelect">
+                    <option value="matematica">Matemática</option>
+                    <option value="portugues">Português</option>
+                    <option value="ingles">Inglês</option>
+                </select>
+                <select id="levelSelect"></select>
+                <div id="handicapContainer">
+                    <button type="button" id="handicapQuickBtn"><span id="handicapBadgeText">+1</span></button>
+                    <div id="handicapPopover" style="display:none;"><span id="handicapPopoverCurrent">+1</span><div id="handicapFocusGrid"></div></div>
                 </div>
             </div>
-
-            <!-- Botão Nova Tarefa (abre o wizard) -->
-            <button type="button" id="newTaskBtn" class="bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-600 text-xs font-bold rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95" title="Configurar nova tarefa">
-                <i class="fas fa-plus-circle text-sm" style="color: var(--accent);"></i>
-                <span class="hidden sm:inline">Nova Tarefa</span>
-            </button>
-
-            <!-- Botão Caderno de Revisão (Erros Recentes) -->
-            <button type="button" id="reviewNotebookBtn" class="hidden bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-800 text-xs font-black rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95" title="Abrir Caderno de Revisão com desafios pendentes">
-                <i class="fas fa-book-reader text-sm text-amber-500"></i>
-                <span class="hidden sm:inline">Revisão</span>
-                <span id="reviewCountBadge" class="bg-amber-badge text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">0</span>
-            </button>
         </div>
 
-        <!-- Centro: Aluno & Cronômetro SCT -->
-        <div class="flex items-center gap-2 md:gap-4">
-            <!-- Pílula do Aluno Ativo com Troca Rápida -->
+        <!-- Centro: Aluno Ativo -->
+        <div class="flex items-center gap-2 min-w-0">
             <button id="studentNameBtn" class="text-gray-800 hover:bg-opacity-80 text-xs font-bold pl-1.5 pr-2.5 py-1 rounded-full flex items-center gap-1.5 transition-all shadow-sm cursor-pointer" style="background: var(--badge-bg); border: 1px solid var(--badge-border);" title="Trocar ou gerenciar perfil do aluno">
                 <div class="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-400 to-yellow-500 p-0.5 shadow flex-shrink-0 overflow-hidden">
                     <img id="studentMascotAvatar" src="assets/mascotes/jaguar_avatar.png" alt="Mascote" class="w-full h-full rounded-full object-cover">
                 </div>
-                <span id="studentNameDisplay" class="max-w-[80px] md:max-w-[120px] truncate font-black" style="color: var(--accent-dark);">Super Aluno</span>
+                <span id="studentNameDisplay" class="max-w-[75px] md:max-w-[130px] truncate font-black" style="color: var(--accent-dark);">Super Aluno</span>
                 <i class="fas fa-chevron-down text-[8px] text-gray-400"></i>
             </button>
-
-            <!-- Botão Explícito: Cadastrar Outro Perfil / Criança -->
-            <button id="headerAddProfileBtn" class="tablet-hide-xs tablet-hide-compact text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 transition-all shadow-sm cursor-pointer" style="background: var(--badge-bg); border: 1px solid var(--badge-border); color: var(--badge-text);" title="Cadastrar outra criança / novo perfil">
-                <i class="fas fa-user-plus text-[10px]"></i>
-                <span class="hidden sm:inline font-black">+ Perfil</span>
-            </button>
-
-            <!-- Cronômetro SCT Kumon -->
-            <div id="sctTimerDisplay" class="tablet-hide-xs tablet-hide-compact bg-gray-100 border border-gray-200 text-gray-700 px-3 py-1 rounded-xl text-xs md:text-sm font-mono font-bold flex items-center gap-1.5">
-                <i class="fas fa-stopwatch text-blue-400"></i>
-                <span>00:00</span>
-            </div>
         </div>
 
-        <!-- Lado Direito: Gamificação & Controles -->
-        <div class="flex items-center gap-2 md:gap-3">
-            <!-- Contador de Estrelas -->
-            <div class="px-2.5 py-1 rounded-xl text-xs md:text-sm font-black flex items-center gap-1" style="background: var(--badge-bg); border: 1px solid var(--badge-border); color: var(--badge-text);">
+        <!-- Lado Direito: Estrelas/Liga, Evolução/Ranking e Botão da Gaveta -->
+        <div class="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
+            <button type="button" id="headerWardrobeStarsBtn" onclick="if(window.AvatarWardrobe)window.AvatarWardrobe.openModal()" class="px-2 md:px-2.5 py-1 rounded-xl text-xs md:text-sm font-black flex items-center gap-1 cursor-pointer transition-transform active:scale-95" style="background: var(--badge-bg); border: 1px solid var(--badge-border); color: var(--badge-text);" title="Abrir Camarim do Mascote e Liga Atual">
+                <span id="headerLeagueIcon" class="text-xs">🌱</span>
                 <i class="fas fa-star text-amber-400"></i>
                 <span id="headerStarsCount">0</span>
-            </div>
-
-            <!-- Streak Atual -->
-            <div class="tablet-hide-sm tablet-hide-compact bg-orange-50 border border-orange-200 text-orange-600 px-2.5 py-1 rounded-xl text-xs md:text-sm font-black flex items-center gap-1" title="Sequência de acertos seguidos">
-                <i class="fas fa-fire text-orange-500"></i>
-                <span id="headerStreakCount">0</span>
-            </div>
-
-            <!-- Botão de Troféus / Conquistas -->
-            <button id="trophyBtn" class="tablet-hide-sm tablet-hide-compact p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-amber-400 hover:text-amber-300 transition-colors cursor-pointer" title="Ver Conquistas e Troféus">
-                <i class="fas fa-trophy text-sm"></i>
             </button>
 
-            <!-- Botão de Boletim de Evolução & Gráficos -->
-            <button id="headerEvolutionBtn" class="tablet-hide-sm tablet-hide-compact p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-blue-400 hover:text-blue-300 transition-colors cursor-pointer" title="Ver Boletim de Evolução & Histórico">
-                <i class="fas fa-chart-line text-sm"></i>
+            <button id="headerEvolutionBtn" class="tablet-hide-sm p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-blue-500 transition-colors cursor-pointer" title="Ver Ranking Pessoal & Boletim de Evolução" aria-label="Ver Ranking Pessoal e Boletim de Evolução">
+                <i class="fas fa-trophy text-sm text-amber-500"></i>
             </button>
 
-            <!-- Botão de Trocar Mascote no Header -->
-            <button id="headerMascotBtn" class="tablet-hide-sm tablet-hide-compact flex items-center gap-1.5 p-1.5 md:px-2.5 md:py-1 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors" title="Escolher Mascote Companheiro">
-                <img id="headerMascotImg" src="assets/mascotes/jaguar_avatar.png" alt="Mascote" class="w-6 h-6 rounded-full object-cover border-2 border-amber-400">
-                <span id="headerMascotName" class="hidden md:inline text-xs font-bold text-amber-400">Jade</span>
-            </button>
-
-            <!-- Botão PWA: Instalar Aplicativo -->
-            <button id="headerPwaInstallBtn" class="pwa-install-btn hidden bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-400/50 text-indigo-300 text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 transition-all shadow-sm cursor-pointer" title="Instalar aplicativo no iPad/Tablet">
-                <i class="fas fa-download text-[10px] text-indigo-300"></i>
-                <span class="hidden sm:inline font-black">Instalar App</span>
-            </button>
-
-            <!-- Botão Fonte Bastão (Educação Infantil / Caixa Alta BNCC) -->
-            <button id="fontBastaoToggleBtn" class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors cursor-pointer border border-transparent" title="Modo Fonte Bastão (Caixa Alta para Alfabetização Infantil)" aria-label="Alternar Fonte Bastão">
-                <i class="fas fa-font text-sm"></i>
-            </button>
-
-            <!-- Botão de Diagnóstico de Som -->
-            <button id="soundDiagBtn" class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors cursor-pointer" title="Diagnóstico e Teste de Áudio">
-                <i class="fas fa-headphones text-sm"></i>
-            </button>
-
-            <!-- Botão de Som Mudo / Ativo -->
-            <button id="soundToggleBtn" class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors cursor-pointer" title="Alternar som">
-                <i class="fas fa-volume-up text-sm"></i>
+            <button type="button" id="tabletDrawerBtn" class="relative px-2.5 md:px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95" title="Abrir Gaveta de Dificuldade, Som e Ranking" aria-label="Abrir Gaveta de Ajustes">
+                <i class="fas fa-sliders-h text-xs"></i>
+                <span class="tablet-drawer-label">Gaveta</span>
+                <span id="drawerReviewDot" class="hidden w-2 h-2 rounded-full bg-amber-300 ring-2 ring-blue-600"></span>
             </button>
         </div>
     </header>
+
+    <!-- GAVETA LATERAL DESLIZANTE (CONTROLES EM GAVETA · TABLET + PC) -->
+    <div id="tabletSettingsDrawerBackdrop"></div>
+    <aside id="tabletSettingsDrawer" aria-label="Gaveta de Dificuldade e Ajustes">
+        <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50 flex-shrink-0">
+            <div class="flex items-center gap-2">
+                <span class="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center text-sm shadow-sm">
+                    <i class="fas fa-sliders-h"></i>
+                </span>
+                <div>
+                    <h3 class="font-black text-sm text-slate-900 leading-tight">Gaveta de Ajustes</h3>
+                    <p class="text-[10px] text-slate-500 font-semibold">Dificuldade, Ranking e Conforto</p>
+                </div>
+            </div>
+            <button type="button" id="closeTabletDrawerBtn" class="w-8 h-8 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-500 flex items-center justify-center cursor-pointer" title="Fechar Gaveta (ESC)" aria-label="Fechar Gaveta">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+            <!-- Bloco 1: Slider Contínuo de Dificuldade (Para Pais e Crianças) -->
+            <section class="bg-blue-50/70 border-2 border-blue-200 rounded-2xl p-3.5 space-y-2.5">
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-blue-800 flex items-center gap-1.5">
+                        <i class="fas fa-layer-group"></i> Dificuldade do Nível
+                    </span>
+                    <span id="drawerStageBadge" class="text-[11px] font-black px-2 py-0.5 rounded-full bg-white text-blue-700 border border-blue-200 shadow-xs">
+                        Degrau 1/13 · +1
+                    </span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button type="button" id="drawerStageDecBtn" class="w-9 h-9 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-black text-base flex items-center justify-center cursor-pointer shadow-xs active:scale-95 flex-shrink-0" title="Diminuir dificuldade" aria-label="Diminuir degrau de dificuldade">−</button>
+                    <input type="range" id="tabletDifficultySlider" class="kumon-difficulty-slider flex-1" min="1" max="13" step="1" value="1" aria-label="Slider de dificuldade">
+                    <button type="button" id="drawerStageIncBtn" class="w-9 h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-base flex items-center justify-center cursor-pointer shadow-sm active:scale-95 flex-shrink-0" title="Aumentar dificuldade" aria-label="Aumentar degrau de dificuldade">+</button>
+                </div>
+
+                <div class="flex items-center justify-between text-[11px] font-bold text-slate-700">
+                    <span id="drawerStageDesc" class="truncate">Adição fixa +1</span>
+                    <span id="drawerStageXpMult" class="text-amber-600 font-black flex-shrink-0 ml-2">⚡ 1.0x XP</span>
+                </div>
+
+                <label class="flex items-center justify-between gap-2 pt-2 border-t border-blue-200/70 cursor-pointer">
+                    <span class="text-[11px] font-bold text-slate-700">Subir degrau automático (≥80%)</span>
+                    <input type="checkbox" id="drawerAutoAdvanceToggle" checked class="w-4 h-4 accent-blue-600 cursor-pointer">
+                </label>
+            </section>
+
+            <!-- Bloco 2: Liga, Ranking Pessoal & Camarim -->
+            <section class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">Liga & Ranking Pessoal</span>
+                    <span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-[10px] font-black flex items-center gap-1" title="Sequência de acertos">
+                        <i class="fas fa-fire text-orange-500"></i> <span id="headerStreakCount">0</span>
+                    </span>
+                </div>
+                <div id="drawerLeagueSummary" class="bg-white border border-slate-200 rounded-xl p-2.5 text-xs">
+                    <div class="font-black text-slate-900">🌱 Semente · 0 XP</div>
+                    <div class="text-[10px] text-slate-500 mt-0.5">Posição #1 no Ranking</div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" id="drawerOpenRankingBtn" class="py-2 px-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-black text-xs flex items-center justify-center gap-1.5 cursor-pointer">
+                        <i class="fas fa-trophy text-amber-500"></i> Ranking
+                    </button>
+                    <button type="button" id="drawerOpenWardrobeBtn" onclick="if(window.AvatarWardrobe)window.AvatarWardrobe.openModal()" class="py-2 px-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-black text-xs flex items-center justify-center gap-1.5 cursor-pointer">
+                        <i class="fas fa-hat-wizard text-amber-500"></i> Camarim
+                    </button>
+                </div>
+            </section>
+
+            <!-- Bloco 3: Missões, Revisão e Perfis -->
+            <section class="space-y-2">
+                <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Missões & Estudo</span>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" id="newTaskBtn" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl px-3 py-2.5 flex items-center gap-2 transition-all cursor-pointer shadow-xs">
+                        <i class="fas fa-plus-circle text-blue-600"></i>
+                        <span>Nova Missão</span>
+                    </button>
+                    <button type="button" id="reviewNotebookBtn" class="hidden bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-800 text-xs font-black rounded-xl px-3 py-2.5 flex items-center justify-between cursor-pointer shadow-xs">
+                        <span class="flex items-center gap-1.5"><i class="fas fa-book-reader text-amber-500"></i> Revisão</span>
+                        <span id="reviewCountBadge" class="bg-amber-badge text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">0</span>
+                    </button>
+                    <button type="button" id="trophyBtn" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl px-3 py-2.5 flex items-center gap-2 cursor-pointer shadow-xs">
+                        <i class="fas fa-medal text-amber-500"></i> Conquistas
+                    </button>
+                    <button type="button" id="headerMascotBtn" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl px-2.5 py-2 flex items-center gap-2 cursor-pointer shadow-xs">
+                        <img id="headerMascotImg" src="assets/mascotes/jaguar_avatar.png" alt="Mascote" class="w-5 h-5 rounded-full object-cover border border-amber-400">
+                        <span id="headerMascotName" class="font-bold text-slate-700 truncate">Jade</span>
+                    </button>
+                    <button type="button" id="headerAddProfileBtn" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl px-3 py-2.5 flex items-center gap-2 cursor-pointer shadow-xs">
+                        <i class="fas fa-user-plus text-indigo-500"></i>
+                        <span>+ Criança</span>
+                    </button>
+                    <button type="button" id="drawerEvolutionQuickBtn" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl px-3 py-2.5 flex items-center gap-2 cursor-pointer shadow-xs">
+                        <i class="fas fa-chart-line text-blue-500"></i> Boletim
+                    </button>
+                    <button type="button" id="drawerOpenWeaknessesBtn" class="col-span-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-800 text-xs font-black rounded-xl px-3 py-2.5 flex items-center justify-center gap-2 cursor-pointer shadow-xs">
+                        <i class="fas fa-user-shield text-rose-600"></i> <span>Área dos Pais & Fraquezas 🔒</span>
+                    </button>
+                </div>
+                <button id="headerPwaInstallBtn" class="pwa-install-btn hidden w-full bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-black px-3 py-2 rounded-xl flex items-center justify-center gap-2 cursor-pointer">
+                    <i class="fas fa-download"></i> <span>Instalar App no Dispositivo</span>
+                </button>
+            </section>
+
+            <!-- Bloco 4: Conforto Sensorial & Áudio -->
+            <section class="space-y-2">
+                <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Conforto & Áudio</span>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" id="sctTimerDisplay" class="flex-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-mono font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap" title="Cronômetro de Fluência (Toque para alternar Modo Zen sem relógio)">
+                        <i class="fas fa-stopwatch text-blue-500"></i>
+                        <span>00:00</span>
+                    </button>
+                    <button id="fontBastaoToggleBtn" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-transparent" title="Modo Fonte Bastão (Caixa Alta)" aria-label="Alternar Fonte Bastão">
+                        <i class="fas fa-font"></i> <span>Bastão</span>
+                    </button>
+                    <button id="soundToggleBtn" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer" title="Alternar som" aria-label="Alternar som">
+                        <i class="fas fa-volume-up text-sm"></i>
+                    </button>
+                    <button id="soundDiagBtn" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer" title="Diagnóstico de áudio" aria-label="Diagnóstico de áudio">
+                        <i class="fas fa-headphones text-sm"></i>
+                    </button>
+                </div>
+                <button type="button" onclick="if(window.KumonParentGuide)window.KumonParentGuide.open();" class="w-full py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer">
+                    <i class="fas fa-book-open"></i> Guia dos Pais & Método Kumon
+                </button>
+            </section>
+        </div>
+    </aside>
 
     <!-- BARRA DE PROGRESSO DA RODADA -->
     <div class="w-full bg-gray-200 h-1.5 md:h-2 overflow-hidden flex-shrink-0">
@@ -862,8 +896,11 @@
     <!-- ÁREA PRINCIPAL DO PLAYER DE EXERCÍCIOS -->
     <main class="flex-1 flex flex-col items-center justify-between p-3 md:p-6 overflow-y-auto max-w-5xl mx-auto w-full tablet-main-safe">
         <!-- Cabeçalho do Card (Instrução e Questão Atual) -->
-        <div class="w-full flex items-center justify-between text-xs text-gray-500 font-semibold mb-2 px-2 flex-shrink-0">
-            <span id="roundProgressText" class="bg-gray-100 px-3 py-1 rounded-xl text-blue-400 border border-gray-200 text-[11px] font-bold tracking-wide">Questão 1 de 10</span>
+        <div class="w-full flex items-center justify-between text-xs text-gray-500 font-semibold mb-2 px-2 flex-shrink-0 gap-2">
+            <div class="flex items-center gap-1.5 min-w-0">
+                <span id="roundProgressText" class="bg-gray-100 px-3 py-1 rounded-xl text-blue-400 border border-gray-200 text-[11px] font-bold tracking-wide">Questão 1 de 10</span>
+                <span id="questionReinforceBadge" class="hidden px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-black whitespace-nowrap">💡 Reforço Amigo</span>
+            </div>
             <div class="flex items-center gap-2">
                 <button id="repeatInstructionBtn" type="button" class="px-2.5 py-1 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95" title="Ouvir instrução falada novamente">
                     <i class="fas fa-volume-up text-xs"></i> <span>Ouvir</span>
@@ -932,7 +969,9 @@
     <!-- SCRIPTS -->
     <!-- jsPDF 2.5.1 com SRI -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="progression-engine.js?v=4.0.0"></script>
     <script src="student-profiles.js?v=3.9.0"></script>
+    <script src="avatar-wardrobe.js?v=3.9.0"></script>
     <script src="gerador.js?v=3.9.0"></script>
     <script src="content-pool.js?v=3.9.0"></script>
     <script src="matematica.js?v=3.9.0"></script>

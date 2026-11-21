@@ -1245,6 +1245,14 @@
     const Session = {
         subjectKey: 'matematica',
         levelId: 'm2',
+        currentStage: 1,
+        autoAdvance: (() => {
+            try {
+                const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
+                const saved = storage ? storage.getItem('kumongen_auto_advance') : null;
+                return saved !== 'false';
+            } catch (e) { return true; }
+        })(),
         handicap: (() => {
             try {
                 const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
@@ -1275,8 +1283,13 @@
         initialItemsCount: 10,
         gauntletItemsSolved: 0,
         isReviewMode: false,
+        adaptiveWeaknessMode: false,
         showConcreteAids: true,
-        countedDots: []
+        countedDots: [],
+        questionStartedAt: null,
+        roundItemMetrics: [],
+        injectedReviewCount: 0,
+        masteredFromNotebookCount: 0
     };
 
     // ============================================================
@@ -1297,7 +1310,7 @@
 
         getItemCanonicalKey(item) {
             if (!item) return '';
-            if (item.type === 'math') return `math:${item.operand1}${item.operator}${item.operand2}`;
+            if (item.type === 'math') return `math:${item.operand1}${item.operator}${item.operand2}${item.missingPos ? ':' + item.missingPos : ''}`;
             if (item.type === 'quantity') return `qty:${item.value}:${item.prompt || ''}`;
             if (item.type === 'trace') return `trace:${item.char || item.letter || ''}`;
             if (item.type === 'syllable') return `syl:${item.word || item.target || ''}:${item.targetSyl || item.missingSyllable || ''}`;
@@ -1307,7 +1320,13 @@
             if (item.type === 'sentence') return `sent:${item.sentence || ''}`;
             if (item.type === 'opposite') return `opp:${item.word || ''}`;
             if (item.type === 'sequence') return `seq:${(item.sequence || []).join(',')}`;
-            return JSON.stringify(item);
+            if (item.type === 'compare') return `cmp:${item.left}:${item.right}`;
+            if (item.type === 'neighbors') return `nbr:${item.center}:${item.direction || ''}`;
+            if (item.type === 'tens') return `tens:${item.number}`;
+            const cleanItem = Object.assign({}, item);
+            delete cleanItem._reviewSubjectKey;
+            delete cleanItem._reviewLevelId;
+            return JSON.stringify(cleanItem);
         },
 
         getItems(studentId = null) {
@@ -1336,26 +1355,55 @@
             this.updateHeaderUI();
         },
 
-        addItem(item, subjectKey, levelId) {
+        addItem(item, subjectKey, levelId, meta = {}) {
             if (!item) return;
             const items = this.getItems();
             const cKey = this.getItemCanonicalKey(item);
             const idx = items.findIndex(it => it.id === cKey);
+            const effSub = item._reviewSubjectKey || subjectKey || Session.subjectKey || 'matematica';
+            const effLvl = item._reviewLevelId || levelId || Session.levelId || 'm1';
+            const skillInfo = (typeof window !== 'undefined' && window.KumonProgression && typeof window.KumonProgression.getItemSkillTag === 'function')
+                ? window.KumonProgression.getItemSkillTag(item, effSub, effLvl)
+                : { tag: `${effSub}:${effLvl}`, label: `${effSub} ${effLvl}` };
+            const reason = (meta && meta.reason) || 'error';
+            const targetBox = (meta && typeof meta.box === 'number') ? meta.box : (reason === 'slow' ? 1 : 0);
 
             if (idx >= 0) {
                 items[idx].attempts = (items[idx].attempts || 1) + 1;
                 items[idx].lastFailedAt = new Date().toISOString();
+                items[idx].lastReason = reason;
+                items[idx].skillTag = items[idx].skillTag || skillInfo.tag;
+                items[idx].skillLabel = items[idx].skillLabel || skillInfo.label;
+                if (reason === 'error') {
+                    items[idx].box = 0;
+                    items[idx].dueRound = 0;
+                }
+                if (meta && typeof meta.latencyMs === 'number') {
+                    items[idx].lastLatencyMs = meta.latencyMs;
+                }
             } else {
                 try {
                     const clone = JSON.parse(JSON.stringify(item));
+                    delete clone._reviewSubjectKey;
+                    delete clone._reviewLevelId;
+                    delete clone._isAdaptiveReview;
+                    delete clone._reviewId;
+                    delete clone._reviewBox;
+                    delete clone._reviewReason;
                     items.push({
                         id: cKey,
                         item: clone,
-                        subjectKey: subjectKey || Session.subjectKey || 'matematica',
-                        levelId: levelId || Session.levelId || 'm1',
+                        subjectKey: effSub,
+                        levelId: effLvl,
                         addedAt: new Date().toISOString(),
                         lastFailedAt: new Date().toISOString(),
-                        attempts: 1
+                        attempts: 1,
+                        box: targetBox,
+                        dueRound: 0,
+                        lastReason: reason,
+                        skillTag: skillInfo.tag,
+                        skillLabel: skillInfo.label,
+                        lastLatencyMs: (meta && typeof meta.latencyMs === 'number') ? meta.latencyMs : null
                     });
                 } catch (e) {
                     console.warn('[ReviewNotebook] Falha ao clonar item:', e);
@@ -1364,10 +1412,33 @@
             this.saveItems(items);
         },
 
+        // Sistema Leitner Espaçado: Box 0 -> Box 1 (+1 rodada) -> Box 2 (Dominado e removido)
+        advanceLeitnerOnHit(item, currentRoundNumber = 0) {
+            if (!item) return { removed: false, mastered: false, promotedToBox: null };
+            const items = this.getItems();
+            const cKey = item._reviewId || this.getItemCanonicalKey(item);
+            const idx = items.findIndex(it => it.id === cKey);
+            if (idx === -1) return { removed: false, mastered: false, promotedToBox: null };
+
+            const entry = items[idx];
+            const curBox = typeof entry.box === 'number' ? entry.box : 0;
+            if (curBox >= 1) {
+                items.splice(idx, 1);
+                this.saveItems(items);
+                return { removed: true, mastered: true, promotedToBox: 2 };
+            }
+            entry.box = 1;
+            // Pula 1 rodada completa de descanso (rodada atual R -> ao fechar vira R+1 -> volta em R+2)
+            entry.dueRound = (Number(currentRoundNumber) || 0) + 2;
+            entry.lastHitAt = new Date().toISOString();
+            this.saveItems(items);
+            return { removed: false, mastered: false, promotedToBox: 1 };
+        },
+
         removeItem(item) {
             if (!item) return;
             const items = this.getItems();
-            const cKey = this.getItemCanonicalKey(item);
+            const cKey = (item._reviewId) || this.getItemCanonicalKey(item);
             const filtered = items.filter(it => it.id !== cKey);
             if (filtered.length !== items.length) {
                 this.saveItems(filtered);
@@ -1381,6 +1452,7 @@
         updateHeaderUI() {
             const btn = document.getElementById('reviewNotebookBtn');
             const badge = document.getElementById('reviewCountBadge');
+            const dot = document.getElementById('drawerReviewDot');
             const c = this.count();
             if (btn) {
                 if (c > 0) {
@@ -1389,6 +1461,10 @@
                 } else {
                     btn.classList.add('hidden');
                 }
+            }
+            if (dot) {
+                if (c > 0) dot.classList.remove('hidden');
+                else dot.classList.add('hidden');
             }
         },
 
@@ -1471,10 +1547,22 @@
             const items = this.getItems();
             if (!items.length) return;
 
+            const wModal = document.getElementById('taskWizardModal');
+            if (wModal) wModal.style.display = 'none';
+
             Session.isReviewMode = true;
             Session.isGauntletPhase = false;
             Session.isGauntlet = false;
-            Session.items = items.map(it => it.item);
+            Session.items = items.map(it => Object.assign({}, it.item, {
+                _reviewSubjectKey: it.subjectKey || 'matematica',
+                _reviewLevelId: it.levelId || 'm1'
+            }));
+            if (Session.items[0] && Session.items[0]._reviewSubjectKey) {
+                Session.subjectKey = Session.items[0]._reviewSubjectKey;
+                Session.levelId = Session.items[0]._reviewLevelId || Session.levelId;
+                TabletPlayer.populateSubjects();
+                TabletPlayer.populateLevels();
+            }
             Session.currentIndex = 0;
             Session.currentInput = '';
             Session.currentAttempts = 0;
@@ -2061,9 +2149,22 @@
             document.body.classList.remove('theme-jaguar', 'theme-capivara', 'theme-golfinho', 'theme-calango');
             document.body.classList.add(m.themeClass);
 
-            // Atualiza componente principal ao lado do card
-            const avatarImg = document.getElementById('mascotAvatarImg');
-            if (avatarImg) avatarImg.src = m.avatar;
+            // Atualiza componente principal ao lado do card (com suporte a Roupas & Acessórios SVG)
+            const ring = document.getElementById('mascotAvatarRing');
+            if (ring) {
+                ring.className = `w-14 h-14 md:w-20 md:h-20 rounded-full p-1 theme-ring shadow-xl transition-all duration-300 group-hover:scale-105 group-active:scale-95 relative`;
+                const activeStudent = window.StudentProfileEngine ? window.StudentProfileEngine.getActive() : null;
+                const avatarSubject = Object.assign({}, activeStudent || {}, { mascot: m.id });
+                if (window.AvatarWardrobe && typeof window.AvatarWardrobe.renderAvatarHtml === 'function') {
+                    ring.innerHTML = window.AvatarWardrobe.renderAvatarHtml(avatarSubject, 'border-2 border-white shadow-inner', 'mascotAvatarImg');
+                } else {
+                    const avatarImg = document.getElementById('mascotAvatarImg');
+                    if (avatarImg) avatarImg.src = m.avatar;
+                }
+            } else {
+                const avatarImg = document.getElementById('mascotAvatarImg');
+                if (avatarImg) avatarImg.src = m.avatar;
+            }
 
             const nameBadge = document.getElementById('mascotNameBadge');
             if (nameBadge) {
@@ -2072,23 +2173,18 @@
                 nameBadge.style.cssText = `background: var(--accent-light); color: var(--accent-dark); border: 1px solid var(--accent);`;
             }
 
-            const ring = document.getElementById('mascotAvatarRing');
-            if (ring) {
-                ring.className = `w-14 h-14 md:w-20 md:h-20 rounded-full p-1 theme-ring shadow-xl transition-all duration-300 group-hover:scale-105 group-active:scale-95`;
-            }
-
             // Atualiza botão do header
             const headerImg = document.getElementById('headerMascotImg');
             if (headerImg) {
                 headerImg.src = m.avatar;
-                headerImg.className = `w-6 h-6 rounded-full object-cover border-2`;
+                headerImg.className = `w-5 h-5 rounded-full object-cover border-2 flex-shrink-0`;
                 headerImg.style.borderColor = `var(--accent)`;
             }
             const headerName = document.getElementById('headerMascotName');
             if (headerName) {
                 headerName.innerText = m.name;
-                headerName.className = `hidden md:inline text-xs font-bold`;
-                headerName.style.color = `var(--accent-dark)`;
+                headerName.className = `text-xs font-bold text-slate-700 truncate`;
+                headerName.style.color = '';
             }
 
             // Atualiza badges dinâmicos do header com CSS vars
@@ -2197,9 +2293,14 @@
                         }).join('')}
                     </div>
 
-                    <button id="closeMascotPickerBtn" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition-colors">
-                        Continuar com ${this.getCurrent().name}
-                    </button>
+                    <div class="flex flex-col gap-2">
+                        <button type="button" id="openWardrobeFromPickerBtn" class="w-full py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95">
+                            <i class="fas fa-hat-wizard"></i> Camarim do Mascote (Trocar Roupas)
+                        </button>
+                        <button id="closeMascotPickerBtn" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition-colors">
+                            Continuar com ${this.getCurrent().name}
+                        </button>
+                    </div>
                 </div>
             `;
 
@@ -2211,9 +2312,23 @@
                     sound.playSuccess();
                     const mid = btn.getAttribute('data-mascot-id');
                     this.set(mid);
+                    if (window.StudentProfileEngine) {
+                        const active = window.StudentProfileEngine.getActive();
+                        if (active) {
+                            window.StudentProfileEngine.update(active.id, { mascot: mid });
+                        }
+                    }
                     modal.style.display = 'none';
                 });
             });
+
+            const wardrobeBtn = document.getElementById('openWardrobeFromPickerBtn');
+            if (wardrobeBtn) {
+                wardrobeBtn.onclick = () => {
+                    modal.style.display = 'none';
+                    if (window.AvatarWardrobe) window.AvatarWardrobe.openModal();
+                };
+            }
 
             const closeBtn = document.getElementById('closeMascotPickerBtn');
             if (closeBtn) {
@@ -2232,6 +2347,7 @@
         modal: null,
         selectedSubject: null,
         selectedLevel: null,
+        selectedStage: null,
         selectedHandicap: null,
         currentStep: 1,
         _eventsBound: false,
@@ -2241,7 +2357,14 @@
             if (!this.modal) return;
             this.selectedSubject = (opts && opts.subject) || Session.subjectKey || 'matematica';
             this.selectedLevel = (opts && opts.level) || Session.levelId || 'm2';
-            if (Session.handicap) {
+            const profileStage = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getLevelStage === 'function')
+                ? window.StudentProfileEngine.getLevelStage(this.selectedSubject, this.selectedLevel)
+                : (Session.currentStage || 1);
+            this.selectedStage = (opts && opts.stage) ? parseInt(opts.stage, 10) : profileStage;
+            if (typeof window !== 'undefined' && window.KumonProgression) {
+                const stOpts = window.KumonProgression.stageToGeneratorOptions(this.selectedSubject, this.selectedLevel, this.selectedStage);
+                this.selectedHandicap = stOpts.handicap ? { ...stOpts.handicap } : (Session.handicap ? { ...Session.handicap } : { mode: 'mixed_full' });
+            } else if (Session.handicap) {
                 this.selectedHandicap = { ...Session.handicap };
             } else {
                 this.selectedHandicap = { mode: 'mixed_full' };
@@ -2299,22 +2422,54 @@
                 { key: 'ingles', icon: 'fa-globe-americas', emoji: '🇬🇧', label: 'Inglês', color: '#dc2626', bg: '#fef2f2', border: '#fca5a5', desc: 'Words, opposites, sentences' }
             ].filter(s => window.KumonSubjects[s.key]);
 
+            const recSubKey = this.selectedSubject || Session.subjectKey || 'matematica';
+            const recSubObj = window.KumonSubjects[recSubKey] || window.KumonSubjects.matematica;
+            let recLvlId = this.selectedLevel || Session.levelId || 'm2';
+            let recStage = this.selectedStage || Session.currentStage || 1;
+            if (window.StudentProfileEngine && typeof window.StudentProfileEngine.getRecommendedNextLevel === 'function') {
+                const rec = window.StudentProfileEngine.getRecommendedNextLevel(recSubKey, recSubObj ? recSubObj.levels : []);
+                if (rec && rec.id) {
+                    recLvlId = rec.id;
+                    if (rec.stage) recStage = rec.stage;
+                }
+            }
+            const recLevelObj = (recSubObj && recSubObj.levels && recSubObj.levels.find(l => l.id === recLvlId)) || (recSubObj && recSubObj.levels && recSubObj.levels[0]);
+            const recLevelLabel = recLevelObj ? recLevelObj.title : recLvlId.toUpperCase();
+            const recStages = (typeof window !== 'undefined' && window.KumonProgression) ? window.KumonProgression.getStagesForLevel(recSubKey, recLvlId) : [];
+            const recStageSpec = (typeof window !== 'undefined' && window.KumonProgression) ? window.KumonProgression.getStageSpec(recSubKey, recLvlId, recStage) : { shortLabel: `+${recStage}` };
+            const recStageSuffix = recStages.length > 1 ? ` · Deg. ${recStage}/${recStages.length} (${recStageSpec.shortLabel})` : '';
+            const pendingReviews = ReviewNotebookManager.count();
+
             this.modal.innerHTML = `
                 <div class="wizard-card-modal bg-white p-5 md:p-6 text-center border-2 border-amber-400 my-auto">
                     <button type="button" id="wizardCloseBtn1" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold transition-all cursor-pointer z-10 active:scale-90" title="Fechar (ESC)">
                         <i class="fas fa-times"></i>
                     </button>
                     
-                    <div class="flex-shrink-0 mb-3">
-                        <div class="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-xl bg-amber-100 text-amber-600 shadow-sm">
+                    <div class="flex-shrink-0 mb-2.5">
+                        <div class="w-11 h-11 rounded-full mx-auto mb-1.5 flex items-center justify-center text-lg bg-amber-100 text-amber-600 shadow-sm">
                             <i class="fas fa-tasks"></i>
                         </div>
                         <span class="inline-block text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full mb-1 bg-amber-50 text-amber-700 border border-amber-300">Passo 1 de 3</span>
                         <h3 class="text-xl font-black text-gray-900 mb-0.5">Escolha a Matéria</h3>
-                        <p class="text-xs text-gray-500">O que a criança vai treinar hoje?</p>
+                        <p class="text-xs text-gray-500">Toque em Continuar para jogar em 1 clique ou escolha outra matéria:</p>
                     </div>
 
-                    <div class="flex-1 overflow-y-auto min-h-0 pr-1 flex flex-col gap-2.5" style="-webkit-overflow-scrolling: touch;">
+                    <!-- Atalho 1-Toque Zero Fricção para Crianças -->
+                    <div class="flex flex-col sm:flex-row gap-2 mb-2.5 flex-shrink-0">
+                        <button type="button" id="wizardQuickStartBtn" class="flex-1 py-2.5 px-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95">
+                            <i class="fas fa-rocket text-amber-300"></i>
+                            <span class="truncate">Continuar: ${recLevelLabel}${recStageSuffix}</span>
+                        </button>
+                        ${pendingReviews > 0 ? `
+                        <button type="button" id="wizardReviewQuickBtn" class="py-2.5 px-3.5 rounded-2xl bg-amber-50 hover:bg-amber-100 border-2 border-amber-300 text-amber-800 font-black text-xs sm:text-sm shadow-sm flex items-center justify-center gap-1.5 cursor-pointer transition-transform active:scale-95 flex-shrink-0">
+                            <i class="fas fa-book-reader text-amber-500"></i>
+                            <span>Revisão (${pendingReviews})</span>
+                        </button>
+                        ` : ''}
+                    </div>
+
+                    <div class="wizard-subject-grid flex-1 overflow-y-auto min-h-0 pr-1 flex flex-col gap-2.5" style="-webkit-overflow-scrolling: touch;">
                         ${subjects.map(s => {
                             const subObj = window.KumonSubjects[s.key];
                             const lvlCount = subObj && subObj.levels ? subObj.levels.length : 0;
@@ -2340,6 +2495,23 @@
 
             const closeBtn = document.getElementById('wizardCloseBtn1');
             if (closeBtn) closeBtn.addEventListener('click', () => this.close());
+
+            const quickStartBtn = document.getElementById('wizardQuickStartBtn');
+            if (quickStartBtn) {
+                quickStartBtn.addEventListener('click', () => {
+                    this.selectedSubject = recSubKey;
+                    this.selectedLevel = recLvlId;
+                    this.selectedStage = recStage;
+                    this.confirm();
+                });
+            }
+
+            const reviewQuickBtn = document.getElementById('wizardReviewQuickBtn');
+            if (reviewQuickBtn) {
+                reviewQuickBtn.addEventListener('click', () => {
+                    ReviewNotebookManager.startReviewSession();
+                });
+            }
 
             this.modal.querySelectorAll('.wizard-subject-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -2427,6 +2599,15 @@
             this.modal.querySelectorAll('.wizard-level-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     this.selectedLevel = btn.getAttribute('data-level');
+                    if (window.StudentProfileEngine && typeof window.StudentProfileEngine.getLevelStage === 'function') {
+                        this.selectedStage = window.StudentProfileEngine.getLevelStage(this.selectedSubject, this.selectedLevel);
+                    } else {
+                        this.selectedStage = 1;
+                    }
+                    if (typeof window !== 'undefined' && window.KumonProgression) {
+                        const stOpts = window.KumonProgression.stageToGeneratorOptions(this.selectedSubject, this.selectedLevel, this.selectedStage);
+                        if (stOpts.handicap) this.selectedHandicap = { ...stOpts.handicap };
+                    }
                     this.renderStep3();
                 });
             });
@@ -2482,11 +2663,50 @@
                 previewLabel = `🎲 ${opName} Fácil (1-5)`;
             }
 
+            const hasProg = typeof window !== 'undefined' && !!window.KumonProgression;
+            const stages = hasProg ? window.KumonProgression.getStagesForLevel(this.selectedSubject, this.selectedLevel) : [];
+            const maxStage = Math.max(1, stages.length);
+            const wLimits = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getTrackLimits === 'function')
+                ? window.StudentProfileEngine.getTrackLimits(this.selectedSubject, this.selectedLevel)
+                : { minStage: 1, maxStage: maxStage };
+            if (!this.selectedStage) {
+                this.selectedStage = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getLevelStage === 'function')
+                    ? window.StudentProfileEngine.getLevelStage(this.selectedSubject, this.selectedLevel)
+                    : 1;
+            }
+            const rawCurStage = hasProg ? window.KumonProgression.clampStage(this.selectedSubject, this.selectedLevel, this.selectedStage) : 1;
+            const curStage = Math.max(wLimits.minStage, Math.min(wLimits.maxStage, rawCurStage));
+            this.selectedStage = curStage;
+            const stageSpec = hasProg ? window.KumonProgression.getStageSpec(this.selectedSubject, this.selectedLevel, curStage) : { stage: 1, shortLabel: 'Base', label: 'Modo Padrão', xpMultiplier: 1.0 };
+
+            const sliderBlockHtml = hasProg && maxStage > 1 ? `
+                <div class="mt-2.5 text-left bg-slate-50 border-2 border-slate-200 rounded-2xl p-3 space-y-2">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-xs font-black text-slate-700 flex items-center gap-1.5">
+                            <i class="fas fa-sliders-h" style="color:${sc.color}"></i> Degrau de Dificuldade:
+                        </span>
+                        <span id="wizardStageBadge" class="text-[11px] font-black px-2.5 py-0.5 rounded-full shadow-xs" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
+                            Degrau ${stageSpec.stage}/${maxStage} · ${stageSpec.shortLabel}
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="wizardStageDecBtn" class="w-8 h-8 rounded-xl bg-white border border-slate-300 text-slate-700 font-black text-sm flex items-center justify-center cursor-pointer active:scale-95">−</button>
+                        <input type="range" id="wizardDifficultySlider" class="kumon-difficulty-slider flex-1" min="${wLimits.minStage}" max="${wLimits.maxStage}" step="1" value="${stageSpec.stage}" aria-label="Degrau de dificuldade no wizard">
+                        <button type="button" id="wizardStageIncBtn" class="w-8 h-8 rounded-xl text-white font-black text-sm flex items-center justify-center cursor-pointer active:scale-95" style="background:${sc.color};">+</button>
+                    </div>
+                    <div class="flex items-center justify-between text-[11px] font-bold text-slate-600">
+                        <span id="wizardStageDesc" class="truncate">${stageSpec.label}${(wLimits.minStage > 1 || wLimits.maxStage < maxStage) ? ` · 🔒 ${wLimits.minStage}–${wLimits.maxStage}` : ''}</span>
+                        <span id="wizardStageXp" class="text-amber-600 font-black flex-shrink-0 ml-2">⚡ ${stageSpec.xpMultiplier}x XP</span>
+                    </div>
+                </div>
+            ` : '';
+
             const handicapSection = isMathOp ? `
+                ${sliderBlockHtml}
                 <div class="mt-3 text-left">
                     <div class="flex items-center justify-between mb-2">
                         <span class="text-xs font-black text-gray-700 flex items-center gap-1.5">
-                            <i class="fas fa-bullseye" style="color:${sc.color}"></i> Desafio de ${opName}:
+                            <i class="fas fa-bullseye" style="color:${sc.color}"></i> Desafio Rápido de ${opName}:
                         </span>
                         <span id="wizardHandicapPreview" class="text-xs font-black px-2.5 py-0.5 rounded-full shadow-sm" style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
                             ${previewLabel}
@@ -2538,9 +2758,10 @@
                     </div>
                 </div>
             ` : `
+                ${sliderBlockHtml}
                 <div class="mt-2 text-left bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs text-slate-600 flex items-center gap-2">
                     <i class="fas fa-info-circle text-blue-500"></i>
-                    <span>Modo de Progressão Padrão ativo para este nível.</span>
+                    <span>Progressão automática ativa: conclua com ≥80% para subir de degrau!</span>
                 </div>
             `;
 
@@ -2607,6 +2828,22 @@
             const backBtn = document.getElementById('wizardBack2Btn');
             if (backBtn) backBtn.addEventListener('click', () => this.renderStep2());
 
+            // Listeners do Slider de Dificuldade no Passo 3
+            const wizardSlider = document.getElementById('wizardDifficultySlider');
+            const wizardDecBtn = document.getElementById('wizardStageDecBtn');
+            const wizardIncBtn = document.getElementById('wizardStageIncBtn');
+            const applyWizardStage = (nextVal) => {
+                if (!window.KumonProgression) return;
+                const base = window.KumonProgression.clampStage(this.selectedSubject, this.selectedLevel, nextVal);
+                this.selectedStage = Math.max(wLimits.minStage, Math.min(wLimits.maxStage, base));
+                const opts = window.KumonProgression.stageToGeneratorOptions(this.selectedSubject, this.selectedLevel, this.selectedStage);
+                if (opts.handicap) this.selectedHandicap = { ...opts.handicap };
+                this.renderStep3();
+            };
+            if (wizardSlider) wizardSlider.addEventListener('change', (e) => applyWizardStage(e.target.value));
+            if (wizardDecBtn) wizardDecBtn.addEventListener('click', () => applyWizardStage((this.selectedStage || 1) - 1));
+            if (wizardIncBtn) wizardIncBtn.addEventListener('click', () => applyWizardStage((this.selectedStage || 1) + 1));
+
             // Listeners dos botões de Handicap no Wizard
             this.modal.querySelectorAll('.wizard-handicap-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -2619,6 +2856,9 @@
                     } else if (mode === 'mixed_full') {
                         this.selectedHandicap = { mode: 'mixed_full' };
                     }
+                    if (window.KumonProgression) {
+                        this.selectedStage = window.KumonProgression.findStageFromHandicap(this.selectedSubject, this.selectedLevel, this.selectedHandicap);
+                    }
                     this.renderStep3();
                 });
             });
@@ -2627,6 +2867,21 @@
         confirm() {
             Session.subjectKey = this.selectedSubject || 'matematica';
             Session.levelId = this.selectedLevel || 'm2';
+            const fallbackStage = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getLevelStage === 'function')
+                ? window.StudentProfileEngine.getLevelStage(Session.subjectKey, Session.levelId)
+                : 1;
+            const chosenStage = this.selectedStage || fallbackStage;
+            Session.currentStage = (window.KumonProgression)
+                ? window.KumonProgression.clampStage(Session.subjectKey, Session.levelId, chosenStage)
+                : chosenStage;
+
+            if (window.StudentProfileEngine && typeof window.StudentProfileEngine.setLevelStage === 'function') {
+                window.StudentProfileEngine.setLevelStage(Session.subjectKey, Session.levelId, Session.currentStage);
+            }
+            if (window.KumonProgression) {
+                const sOpts = window.KumonProgression.stageToGeneratorOptions(Session.subjectKey, Session.levelId, Session.currentStage);
+                if (sOpts.handicap) this.selectedHandicap = { ...sOpts.handicap };
+            }
             if (this.selectedHandicap) {
                 Session.handicap = { ...this.selectedHandicap };
                 try {
@@ -2640,6 +2895,7 @@
             TabletPlayer.populateSubjects();
             TabletPlayer.populateLevels();
             TabletPlayer.updateHandicapHeaderBadge();
+            if (typeof TabletPlayer.syncDrawerUI === 'function') TabletPlayer.syncDrawerUI();
             TabletPlayer.startRound();
         }
     };
@@ -2670,11 +2926,229 @@
 
             MascotEngine.updateUI();
             this.bindTopNav();
+            this.bindDrawerControls();
             this.bindKeypad();
             this.loadInitialState();
             this.updateGamificationHeader();
+            this.syncDrawerUI();
             ReviewNotebookManager.updateHeaderUI();
             FontBastaoManager.init();
+        },
+
+        getGenerationOptions() {
+            const subKey = Session.subjectKey || 'matematica';
+            const lvlId = Session.levelId || 'm2';
+            const stageVal = (typeof window !== 'undefined' && window.KumonProgression)
+                ? window.KumonProgression.clampStage(subKey, lvlId, Session.currentStage || 1)
+                : (Session.currentStage || 1);
+            Session.currentStage = stageVal;
+            if (typeof window !== 'undefined' && window.KumonProgression) {
+                return window.KumonProgression.stageToGeneratorOptions(subKey, lvlId, stageVal);
+            }
+            return { handicap: Session.handicap, stage: stageVal };
+        },
+
+        openDrawer() {
+            const drawer = document.getElementById('tabletSettingsDrawer');
+            const backdrop = document.getElementById('tabletSettingsDrawerBackdrop');
+            this.syncDrawerUI();
+            if (drawer) drawer.classList.add('open');
+            if (backdrop) backdrop.classList.add('open');
+        },
+
+        closeDrawer() {
+            const drawer = document.getElementById('tabletSettingsDrawer');
+            const backdrop = document.getElementById('tabletSettingsDrawerBackdrop');
+            if (drawer) drawer.classList.remove('open');
+            if (backdrop) backdrop.classList.remove('open');
+        },
+
+        applyStageChange(rawStage, shouldRegenerate = true) {
+            const subKey = Session.subjectKey || 'matematica';
+            const lvlId = Session.levelId || 'm2';
+            const baseClamped = (typeof window !== 'undefined' && window.KumonProgression)
+                ? window.KumonProgression.clampStage(subKey, lvlId, rawStage)
+                : Math.max(1, parseInt(rawStage, 10) || 1);
+            const limits = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getTrackLimits === 'function')
+                ? window.StudentProfileEngine.getTrackLimits(subKey, lvlId)
+                : { minStage: 1, maxStage: baseClamped };
+            const clamped = Math.max(limits.minStage, Math.min(limits.maxStage, baseClamped));
+
+            Session.currentStage = clamped;
+            if (window.StudentProfileEngine && typeof window.StudentProfileEngine.setLevelStage === 'function') {
+                window.StudentProfileEngine.setLevelStage(subKey, lvlId, clamped);
+            }
+            if (typeof window !== 'undefined' && window.KumonProgression) {
+                const stOpts = window.KumonProgression.stageToGeneratorOptions(subKey, lvlId, clamped);
+                if (stOpts.handicap) {
+                    Session.handicap = { ...stOpts.handicap };
+                    try {
+                        (window.SafeStorage || localStorage).setItem('kumongen_tablet_handicap', JSON.stringify(Session.handicap));
+                    } catch (e) {}
+                }
+            }
+
+            this.updateHandicapHeaderBadge();
+            this.syncDrawerUI();
+
+            if (shouldRegenerate && window.KumonSubjects && Session.items && Session.items.length > 0) {
+                const sub = window.KumonSubjects[subKey];
+                const level = sub && sub.levels ? (sub.levels.find(l => l.id === lvlId) || sub.levels[0]) : null;
+                if (sub && level) {
+                    const remainingCount = Math.max(1, Session.items.length - Session.currentIndex);
+                    const newItems = sub.generate(level, remainingCount, this.getGenerationOptions());
+                    if (newItems && newItems.length) {
+                        Session.items.splice(Session.currentIndex, remainingCount, ...newItems);
+                        this.renderCurrentQuestion();
+                    }
+                }
+            }
+        },
+
+        syncDrawerUI() {
+            const subKey = Session.subjectKey || 'matematica';
+            const lvlId = Session.levelId || 'm2';
+            const hasProg = typeof window !== 'undefined' && !!window.KumonProgression;
+            const stages = hasProg ? window.KumonProgression.getStagesForLevel(subKey, lvlId) : [];
+            const maxStage = Math.max(1, stages.length);
+            const limits = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getTrackLimits === 'function')
+                ? window.StudentProfileEngine.getTrackLimits(subKey, lvlId)
+                : { minStage: 1, maxStage: maxStage };
+            const hasCustomLimit = (limits.minStage > 1 || limits.maxStage < maxStage);
+            const rawStage = hasProg ? window.KumonProgression.clampStage(subKey, lvlId, Session.currentStage || 1) : 1;
+            const curStage = Math.max(limits.minStage, Math.min(limits.maxStage, rawStage));
+            Session.currentStage = curStage;
+            const spec = hasProg ? window.KumonProgression.getStageSpec(subKey, lvlId, curStage) : { stage: 1, shortLabel: 'Base', label: 'Modo Padrão', xpMultiplier: 1.0 };
+
+            const slider = document.getElementById('tabletDifficultySlider');
+            if (slider) {
+                slider.min = String(limits.minStage);
+                slider.max = String(limits.maxStage);
+                slider.value = String(curStage);
+            }
+            const badge = document.getElementById('drawerStageBadge');
+            if (badge) badge.textContent = `Degrau ${curStage}/${maxStage} · ${spec.shortLabel}`;
+            const desc = document.getElementById('drawerStageDesc');
+            if (desc) desc.textContent = hasCustomLimit ? `${spec.label} · 🔒 ${limits.minStage}–${limits.maxStage}` : spec.label;
+            const mult = document.getElementById('drawerStageXpMult');
+            if (mult) mult.textContent = `⚡ ${spec.xpMultiplier}x XP`;
+
+            const pill = document.getElementById('headerStagePill');
+            if (pill) {
+                pill.textContent = spec.shortLabel;
+                pill.title = `${spec.label} (Degrau ${curStage} de ${maxStage})`;
+            }
+
+            if (window.StudentProfileEngine && typeof window.StudentProfileEngine.getParentControls === 'function') {
+                const pCtrl = window.StudentProfileEngine.getParentControls();
+                Session.autoAdvance = pCtrl.autoAdvance !== false;
+            }
+            const autoToggle = document.getElementById('drawerAutoAdvanceToggle');
+            if (autoToggle) {
+                autoToggle.checked = Session.autoAdvance !== false;
+            }
+
+            const leagueBox = document.getElementById('drawerLeagueSummary');
+            if (leagueBox && window.StudentProfileEngine && typeof window.StudentProfileEngine.getActiveLeagueInfo === 'function') {
+                const lInfo = window.StudentProfileEngine.getActiveLeagueInfo();
+                const rInfo = window.StudentProfileEngine.getActiveRanking();
+                const nextHint = (rInfo && rInfo.nextTarget)
+                    ? `Posição #${rInfo.activeRank} · faltam ${rInfo.nextTarget.xpGap} XP para ${rInfo.nextTarget.name}`
+                    : `Posição #${(rInfo && rInfo.activeRank) || 1} no Ranking`;
+                leagueBox.innerHTML = `
+                    <div class="font-black text-slate-900">${lInfo.current.icon} ${lInfo.current.name} · ${lInfo.xp} XP</div>
+                    <div class="text-[10px] text-slate-500 mt-0.5">${(window.escapeHtml ? window.escapeHtml(nextHint) : nextHint)}</div>
+                `;
+            }
+        },
+
+        bindDrawerControls() {
+            const openBtn = document.getElementById('tabletDrawerBtn');
+            const closeBtn = document.getElementById('closeTabletDrawerBtn');
+            const backdrop = document.getElementById('tabletSettingsDrawerBackdrop');
+            const slider = document.getElementById('tabletDifficultySlider');
+            const decBtn = document.getElementById('drawerStageDecBtn');
+            const incBtn = document.getElementById('drawerStageIncBtn');
+            const autoToggle = document.getElementById('drawerAutoAdvanceToggle');
+            const openRankBtn = document.getElementById('drawerOpenRankingBtn');
+            const drawerEvoBtn = document.getElementById('drawerEvolutionQuickBtn');
+            const drawerWeakBtn = document.getElementById('drawerOpenWeaknessesBtn');
+
+            if (openBtn) openBtn.addEventListener('click', () => this.openDrawer());
+            if (closeBtn) closeBtn.addEventListener('click', () => this.closeDrawer());
+            if (backdrop) backdrop.addEventListener('click', () => this.closeDrawer());
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    const drawer = document.getElementById('tabletSettingsDrawer');
+                    if (drawer && drawer.classList.contains('open')) {
+                        this.closeDrawer();
+                    }
+                }
+            });
+
+            if (slider) {
+                slider.addEventListener('input', (e) => this.applyStageChange(e.target.value, true));
+            }
+            if (decBtn) {
+                decBtn.addEventListener('click', () => this.applyStageChange((Session.currentStage || 1) - 1, true));
+            }
+            if (incBtn) {
+                incBtn.addEventListener('click', () => this.applyStageChange((Session.currentStage || 1) + 1, true));
+            }
+            if (autoToggle) {
+                autoToggle.addEventListener('change', (e) => {
+                    Session.autoAdvance = !!e.target.checked;
+                    if (window.StudentProfileEngine && typeof window.StudentProfileEngine.updateParentControls === 'function') {
+                        window.StudentProfileEngine.updateParentControls({ autoAdvance: Session.autoAdvance });
+                    }
+                    try {
+                        (window.SafeStorage || localStorage).setItem('kumongen_auto_advance', Session.autoAdvance ? 'true' : 'false');
+                    } catch (err) {}
+                });
+            }
+            if (openRankBtn) {
+                openRankBtn.addEventListener('click', () => {
+                    this.closeDrawer();
+                    if (window.StudentProfileEngine) {
+                        window.StudentProfileEngine.showEvolutionModal(null, { initialEvolutionTab: 'ranking' });
+                    }
+                });
+            }
+            if (drawerEvoBtn) {
+                drawerEvoBtn.addEventListener('click', () => {
+                    this.closeDrawer();
+                    if (window.StudentProfileEngine) {
+                        window.StudentProfileEngine.showEvolutionModal();
+                    }
+                });
+            }
+            if (drawerWeakBtn) {
+                drawerWeakBtn.addEventListener('click', () => {
+                    this.closeDrawer();
+                    if (window.StudentProfileEngine && typeof window.StudentProfileEngine.openParentDashboard === 'function') {
+                        window.StudentProfileEngine.openParentDashboard();
+                    }
+                });
+            }
+
+            // Fecha a gaveta após clicar em botões modais internos para foco limpo
+            ['newTaskBtn', 'reviewNotebookBtn', 'trophyBtn', 'headerMascotBtn', 'headerAddProfileBtn'].forEach(btnId => {
+                const b = document.getElementById(btnId);
+                if (b) {
+                    b.addEventListener('click', () => this.closeDrawer());
+                }
+            });
+
+            window.addEventListener('kumongen:stage_changed', (e) => {
+                if (e && e.detail && e.detail.subjectKey === Session.subjectKey && e.detail.levelId === Session.levelId) {
+                    Session.currentStage = e.detail.stage;
+                    this.syncDrawerUI();
+                }
+            });
+            window.addEventListener('kumongen:parent_controls_changed', () => {
+                this.syncDrawerUI();
+            });
         },
 
         bindTopNav() {
@@ -2760,6 +3234,9 @@
                 subSelect.addEventListener('change', (e) => {
                     Session.subjectKey = e.target.value;
                     this.populateLevels();
+                    if (window.StudentProfileEngine && typeof window.StudentProfileEngine.getLevelStage === 'function') {
+                        Session.currentStage = window.StudentProfileEngine.getLevelStage(Session.subjectKey, Session.levelId);
+                    }
                     this.startRound();
                 });
             }
@@ -2769,6 +3246,9 @@
             if (lvlSelect) {
                 lvlSelect.addEventListener('change', (e) => {
                     Session.levelId = e.target.value;
+                    if (window.StudentProfileEngine && typeof window.StudentProfileEngine.getLevelStage === 'function') {
+                        Session.currentStage = window.StudentProfileEngine.getLevelStage(Session.subjectKey, Session.levelId);
+                    }
                     this.startRound();
                 });
             }
@@ -2866,6 +3346,41 @@
                 }
             });
 
+            // Escuta trocas no Camarim do Mascote (Roupas e Acessórios SVG)
+            window.addEventListener('kumongen:wardrobe_changed', () => {
+                MascotEngine.updateUI();
+                this.updateGamificationHeader();
+            });
+
+            // Modo Zen sem relógio (para crianças que sentem ansiedade com cronômetro)
+            try {
+                const savedZen = (window.SafeStorage || localStorage).getItem('kumongen_zen_mode');
+                if (savedZen === 'true') {
+                    document.body.setAttribute('data-zen-mode', 'true');
+                }
+            } catch (e) {}
+
+            const timerBtn = document.getElementById('sctTimerDisplay');
+            if (timerBtn) {
+                timerBtn.addEventListener('click', () => {
+                    const isZen = document.body.getAttribute('data-zen-mode') === 'true';
+                    const nextZen = !isZen;
+                    document.body.setAttribute('data-zen-mode', nextZen ? 'true' : 'false');
+                    try {
+                        (window.SafeStorage || localStorage).setItem('kumongen_zen_mode', nextZen ? 'true' : 'false');
+                    } catch (e) {}
+                    if (nextZen) {
+                        timerBtn.innerHTML = `<i class="fas fa-spa text-emerald-500"></i> <span class="text-emerald-700 font-bold">Modo Zen</span>`;
+                        MascotEngine.speak('Modo Zen ativado! Faça no seu ritmo, com calma! 🌿', 2800, false);
+                    } else {
+                        const m = String(Math.floor(Session.elapsedSeconds / 60)).padStart(2, '0');
+                        const s = String(Session.elapsedSeconds % 60).padStart(2, '0');
+                        const targetM = Math.floor(Session.targetSctSeconds / 60);
+                        timerBtn.innerHTML = `<span class="text-slate-700">${m}:${s}</span> <span class="text-xs text-slate-400 font-normal">/ Meta: ${targetM} min</span>`;
+                    }
+                });
+            }
+
             // Botão de Som Mudo / Desmutado
             const soundBtn = document.getElementById('soundToggleBtn');
             if (soundBtn) {
@@ -2895,9 +3410,30 @@
                 trophyBtn.addEventListener('click', () => this.showBadgesModal());
             }
 
-            // Teclado físico do computador também funciona para conveniência
+            // Teclado físico do computador também funciona (isolado de inputs e modais abertos)
             window.addEventListener('keydown', (e) => {
                 if (Session.isTransitionLocked) return;
+                const tgt = e.target;
+                if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT' || tgt.isContentEditable)) {
+                    return;
+                }
+                const blockingModals = [
+                    'kumonParentPasswordModal',
+                    'kumonParentGateModal',
+                    'studentProfileManagerModal',
+                    'avatarWardrobeModal',
+                    'taskWizardModal',
+                    'levelPickerModal',
+                    'reviewNotebookModal',
+                    'roundFinishedModal',
+                    'gauntletModal'
+                ];
+                for (let i = 0; i < blockingModals.length; i++) {
+                    const mEl = document.getElementById(blockingModals[i]);
+                    if (mEl && mEl.style.display !== 'none' && mEl.offsetParent !== null) {
+                        return;
+                    }
+                }
                 if (e.key >= '0' && e.key <= '9') {
                     sound.init();
                     sound.playClick();
@@ -2957,18 +3493,32 @@
                 MascotEngine.set(student.mascot);
             }
 
+            if (window.StudentProfileEngine && typeof window.StudentProfileEngine.getLevelStage === 'function') {
+                Session.currentStage = window.StudentProfileEngine.getLevelStage(Session.subjectKey, Session.levelId, student);
+            }
             this.updateGamificationHeader();
+            this.syncDrawerUI();
             ReviewNotebookManager.updateHeaderUI();
             FontBastaoManager.onStudentChanged(student);
         },
 
         loadInitialState() {
-            // Permite carregar matéria e nível via Query Params: tablet.html?subject=portugues&level=p3
+            // Permite carregar matéria, nível, degrau ou missão compartilhada via Query Params
             const urlParams = new URLSearchParams(window.location.search);
-            const qSub = urlParams.get('subject');
-            const qLvl = urlParams.get('level');
-            const autoStart = urlParams.get('autostart') === 'true';
+            const shareRaw = urlParams.get('share');
+            const sharedMission = (shareRaw && typeof window !== 'undefined' && window.KumonProgression && typeof window.KumonProgression.decodeShareMission === 'function')
+                ? window.KumonProgression.decodeShareMission(shareRaw)
+                : null;
 
+            const qSub = urlParams.get('subject') || (sharedMission && sharedMission.subject);
+            const qLvl = urlParams.get('level') || (sharedMission && sharedMission.level);
+            const qStage = urlParams.get('stage') || (sharedMission && sharedMission.stage ? String(sharedMission.stage) : null);
+            const qMode = urlParams.get('mode');
+            const autoStart = urlParams.get('autostart') === 'true' || qMode === 'weakness';
+
+            if (qMode === 'weakness') {
+                Session.adaptiveWeaknessMode = true;
+            }
             if (qSub && window.KumonSubjects && window.KumonSubjects[qSub]) {
                 Session.subjectKey = qSub;
             }
@@ -2981,9 +3531,23 @@
                 if (active) {
                     this.onStudentChanged(active);
                 }
+                const savedStage = (typeof window.StudentProfileEngine.getLevelStage === 'function')
+                    ? window.StudentProfileEngine.getLevelStage(Session.subjectKey, Session.levelId)
+                    : 1;
+                Session.currentStage = qStage ? (parseInt(qStage, 10) || savedStage) : savedStage;
+                if (qStage && typeof window.StudentProfileEngine.setLevelStage === 'function') {
+                    Session.currentStage = window.StudentProfileEngine.setLevelStage(Session.subjectKey, Session.levelId, Session.currentStage);
+                }
             } else {
                 const nameEl = document.getElementById('studentNameDisplay');
                 if (nameEl) nameEl.innerText = Session.studentName;
+                if (qStage) Session.currentStage = parseInt(qStage, 10) || 1;
+            }
+
+            if (typeof window !== 'undefined' && window.KumonProgression) {
+                Session.currentStage = window.KumonProgression.clampStage(Session.subjectKey, Session.levelId, Session.currentStage || 1);
+                const stOpts = window.KumonProgression.stageToGeneratorOptions(Session.subjectKey, Session.levelId, Session.currentStage);
+                if (stOpts.handicap) Session.handicap = { ...stOpts.handicap };
             }
 
             this.populateSubjects();
@@ -2997,20 +3561,28 @@
             const sub = window.KumonSubjects ? window.KumonSubjects[Session.subjectKey] : null;
             const level = sub && sub.levels ? sub.levels.find(l => l.id === Session.levelId) : null;
             if (sub && level && (!Session.items || Session.items.length === 0)) {
-                Session.items = sub.generate(level, 10, { handicap: Session.handicap });
+                Session.items = sub.generate(level, 10, this.getGenerationOptions());
                 Session.initialItemsCount = Session.items.length;
             }
             this.updateHandicapHeaderBadge();
+            this.syncDrawerUI();
 
-            // Abertura com autostart explícito (ex: testes automatizados rápidos)
+            // Abertura com autostart explícito (ex: testes automatizados rápidos ou botão "Iniciar Treino Hoje")
             if (autoStart) {
                 this.startRound();
             } else {
-                // SEMPRE acolhe o usuário no Splash/Wizard permitindo ajustar o handicap!
+                // Pré-renderiza o primeiro card silenciosamente no fundo para que #activeAnswerBox exista desde o carregamento
+                Session.workedExampleDismissed = true;
+                this.renderCurrentQuestion();
+                clearCardAutoplay();
+                Session.workedExampleDismissed = false;
+
+                // Acolhe o usuário no Splash/Wizard com 1-Toque para continuar do degrau exato onde parou
                 const targetStep = qLvl ? 3 : (qSub ? 2 : 1);
                 this.showSplashLobby({
                     subject: qSub || Session.subjectKey,
                     level: qLvl || Session.levelId,
+                    stage: Session.currentStage,
                     step: targetStep
                 });
             }
@@ -3184,6 +3756,13 @@
                 const badgeClasses = isSelected
                     ? 'bg-blue-500 text-white shadow'
                     : 'bg-gray-200 text-gray-600';
+                const stages = (typeof window !== 'undefined' && window.KumonProgression) ? window.KumonProgression.getStagesForLevel(subjectKey, lvl.id) : [];
+                const savedStage = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getLevelStage === 'function')
+                    ? window.StudentProfileEngine.getLevelStage(subjectKey, lvl.id)
+                    : 1;
+                const stageBadge = stages.length > 1
+                    ? `<span class="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">Deg. ${savedStage}/${stages.length}</span>`
+                    : '';
 
                 return `
                     <button type="button" class="level-card-btn w-full p-3 md:p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between text-left cursor-pointer active:scale-98 ${activeCardClasses}" data-subject="${subjectKey}" data-level="${lvl.id}" data-level-id="${lvl.id}">
@@ -3197,6 +3776,7 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+                            ${stageBadge}
                             ${isSelected ? '<i class="fas fa-check-circle text-blue-400 text-base"></i>' : '<i class="fas fa-play text-slate-500 text-xs"></i>'}
                         </div>
                     </button>
@@ -3210,6 +3790,15 @@
 
                     Session.subjectKey = chosenSub;
                     Session.levelId = chosenLvl;
+                    if (window.StudentProfileEngine && typeof window.StudentProfileEngine.getLevelStage === 'function') {
+                        Session.currentStage = window.StudentProfileEngine.getLevelStage(chosenSub, chosenLvl);
+                    } else {
+                        Session.currentStage = 1;
+                    }
+                    if (typeof window !== 'undefined' && window.KumonProgression) {
+                        const stOpts = window.KumonProgression.stageToGeneratorOptions(chosenSub, chosenLvl, Session.currentStage);
+                        if (stOpts.handicap) Session.handicap = { ...stOpts.handicap };
+                    }
 
                     const subSelect = document.getElementById('subjectSelect');
                     if (subSelect) subSelect.value = chosenSub;
@@ -3219,6 +3808,7 @@
                     if (lvlSelect) lvlSelect.value = chosenLvl;
 
                     this.closeLevelPickerModal();
+                    this.syncDrawerUI();
                     this.startRound();
                 });
             });
@@ -3274,14 +3864,49 @@
             const keypad = document.getElementById('keypadWrapper');
             if (keypad) keypad.style.display = '';
 
-            // Gera 10 exercícios para uma rodada rápida e focada respeitando handicap
-            const generated = sub.generate(level, 10, { handicap: Session.handicap });
+            // Gera 10 exercícios com mix adaptativo (erros/hesitações espaçados + degrau atual)
+            const genOpts = this.getGenerationOptions();
+            const activeStudent = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getActive === 'function')
+                ? window.StudentProfileEngine.getActive()
+                : null;
+            const parentCtrl = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getParentControls === 'function')
+                ? window.StudentProfileEngine.getParentControls(activeStudent)
+                : { reviewMixRatio: 0.25 };
+            const totalRoundsDone = (activeStudent && activeStudent.gamification && activeStudent.gamification.totalRounds) || 0;
+            const reviewPool = ReviewNotebookManager.getItems();
+
+            let generated = null;
+            let injectedCount = 0;
+            if (typeof window !== 'undefined' && window.KumonProgression && typeof window.KumonProgression.buildAdaptiveSessionItems === 'function') {
+                const adaptivePack = window.KumonProgression.buildAdaptiveSessionItems({
+                    subjectKey: Session.subjectKey,
+                    level,
+                    stage: Session.currentStage,
+                    totalCount: 10,
+                    generatorFn: sub.generate,
+                    generatorOptions: genOpts,
+                    reviewItems: reviewPool,
+                    currentRoundNumber: totalRoundsDone,
+                    mixRatio: parentCtrl.reviewMixRatio,
+                    forceWeaknessMode: !!Session.adaptiveWeaknessMode
+                });
+                generated = adaptivePack.items;
+                injectedCount = adaptivePack.injectedReviewCount || 0;
+            } else {
+                generated = sub.generate(level, 10, genOpts);
+            }
+
+            Session.adaptiveWeaknessMode = false;
             Session.items = generated && generated.length ? generated : [{ type: 'math', operand1: 2, operator: '+', operand2: 1 }];
             Session.currentIndex = 0;
             Session.currentInput = '';
             Session.currentAttempts = 0;
             Session.roundCorrectFirstAttempt = 0;
             Session.workedExampleDismissed = false;
+            Session.roundItemMetrics = [];
+            Session.injectedReviewCount = injectedCount;
+            Session.masteredFromNotebookCount = 0;
+            Session.questionStartedAt = null;
 
             // Reseta flags do Gauntlet Kumon (Loop de Maestria 100%)
             Session.missedItemsQueue = [];
@@ -3298,8 +3923,9 @@
             // Inicia cronômetro
             this.startTimer();
 
-            // Atualiza badge de handicap no header
+            // Atualiza badge de handicap / degrau no header e gaveta
             this.updateHandicapHeaderBadge();
+            this.syncDrawerUI();
 
             // Atualiza barra de progresso e exibe card
             this.renderCurrentQuestion();
@@ -3318,8 +3944,12 @@
                 const targetM = Math.floor(Session.targetSctSeconds / 60);
 
                 if (timerEl) {
-                    const isOvertime = Session.elapsedSeconds > Session.targetSctSeconds;
-                    timerEl.innerHTML = `<span class="${isOvertime ? 'text-amber-400 font-bold' : 'text-slate-200'}">${m}:${s}</span> <span class="text-xs text-slate-400 font-normal">/ Meta: ${targetM} min</span>`;
+                    if (document.body.getAttribute('data-zen-mode') === 'true') {
+                        timerEl.innerHTML = `<i class="fas fa-spa text-emerald-500"></i> <span class="text-emerald-700 font-bold">Modo Zen</span>`;
+                    } else {
+                        const isOvertime = Session.elapsedSeconds > Session.targetSctSeconds;
+                        timerEl.innerHTML = `<span class="${isOvertime ? 'text-amber-500 font-bold' : 'text-slate-700'} whitespace-nowrap">${m}:${s}</span> <span class="text-[11px] text-slate-400 font-normal whitespace-nowrap">/ Meta ${targetM}m</span>`;
+                    }
                 }
             };
 
@@ -3331,11 +3961,19 @@
             const data = Gamification.get();
             const starsEl = document.getElementById('headerStarsCount');
             const streakEl = document.getElementById('headerStreakCount');
+            const leagueIconEl = document.getElementById('headerLeagueIcon');
             const totalStars = (window.KumonGen && window.KumonGen.getScore)
                 ? window.KumonGen.getScore().stars
                 : (data.stars || 0);
             if (starsEl) starsEl.innerText = totalStars;
             if (streakEl) streakEl.innerText = data.streak || 0;
+            if (leagueIconEl && window.StudentProfileEngine && typeof window.StudentProfileEngine.getActiveLeagueInfo === 'function') {
+                const lInfo = window.StudentProfileEngine.getActiveLeagueInfo();
+                leagueIconEl.textContent = (lInfo && lInfo.current && lInfo.current.icon) || '🌱';
+            }
+            if (typeof this.syncDrawerUI === 'function') {
+                this.syncDrawerUI();
+            }
         },
 
         // ============================================================
@@ -3358,6 +3996,12 @@
 
             const item = Session.items[Session.currentIndex];
             if (!item) return;
+            if (Session.isReviewMode && item._reviewSubjectKey) {
+                Session.subjectKey = item._reviewSubjectKey;
+                if (item._reviewLevelId) Session.levelId = item._reviewLevelId;
+                this.populateSubjects();
+                this.populateLevels();
+            }
             const total = Session.items.length;
             const sub = window.KumonSubjects[Session.subjectKey];
             const level = sub && sub.levels ? sub.levels.find(l => l.id === Session.levelId) : null;
@@ -3386,6 +4030,15 @@
                 }
             }
 
+            const reinforceBadge = document.getElementById('questionReinforceBadge');
+            if (reinforceBadge) {
+                if (item._isAdaptiveReview && !Session.isReviewMode && !Session.isGauntletPhase) {
+                    reinforceBadge.classList.remove('hidden');
+                } else {
+                    reinforceBadge.classList.add('hidden');
+                }
+            }
+
             // Exemplo guiado (Worked Example) no exercício 1
             const exampleContainer = document.getElementById('workedExampleModal');
             if (Session.currentIndex === 0 && !Session.workedExampleDismissed && exampleContainer) {
@@ -3394,6 +4047,9 @@
             } else if (exampleContainer) {
                 exampleContainer.style.display = 'none';
             }
+
+            // Inicia cronômetro silencioso por item para detectar hesitações
+            Session.questionStartedAt = Date.now();
 
             // Exibição da instrução
             const instrEl = document.getElementById('exerciseInstruction');
@@ -3655,9 +4311,12 @@
                 `;
             }
 
-            // Suporte Concreto para Adição Inicial (Nível M2 / Educação Infantil)
+            // Suporte Concreto para Adição Inicial (M2) e Subtração Inicial (M6) (Educação Infantil / <10 anos)
             let concretePanelHtml = '';
             const isM2Level = Session.levelId === 'm2' || (item.operator === '+' && item.operand1 <= 10 && item.operand2 <= 10 && Session.subjectKey === 'matematica');
+            const isM6Level = !isM2Level && (Session.levelId === 'm6' || (item.operator === '-' && item.operand1 <= 10 && item.operand2 <= item.operand1 && Session.subjectKey === 'matematica'));
+            const hasConcreteMathAid = isM2Level || isM6Level;
+
             if (isM2Level) {
                 let dotsAHtml = '';
                 for (let i = 0; i < item.operand1; i++) {
@@ -3705,6 +4364,48 @@
                         </div>
                     </div>
                 `;
+            } else if (isM6Level) {
+                const remainCount = Math.max(0, item.operand1 - item.operand2);
+                let remainDotsHtml = '';
+                for (let i = 0; i < remainCount; i++) {
+                    remainDotsHtml += `
+                        <button type="button" class="concrete-math-dot w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center font-black text-xs text-white transition-all cursor-pointer shadow-sm active:scale-90"
+                             data-math-dot-idx="${i}"
+                             title="Bolinha restante ${i+1}"
+                             style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: 2px solid #1d4ed8;">
+                            <span class="math-dot-num opacity-0"></span>
+                        </button>
+                    `;
+                }
+                let takenDotsHtml = '';
+                for (let j = 0; j < item.operand2; j++) {
+                    takenDotsHtml += `
+                        <span class="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center font-black text-xs text-rose-400 bg-rose-50 border-2 border-dashed border-rose-300 opacity-60 select-none" title="Bolinha retirada (-1)">
+                            ✕
+                        </span>
+                    `;
+                }
+                const aidsVisible = Session.showConcreteAids !== false;
+                concretePanelHtml = `
+                    <div class="w-full mt-3 flex flex-col items-center">
+                        <div class="flex items-center justify-between w-full max-w-xs px-2 mb-1.5">
+                            <span class="text-[11px] font-bold text-slate-500">Conte as bolinhas que sobraram:</span>
+                            <button type="button" id="toggleConcreteAidBtn" class="text-[10px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200 transition-colors">
+                                <i class="fas ${aidsVisible ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                                <span>${aidsVisible ? 'Ocultar' : 'Mostrar'}</span>
+                            </button>
+                        </div>
+                        <div id="concreteMathPanel" class="${aidsVisible ? 'flex' : 'hidden'} flex-wrap items-center justify-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-2xl shadow-inner max-w-sm w-full">
+                            <div class="flex flex-wrap items-center justify-center gap-1.5 p-2 bg-blue-50/70 rounded-xl border border-blue-200">
+                                ${remainDotsHtml || '<span class="text-xs font-black text-blue-500 px-2">0 sobrando</span>'}
+                            </div>
+                            <span class="text-xs font-black text-rose-400">−${item.operand2}</span>
+                            <div class="flex flex-wrap items-center justify-center gap-1.5 p-1.5 bg-rose-50/50 rounded-xl border border-rose-200">
+                                ${takenDotsHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
             }
 
             container.innerHTML = `
@@ -3717,11 +4418,11 @@
                 </div>
             `;
 
-            if (isM2Level) {
+            if (hasConcreteMathAid) {
                 const mathDots = container.querySelectorAll('.concrete-math-dot');
                 const toggleAidBtn = document.getElementById('toggleConcreteAidBtn');
                 const mathPanel = document.getElementById('concreteMathPanel');
-                const totalDots = item.operand1 + item.operand2;
+                const totalDots = isM2Level ? (item.operand1 + item.operand2) : Math.max(0, item.operand1 - item.operand2);
 
                 if (toggleAidBtn && mathPanel) {
                     toggleAidBtn.addEventListener('click', () => {
@@ -3766,7 +4467,7 @@
                             }
                         });
 
-                        if (Session.countedDots.length === totalDots && (!Session.currentInput || Session.currentInput === '')) {
+                        if (totalDots > 0 && Session.countedDots.length === totalDots && (!Session.currentInput || Session.currentInput === '')) {
                             Session.currentInput = String(totalDots);
                             const ans = document.getElementById('activeAnswerBox');
                             if (ans) {
@@ -3774,7 +4475,9 @@
                             }
                             const msg = document.getElementById('cardFeedbackMsg');
                             if (msg) {
-                                msg.innerHTML = `<span class="text-emerald-600 font-bold">Juntou tudo: ${item.operand1} + ${item.operand2} = ${totalDots}! Confirme no [✓].</span>`;
+                                msg.innerHTML = isM2Level
+                                    ? `<span class="text-emerald-600 font-bold">Juntou tudo: ${item.operand1} + ${item.operand2} = ${totalDots}! Confirme no [✓].</span>`
+                                    : `<span class="text-emerald-600 font-bold">Sobraram ${totalDots}: ${item.operand1} - ${item.operand2} = ${totalDots}! Confirme no [✓].</span>`;
                             }
                         }
                     });
@@ -4791,7 +5494,11 @@
             } else if (idx > 0 && typeof seq[idx-1] === 'number') {
                 return seq[idx-1] + 1;
             } else if (idx < seq.length - 1 && typeof seq[idx+1] === 'number') {
-                return seq[idx+1] - 1;
+                let step = 1;
+                if (idx + 2 < seq.length && typeof seq[idx+2] === 'number') {
+                    step = seq[idx+2] - seq[idx+1];
+                }
+                return seq[idx+1] - step;
             }
             return 0;
         },
@@ -4828,6 +5535,31 @@
                 answerBox.classList.remove('hint-glow-pulse');
             }
 
+            const currentItem = Session.items[Session.currentIndex];
+            const latencyMs = Session.questionStartedAt ? Math.max(0, Date.now() - Session.questionStartedAt) : 0;
+            const effSub = (currentItem && currentItem._reviewSubjectKey) || Session.subjectKey;
+            const effLvl = (currentItem && currentItem._reviewLevelId) || Session.levelId;
+            const skillInfo = (typeof window !== 'undefined' && window.KumonProgression && typeof window.KumonProgression.getItemSkillTag === 'function')
+                ? window.KumonProgression.getItemSkillTag(currentItem, effSub, effLvl)
+                : { tag: `${effSub}:${effLvl}`, label: `${effSub} ${effLvl}`, subjectKey: effSub, levelId: effLvl };
+            const expectedSec = (typeof window !== 'undefined' && window.KumonProgression && typeof window.KumonProgression.getExpectedItemSec === 'function')
+                ? window.KumonProgression.getExpectedItemSec(effSub, effLvl, Session.currentStage || 1, currentItem)
+                : 9;
+            const wasSlowFirstTry = (!Session.isGauntletPhase && !Session.isGauntlet && Session.currentAttempts === 0 && latencyMs > expectedSec * 1800);
+
+            if (!Session.isGauntletPhase && !Session.isGauntlet) {
+                Session.roundItemMetrics = Session.roundItemMetrics || [];
+                Session.roundItemMetrics.push({
+                    skillTag: skillInfo.tag,
+                    skillLabel: skillInfo.label,
+                    subjectKey: skillInfo.subjectKey,
+                    levelId: skillInfo.levelId,
+                    latencyMs,
+                    wrongCount: Session.currentAttempts,
+                    slow: wasSlowFirstTry
+                });
+            }
+
             if (Session.currentAttempts === 0 && !Session.isGauntletPhase && !Session.isGauntlet) {
                 Session.roundCorrectFirstAttempt++;
                 Gamification.addStars(1);
@@ -4839,10 +5571,28 @@
                 Session.gauntletItemsSolved++;
             }
 
-            // Se estiver no Modo Revisão, remove o exercício superado do Caderno de Revisão
+            // Atualiza Caixa Leitner / Caderno de Revisão (Spaced Repetition)
             if (Session.isReviewMode) {
-                const currentItem = Session.items[Session.currentIndex];
-                ReviewNotebookManager.removeItem(currentItem);
+                if (Session.currentAttempts === 0 && !Session.isGauntletPhase) {
+                    const curRounds = (Gamification.get && Gamification.get().totalRounds) || 0;
+                    const leitnerRes = ReviewNotebookManager.advanceLeitnerOnHit(currentItem, curRounds);
+                    if (leitnerRes && leitnerRes.mastered) {
+                        Session.masteredFromNotebookCount = (Session.masteredFromNotebookCount || 0) + 1;
+                    }
+                }
+            } else if (currentItem && currentItem._isAdaptiveReview && Session.currentAttempts === 0 && !Session.isGauntletPhase) {
+                const curRounds = (Gamification.get && Gamification.get().totalRounds) || 0;
+                const leitnerRes = ReviewNotebookManager.advanceLeitnerOnHit(currentItem, curRounds);
+                if (leitnerRes && leitnerRes.mastered) {
+                    Session.masteredFromNotebookCount = (Session.masteredFromNotebookCount || 0) + 1;
+                }
+            } else if (wasSlowFirstTry && currentItem) {
+                // Acerto com hesitação/demora entra em reforço gentil na Box 1 sem prejudicar precisão
+                ReviewNotebookManager.addItem(currentItem, Session.subjectKey, Session.levelId, {
+                    reason: 'slow',
+                    box: 1,
+                    latencyMs
+                });
             }
 
             const currentStreak = (Gamification.get && Gamification.get().streak) || 1;
@@ -4908,8 +5658,13 @@
                     console.warn('Erro ao enfileirar no Gauntlet Kumon:', e);
                 }
 
-                // Persiste no Caderno de Revisão Inteligente do Aluno (Spaced Repetition)
-                ReviewNotebookManager.addItem(currentItem, Session.subjectKey, Session.levelId);
+                // Persiste no Caderno de Revisão Inteligente do Aluno (Box 0 Leitner)
+                const wrongLatency = Session.questionStartedAt ? Math.max(0, Date.now() - Session.questionStartedAt) : null;
+                ReviewNotebookManager.addItem(currentItem, Session.subjectKey, Session.levelId, {
+                    reason: 'error',
+                    box: 0,
+                    latencyMs: wrongLatency
+                });
             }
 
             const msg = document.getElementById('cardFeedbackMsg');
@@ -5315,12 +6070,44 @@
             const accuracy = Math.round((Session.roundCorrectFirstAttempt / total) * 100);
             const timeSec = Session.elapsedSeconds;
             const targetSec = Session.targetSctSeconds;
+            const wasReviewMode = !!Session.isReviewMode;
 
-            // Bônus de estrelas se bateu a meta ou teve 100% de precisão de primeira
+            const activeStudent = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getActive === 'function')
+                ? window.StudentProfileEngine.getActive()
+                : null;
+            const stageBeforeRound = Session.currentStage || 1;
+            const levelBeforeRound = Session.levelId;
+            const subjectBeforeRound = Session.subjectKey;
+
+            // Persiste telemetria de erros/hesitações para o Radar de Fraquezas dos Pais
+            try {
+                if (Session.roundItemMetrics && Session.roundItemMetrics.length > 0 && window.StudentProfileEngine && typeof window.StudentProfileEngine.recordRoundWeaknessTelemetry === 'function') {
+                    window.StudentProfileEngine.recordRoundWeaknessTelemetry(Session.roundItemMetrics);
+                }
+            } catch (telErr) {
+                console.warn('Erro ao gravar telemetria de fraquezas:', telErr);
+            }
+
+            const progOutcome = (!wasReviewMode && typeof window !== 'undefined' && window.KumonProgression)
+                ? window.KumonProgression.evaluateRoundProgression(activeStudent, {
+                    subjectKey: subjectBeforeRound,
+                    levelId: levelBeforeRound,
+                    currentStage: stageBeforeRound,
+                    accuracy: accuracy,
+                    correctFirst: Session.roundCorrectFirstAttempt,
+                    timeSec: timeSec,
+                    targetSec: targetSec,
+                    itemMetrics: Session.roundItemMetrics || [],
+                    autoAdvance: Session.autoAdvance !== false
+                })
+                : null;
+
+            // Bônus de estrelas se bateu a meta, teve 100% ou venceu degrau avançado
             let bonusStars = 0;
             if (accuracy === 100) bonusStars += 4;
             else if (isGauntletMastered) bonusStars += 2; // Bônus de resiliência
             if (timeSec <= targetSec) bonusStars += 2;
+            if (progOutcome && progOutcome.bonusDifficultyStars) bonusStars += progOutcome.bonusDifficultyStars;
             if (bonusStars > 0) {
                 Gamification.addStars(bonusStars);
             }
@@ -5339,17 +6126,45 @@
                 }
             }
 
-            // Registra no motor de perfis a maestria do nível
+            // Persiste XP com multiplicador, Recorde Pessoal e Progressão Automática de Degrau
             try {
-                if (window.StudentProfileEngine && window.StudentProfileEngine.recordLevelMastery) {
+                if (progOutcome && window.StudentProfileEngine && typeof window.StudentProfileEngine.recordProgressionOutcome === 'function') {
+                    window.StudentProfileEngine.recordProgressionOutcome(progOutcome);
+                    if (progOutcome.promoted || progOutcome.protectedStepDown) {
+                        Session.currentStage = progOutcome.nextStage;
+                        if (typeof window !== 'undefined' && window.KumonProgression) {
+                            const stOpts = window.KumonProgression.stageToGeneratorOptions(subjectBeforeRound, levelBeforeRound, Session.currentStage);
+                            if (stOpts.handicap) {
+                                Session.handicap = { ...stOpts.handicap };
+                                try {
+                                    (window.SafeStorage || localStorage).setItem('kumongen_tablet_handicap', JSON.stringify(Session.handicap));
+                                } catch (stErr) {}
+                            }
+                        }
+                    }
+                }
+            } catch (progErr) {
+                console.warn('Erro ao registrar progressão automática', progErr);
+            }
+
+            // Registra no motor de perfis a maestria real do nível (somente fora de isReviewMode e com domínio comprovado)
+            try {
+                if (!wasReviewMode && window.StudentProfileEngine && window.StudentProfileEngine.recordLevelMastery) {
+                    const reachedEndOfTrack = progOutcome
+                        ? !!(progOutcome.levelMasteredComplete || progOutcome.reachedParentCap || progOutcome.currentStage >= progOutcome.maxStage)
+                        : true;
+                    const qualifiedMastered = accuracy >= 80 && reachedEndOfTrack;
                     window.StudentProfileEngine.recordLevelMastery(
-                        Session.subjectKey,
-                        Session.levelId,
+                        subjectBeforeRound,
+                        levelBeforeRound,
                         {
                             accuracy: accuracy,
                             timeSec: timeSec,
                             targetSec: targetSec,
-                            gauntletCycles: Session.gauntletCycles
+                            gauntletCycles: Session.gauntletCycles,
+                            stage: stageBeforeRound,
+                            mastered: qualifiedMastered,
+                            masteredAllStages: !!(progOutcome && progOutcome.levelMasteredComplete)
                         }
                     );
                 }
@@ -5359,29 +6174,32 @@
 
             // Registra no histórico analítico e geral do KumonGen (Scoreboard, Evolução e Controle dos Pais)
             try {
-                const sub = window.KumonSubjects[Session.subjectKey];
-                const level = sub && sub.levels ? sub.levels.find(l => l.id === Session.levelId) : null;
+                const sub = window.KumonSubjects[subjectBeforeRound];
+                const level = sub && sub.levels ? sub.levels.find(l => l.id === levelBeforeRound) : null;
                 const suffix = isGauntletMastered ? ' · 100% Maestria' : ' · 100% Perfeição';
+                const stageLbl = (progOutcome && progOutcome.stageSpec) ? ` (${progOutcome.stageSpec.shortLabel})` : '';
                 const now = new Date();
                 const sessionDetails = {
                     type: 'tablet_round',
                     timestamp: now.toISOString(),
                     timeStr: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-                    subjectKey: Session.subjectKey,
-                    levelId: Session.levelId,
+                    subjectKey: subjectBeforeRound,
+                    levelId: levelBeforeRound,
+                    stage: stageBeforeRound,
                     accuracy: accuracy,
                     timeSec: timeSec,
                     targetSec: targetSec,
                     totalItems: total,
                     firstAttemptCorrect: Session.roundCorrectFirstAttempt,
                     isGauntletMastered: isGauntletMastered,
+                    xpEarned: progOutcome ? progOutcome.xpEarned : 0,
                     starsEarned: bonusStars + total
                 };
 
                 if (window.KumonGen && window.KumonGen.saveHistory) {
                     window.KumonGen.saveHistory(
                         sub ? sub.title : 'Matemática',
-                        `${level ? level.title : 'Nível'} · Tablet${suffix}`,
+                        `${level ? level.title : 'Nível'}${stageLbl} · Tablet${suffix}`,
                         `${total} exer.`,
                         true,
                         sessionDetails
@@ -5391,7 +6209,7 @@
                         id: 'hist_' + Date.now(),
                         date: now.toLocaleDateString('pt-BR'),
                         subject: sub ? sub.title : 'Matemática',
-                        levelTitle: `${level ? level.title : 'Nível'} · Tablet${suffix}`,
+                        levelTitle: `${level ? level.title : 'Nível'}${stageLbl} · Tablet${suffix}`,
                         pages: `${total} exer.`,
                         completed: true
                     }, sessionDetails));
@@ -5406,6 +6224,11 @@
             }
 
             this.updateGamificationHeader();
+            this.updateHandicapHeaderBadge();
+
+            const rankingAfter = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getActiveRanking === 'function')
+                ? window.StudentProfileEngine.getActiveRanking()
+                : null;
 
             this.showRoundSummaryModal({
                 total,
@@ -5415,7 +6238,14 @@
                 timeSec,
                 targetSec,
                 bonusStars,
-                newlyUnlocked
+                newlyUnlocked,
+                progOutcome,
+                rankingAfter,
+                subjectBeforeRound,
+                levelBeforeRound,
+                stageBeforeRound,
+                masteredFromNotebook: Session.masteredFromNotebookCount || 0,
+                injectedReviewCount: Session.injectedReviewCount || 0
             });
         },
 
@@ -5430,10 +6260,105 @@
             const timeFormatted = `${m}:${s}`;
             const targetFormatted = `${Math.floor(res.targetSec / 60)}:00 min`;
 
-            const sub = window.KumonSubjects[Session.subjectKey];
-            const level = sub.levels.find(l => l.id === Session.levelId);
+            const subKey = res.subjectBeforeRound || Session.subjectKey;
+            const lvlId = res.levelBeforeRound || Session.levelId;
+            const sub = window.KumonSubjects[subKey];
+            const level = sub.levels.find(l => l.id === lvlId);
+            const prog = res.progOutcome || null;
+            const rankingAfter = res.rankingAfter || null;
 
             const beatSCT = res.timeSec <= res.targetSec;
+
+            // Banner de Progressão Bidirecional (Avanço, Recuo Protetor ou Consolidação)
+            let progressionBannerHtml = '';
+            let primaryCtaLabel = '<i class="fas fa-redo"></i> Jogar de Novo';
+            if (prog && prog.promoted) {
+                progressionBannerHtml = `
+                    <div id="roundProgressionBanner" class="bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-300 rounded-2xl p-3 text-left">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-xs font-black text-emerald-800 flex items-center gap-1.5">
+                                <i class="fas fa-arrow-circle-up text-emerald-600"></i> Subiu de Degrau Automaticamente!
+                            </span>
+                            <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-600 text-white">
+                                ${prog.nextStage}/${prog.maxStage}
+                            </span>
+                        </div>
+                        <div class="text-xs text-emerald-900 font-bold mt-1">
+                            Próximo desafio desbloqueado: <strong>${prog.nextStageSpec.label}</strong> (⚡ ${prog.nextStageSpec.xpMultiplier}x XP)
+                        </div>
+                    </div>
+                `;
+                primaryCtaLabel = `<i class="fas fa-rocket"></i> Avançar: Degrau ${prog.nextStage} (${prog.nextStageSpec.shortLabel})`;
+            } else if (prog && prog.protectedStepDown) {
+                progressionBannerHtml = `
+                    <div id="roundProgressionBanner" class="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl p-3 text-left">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-xs font-black text-amber-900 flex items-center gap-1.5">
+                                <i class="fas fa-shield-alt text-amber-600"></i> Calibração Acolhedora Ativada
+                            </span>
+                            <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-600 text-white">
+                                Degrau ${prog.nextStage}/${prog.maxStage}
+                            </span>
+                        </div>
+                        <div class="text-xs text-amber-900 font-bold mt-1">
+                            Ajustamos para <strong>${prog.nextStageSpec.label}</strong> e separamos reforço nas suas dúvidas para você acertar com confiança!
+                        </div>
+                    </div>
+                `;
+                primaryCtaLabel = `<i class="fas fa-heart"></i> Praticar no Degrau ${prog.nextStage} (${prog.nextStageSpec.shortLabel})`;
+            } else if (prog && prog.levelMasteredComplete && prog.nextLevelId !== lvlId) {
+                const nextLvlObj = sub && sub.levels ? sub.levels.find(l => l.id === prog.nextLevelId) : null;
+                const nextTitle = nextLvlObj ? nextLvlObj.title : prog.nextLevelId.toUpperCase();
+                progressionBannerHtml = `
+                    <div id="roundProgressionBanner" class="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-300 rounded-2xl p-3 text-left">
+                        <div class="text-xs font-black text-indigo-800 flex items-center gap-1.5">
+                            <i class="fas fa-crown text-amber-500"></i> Todos os Degraus Concluídos!
+                        </div>
+                        <div class="text-xs text-indigo-900 font-bold mt-1">
+                            Você fechou a trilha completa deste nível! Próximo desafio: <strong>${nextTitle}</strong>.
+                        </div>
+                    </div>
+                `;
+                primaryCtaLabel = `<i class="fas fa-rocket"></i> Ir para ${nextTitle}`;
+            } else if (prog && prog.supportMessage) {
+                progressionBannerHtml = `
+                    <div id="roundProgressionBanner" class="bg-blue-50 border border-blue-200 rounded-2xl p-3 text-left">
+                        <div class="text-xs font-black text-blue-800 flex items-center gap-1.5">
+                            <i class="fas fa-seedling text-blue-600"></i> ${prog.reachedParentCap ? 'Teto Definido pelos Pais' : 'Consolidando Domínio'}
+                        </div>
+                        <div class="text-xs text-blue-900 font-semibold mt-0.5">${prog.supportMessage}</div>
+                    </div>
+                `;
+            }
+
+            if (res.masteredFromNotebook > 0) {
+                progressionBannerHtml += `
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5 text-[11px] font-black text-emerald-800 flex items-center gap-1.5 text-left">
+                        <i class="fas fa-check-double text-emerald-600"></i> Você superou ${res.masteredFromNotebook} ${res.masteredFromNotebook === 1 ? 'desafio antigo' : 'desafios antigos'} do Caderno de Erros!
+                    </div>
+                `;
+            }
+
+            // Card de XP, Liga, Recorde Pessoal & Posição no Ranking
+            let rankingSummaryHtml = '';
+            if (prog) {
+                const recordMsg = prog.isNewTimeRecord
+                    ? (prog.deltaSec > 0 ? `⚡ Novo Recorde Pessoal! (-${prog.deltaSec}s vs anterior)` : '⚡ Primeiro Recorde Registrado!')
+                    : (prog.prevBestTimeSec ? `Seu melhor neste degrau: ${String(Math.floor(prog.prevBestTimeSec / 60)).padStart(2, '0')}:${String(prog.prevBestTimeSec % 60).padStart(2, '0')}` : '');
+                const rankMsg = rankingAfter
+                    ? `#${rankingAfter.activeRank} no Ranking${rankingAfter.nextTarget ? ` · faltam ${rankingAfter.nextTarget.xpGap} XP p/ ${rankingAfter.nextTarget.name}` : ' · Líder!'}`
+                    : '';
+                rankingSummaryHtml = `
+                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-2.5 text-left space-y-1">
+                        <div class="flex items-center justify-between gap-2 text-xs">
+                            <span class="font-black text-indigo-700">${prog.newLeague.icon} ${prog.newLeague.name} ${prog.leagueUp ? '🎉 Subiu de Liga!' : ''}</span>
+                            <span class="font-black text-amber-600">+${prog.xpEarned} XP (${prog.xpMultiplier}x)</span>
+                        </div>
+                        ${recordMsg ? `<div class="text-[11px] font-bold text-emerald-700">${recordMsg}</div>` : ''}
+                        ${rankMsg ? `<div class="text-[11px] font-semibold text-slate-600 flex items-center justify-between gap-2"><span>${rankMsg}</span><span class="flex items-center gap-2"><button type="button" id="summaryOpenWeaknessesBtn" class="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer">🔒 Fraquezas</button><button type="button" id="summaryOpenRankingBtn" class="text-[10px] font-black text-blue-600 hover:underline cursor-pointer">Ver Ranking →</button></span></div>` : ''}
+                    </div>
+                `;
+            }
 
             let badgesHtml = '';
             if (res.newlyUnlocked && res.newlyUnlocked.length > 0) {
@@ -5470,8 +6395,10 @@
                         <!-- Coluna 1: Celebração e Mascote -->
                         <div class="summary-modal-left flex flex-col items-center">
                             <div class="flex items-center gap-3 mb-2">
-                                <div class="w-13 h-13 sm:w-14 sm:h-14 rounded-full p-0.5 bg-gradient-to-tr ${MascotEngine.getCurrent().ringGradient} shadow-sm flex-shrink-0">
-                                    <img src="${MascotEngine.getCurrent().avatar}" alt="${MascotEngine.getCurrent().name}" class="w-full h-full rounded-full object-cover border-2 border-white shadow-inner">
+                                <div class="w-13 h-13 sm:w-14 sm:h-14 rounded-full p-0.5 bg-gradient-to-tr ${MascotEngine.getCurrent().ringGradient} shadow-sm flex-shrink-0 relative">
+                                    ${window.AvatarWardrobe && typeof window.AvatarWardrobe.renderAvatarHtml === 'function'
+                                        ? window.AvatarWardrobe.renderAvatarHtml(Object.assign({}, (window.StudentProfileEngine && window.StudentProfileEngine.getActive()) || {}, { mascot: MascotEngine.getCurrent().id }), 'border-2 border-white shadow-inner')
+                                        : `<img src="${MascotEngine.getCurrent().avatar}" alt="${MascotEngine.getCurrent().name}" class="w-full h-full rounded-full object-cover border-2 border-white shadow-inner">`}
                                 </div>
                                 <div class="w-13 h-13 sm:w-14 sm:h-14 ${res.isGauntletMastered ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'} rounded-full flex items-center justify-center text-2xl shadow-inner flex-shrink-0">
                                     <i class="fas ${res.isGauntletMastered ? 'fa-shield-alt text-amber-500' : 'fa-trophy text-amber-500'}"></i>
@@ -5511,6 +6438,9 @@
                                 </div>
                             </div>
 
+                            ${progressionBannerHtml}
+                            ${rankingSummaryHtml}
+
                             ${beatSCT ? `
                                 <div class="bg-emerald-50 border border-emerald-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-emerald-700 flex items-center justify-center gap-1.5">
                                     <i class="fas fa-bolt text-emerald-500"></i> Concluído dentro da meta sugerida!
@@ -5519,22 +6449,27 @@
 
                             <!-- Ações Principais -->
                             <div class="flex flex-col gap-2 mt-1">
-                                <button id="downloadCertBtn" class="w-full py-2.5 sm:py-3 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
-                                    <i class="fas fa-certificate text-base"></i> Baixar Certificado (PDF)
+                                <button id="playAgainBtn" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95">
+                                    ${primaryCtaLabel}
                                 </button>
 
                                 <div class="grid grid-cols-2 gap-2">
-                                    <button id="playAgainBtn" class="py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-95">
-                                        <i class="fas fa-redo"></i> Jogar de Novo
+                                    <button id="openWardrobeSummaryBtn" type="button" class="py-2 sm:py-2.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-black text-xs rounded-xl shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                                        <i class="fas fa-hat-wizard text-amber-500"></i> Camarim
                                     </button>
-                                    <button id="newTaskSummaryBtn" type="button" class="py-2.5 font-bold text-xs sm:text-sm rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-95" style="background: var(--accent); color: #fff;">
-                                        <i class="fas fa-plus-circle"></i> Nova Missão
+                                    <button id="downloadCertBtn" class="py-2 sm:py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                                        <i class="fas fa-certificate text-sm"></i> Certificado
                                     </button>
                                 </div>
 
-                                <button id="closeSummaryBtn" type="button" class="w-full py-1.5 sm:py-2 bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer">
-                                    <i class="fas fa-times"></i> Fechar
-                                </button>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button id="newTaskSummaryBtn" type="button" class="py-2 font-bold text-xs rounded-xl shadow-sm transition-colors flex items-center justify-center gap-1.5 cursor-pointer active:scale-95" style="background: var(--accent); color: #fff;">
+                                        <i class="fas fa-plus-circle"></i> Nova Missão
+                                    </button>
+                                    <button id="closeSummaryBtn" type="button" class="py-2 bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer">
+                                        <i class="fas fa-times"></i> Fechar
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -5542,6 +6477,13 @@
             `;
 
             modal.style.display = 'flex';
+
+            const wardrobeSummaryBtn = document.getElementById('openWardrobeSummaryBtn');
+            if (wardrobeSummaryBtn) {
+                wardrobeSummaryBtn.addEventListener('click', () => {
+                    if (window.AvatarWardrobe) window.AvatarWardrobe.openModal();
+                });
+            }
 
             const certBtn = document.getElementById('downloadCertBtn');
             if (certBtn) {
@@ -5568,10 +6510,34 @@
                 });
             }
 
+            const summaryRankBtn = document.getElementById('summaryOpenRankingBtn');
+            if (summaryRankBtn) {
+                summaryRankBtn.addEventListener('click', () => {
+                    if (window.StudentProfileEngine) {
+                        window.StudentProfileEngine.showEvolutionModal(null, { initialEvolutionTab: 'ranking' });
+                    }
+                });
+            }
+
+            const summaryWeakBtn = document.getElementById('summaryOpenWeaknessesBtn');
+            if (summaryWeakBtn) {
+                summaryWeakBtn.addEventListener('click', () => {
+                    if (window.StudentProfileEngine && typeof window.StudentProfileEngine.openParentDashboard === 'function') {
+                        window.StudentProfileEngine.openParentDashboard();
+                    }
+                });
+            }
+
             const playAgainBtn = document.getElementById('playAgainBtn');
             if (playAgainBtn) {
                 playAgainBtn.addEventListener('click', () => {
                     modal.style.display = 'none';
+                    if (prog && prog.levelMasteredComplete && prog.nextLevelId && prog.nextLevelId !== lvlId) {
+                        Session.levelId = prog.nextLevelId;
+                        Session.currentStage = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getLevelStage === 'function')
+                            ? window.StudentProfileEngine.getLevelStage(Session.subjectKey, Session.levelId)
+                            : 1;
+                    }
                     this.startRound();
                 });
             }

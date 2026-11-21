@@ -87,12 +87,12 @@
         golfinho: { id: 'golfinho', name: 'Finho', title: 'Golfinho Sábio', avatar: 'assets/mascotes/golfinho_avatar.png', ring: 'from-blue-400 to-cyan-500' }
     };
 
-    // Faixas etárias para sincronização com o Wizard
+    // Faixas etárias para sincronização com o Wizard e recomendações iniciais
     const AGE_TIERS = {
-        'age_4_5': { id: 'age_4_5', label: '4-5 anos', sub: 'Ed. Infantil', emoji: '👶' },
-        'age_6_7': { id: 'age_6_7', label: '6-7 anos', sub: '1º Ano', emoji: '🎒' },
-        'age_8_9': { id: 'age_8_9', label: '8-9 anos', sub: '2º / 3º Ano', emoji: '📘' },
-        'age_10_plus': { id: 'age_10_plus', label: '10+ anos', sub: 'Avançado', emoji: '🚀' }
+        'age_4_5': { id: 'age_4_5', label: '4-5 anos', sub: 'Ed. Infantil', emoji: '👶', recommended: { matematica: ['m1', 'm2'], portugues: ['p1', 'p2'], ingles: ['i1', 'i2'] } },
+        'age_6_7': { id: 'age_6_7', label: '6-7 anos', sub: '1º Ano', emoji: '🎒', recommended: { matematica: ['m2', 'm3'], portugues: ['p2', 'p3'], ingles: ['i2', 'i3'] } },
+        'age_8_9': { id: 'age_8_9', label: '8-9 anos', sub: '2º / 3º Ano', emoji: '📘', recommended: { matematica: ['m6', 'm8'], portugues: ['p4', 'p5'], ingles: ['i4', 'i5'] } },
+        'age_10_plus': { id: 'age_10_plus', label: '10+ anos', sub: 'Avançado', emoji: '🚀', recommended: { matematica: ['m8', 'm9', 'm10'], portugues: ['p6', 'p8'], ingles: ['i6', 'i7'] } }
     };
 
     // Matriz Canônica dos 25 Níveis Oficiais KumonGen (M1-M10, P1-P8, I1-I7)
@@ -146,6 +146,100 @@
         return 'std_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
     }
 
+    function _defaultParentControls() {
+        return {
+            autoAdvance: true,
+            promoteThreshold: 80,
+            autoProtectDown: true,
+            reviewMixRatio: 0.25,
+            dailyTargetSheets: 1,
+            trackLimits: {}
+        };
+    }
+
+    function _defaultParentAuth() {
+        return {
+            mode: 'reversed_name',
+            hash: null,
+            salt: null,
+            updatedAt: null
+        };
+    }
+
+    // SHA-256 determinístico síncrono em JS puro (garante funcionamento offline mesmo em contextos HTTP sem crypto.subtle)
+    function _sha256HexSync(ascii) {
+        const rightRotate = (value, amount) => (value >>> amount) | (value << (32 - amount));
+        const mathPow = Math.pow;
+        const maxWord = mathPow(2, 32);
+        let result = '';
+        const words = [];
+        const utf8 = unescape(encodeURIComponent(String(ascii || '')));
+        const asciiBitLength = utf8.length * 8;
+        const hash = [];
+        const k = [];
+        let primeCounter = 0;
+        const isComposite = {};
+        for (let candidate = 2; primeCounter < 64; candidate++) {
+            if (!isComposite[candidate]) {
+                for (let i = 0; i < 313; i += candidate) isComposite[i] = candidate;
+                hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+                k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+            }
+        }
+        let padded = utf8 + '\x80';
+        while ((padded.length % 64) - 56) padded += '\x00';
+        for (let i = 0; i < padded.length; i++) {
+            const j = padded.charCodeAt(i);
+            words[i >> 2] |= j << ((3 - i) % 4) * 8;
+        }
+        words[words.length] = (asciiBitLength / maxWord) | 0;
+        words[words.length] = asciiBitLength;
+        for (let j = 0; j < words.length;) {
+            const w = words.slice(j, j += 16);
+            const oldHash = hash.slice(0);
+            for (let i = 0; i < 64; i++) {
+                const w15 = w[i - 15], w2 = w[i - 2];
+                const a = hash[0], e = hash[4];
+                const temp1 = hash[7]
+                    + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
+                    + ((e & hash[5]) ^ ((~e) & hash[6]))
+                    + k[i]
+                    + (w[i] = (i < 16) ? w[i] : (
+                        w[i - 16]
+                        + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
+                        + w[i - 7]
+                        + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
+                    ) | 0);
+                const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
+                    + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+                hash.unshift((temp1 + temp2) | 0);
+                hash[4] = (hash[4] + temp1) | 0;
+                hash.pop();
+            }
+            for (let i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
+        }
+        for (let i = 0; i < 8; i++) {
+            for (let j = 3; j >= 0; j--) {
+                const b = (hash[i] >> (j * 8)) & 255;
+                result += (b < 16 ? '0' : '') + b.toString(16);
+            }
+        }
+        return result;
+    }
+
+    function _stripDiacritics(str) {
+        return String(str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function _getReversedNameCandidates(name) {
+        const trimmed = String(name || 'Aluno').trim().toLowerCase();
+        const exactRev = Array.from(trimmed).reverse().join('');
+        const plainRev = Array.from(_stripDiacritics(trimmed)).reverse().join('');
+        return Array.from(new Set([exactRev, plainRev].filter(Boolean)));
+    }
+
+    const _parentUnlockSessions = {};
+
     // Rotina de migração retrocompatível (executa automaticamente no 1º acesso)
     function _migrateLegacyData() {
         try {
@@ -162,11 +256,13 @@
 
         let legacyGamification = {
             stars: 0,
+            xp: 0,
             streak: 0,
             bestStreak: 0,
             totalRounds: 0,
             totalCorrect: 0,
             badges: [],
+            personalRecords: {},
             lastPlayed: null
         };
         try {
@@ -174,6 +270,12 @@
             if (rawG) {
                 const parsedG = JSON.parse(rawG);
                 legacyGamification = Object.assign(legacyGamification, parsedG);
+                if (typeof legacyGamification.xp !== 'number') {
+                    legacyGamification.xp = (legacyGamification.stars || 0) * 15 + (legacyGamification.totalRounds || 0) * 25;
+                }
+                if (!legacyGamification.personalRecords || typeof legacyGamification.personalRecords !== 'object') {
+                    legacyGamification.personalRecords = {};
+                }
             }
         } catch (e) {}
 
@@ -194,7 +296,11 @@
             createdAt: new Date().toISOString(),
             gamification: legacyGamification,
             history: legacyHistory,
-            mastery: {}
+            mastery: {},
+            progression: {},
+            parentControls: _defaultParentControls(),
+            parentAuth: _defaultParentAuth(),
+            weaknessStats: {}
         };
 
         const initialList = [defaultStudent];
@@ -289,14 +395,26 @@
                 createdAt: new Date().toISOString(),
                 gamification: {
                     stars: 0,
+                    xp: 0,
                     streak: 0,
                     bestStreak: 0,
                     totalRounds: 0,
                     totalCorrect: 0,
                     badges: [],
+                    personalRecords: {},
                     lastPlayed: null
                 },
-                history: []
+                wardrobe: {
+                    unlocked: ['hat_crown_starter'],
+                    equipped: { hat: 'hat_crown_starter', glasses: null, outfit: null, aura: null },
+                    starsSpent: 0
+                },
+                history: [],
+                mastery: {},
+                progression: {},
+                parentControls: _defaultParentControls(),
+                parentAuth: _defaultParentAuth(),
+                weaknessStats: {}
             };
 
             list.push(newStudent);
@@ -314,6 +432,14 @@
             if (fields.name) student.name = fields.name.trim();
             if (fields.ageTier && fields.ageTier in AGE_TIERS) student.ageTier = fields.ageTier;
             if (fields.mascot && fields.mascot in MASCOT_PRESETS) student.mascot = fields.mascot;
+            if (fields.wardrobe && typeof fields.wardrobe === 'object') student.wardrobe = fields.wardrobe;
+            if (Array.isArray(fields.history)) student.history = fields.history;
+            if (fields.gamification && typeof fields.gamification === 'object') student.gamification = fields.gamification;
+            if (fields.mastery && typeof fields.mastery === 'object') student.mastery = fields.mastery;
+            if (fields.progression && typeof fields.progression === 'object') student.progression = fields.progression;
+            if (fields.parentControls && typeof fields.parentControls === 'object') student.parentControls = fields.parentControls;
+            if (fields.parentAuth && typeof fields.parentAuth === 'object') student.parentAuth = fields.parentAuth;
+            if (fields.weaknessStats && typeof fields.weaknessStats === 'object') student.weaknessStats = fields.weaknessStats;
 
             list[idx] = student;
             SafeStorage.setItem(STORAGE_STUDENTS, JSON.stringify(list));
@@ -323,6 +449,75 @@
                 _notifyChange(student);
             }
             return student;
+        },
+
+        // Parent Gate: desafio rápido de multiplicação para proteger ações críticas de toques infantis acidentais
+        requireParentGate(onAuthorized, actionLabel = 'Confirmar ação dos pais') {
+            if (typeof document === 'undefined' || !document.body) {
+                if (typeof onAuthorized === 'function') onAuthorized();
+                return null;
+            }
+            const oldGate = document.getElementById('kumonParentGateModal');
+            if (oldGate) oldGate.remove();
+
+            const pairs = [[6, 7], [7, 8], [8, 9], [6, 8], [7, 6], [9, 4]];
+            const [a, b] = pairs[Math.floor(Math.random() * pairs.length)];
+            const answer = a * b;
+
+            const gate = document.createElement('div');
+            gate.id = 'kumonParentGateModal';
+            gate.style.cssText = 'position:fixed;inset:0;z-index:100005;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(15,23,42,0.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-sizing:border-box;';
+            gate.innerHTML = `
+                <div style="background:#ffffff;color:#0f172a;border-radius:24px;max-width:360px;width:100%;padding:20px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);border:3px solid #3b82f6;text-align:center;box-sizing:border-box;" onclick="event.stopPropagation()">
+                    <div style="width:44px;height:44px;border-radius:14px;background:#eff6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:20px;">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <h4 style="margin:0 0 4px;font-weight:900;font-size:15px;color:#0f172a;">Área dos Pais</h4>
+                    <p style="margin:0 0 12px;font-size:11px;color:#64748b;line-height:1.4;">${escapeHtml(actionLabel)}<br>Resolva para continuar:</p>
+                    <div id="parentGateQuestion" data-expected="${answer}" style="font-size:24px;font-weight:900;color:#1e3a8a;background:#f8fafc;border:2px solid #cbd5e1;border-radius:14px;padding:10px;margin-bottom:12px;">
+                        ${a} × ${b} = ?
+                    </div>
+                    <input type="number" id="parentGateInput" placeholder="Resposta" style="width:100%;padding:10px 14px;font-size:18px;font-weight:900;text-align:center;color:#0f172a !important;-webkit-text-fill-color:#0f172a !important;background:#ffffff !important;border:2px solid #94a3b8;border-radius:12px;box-sizing:border-box;margin-bottom:8px;">
+                    <div id="parentGateError" style="min-height:16px;font-size:11px;font-weight:bold;color:#ef4444;margin-bottom:8px;"></div>
+                    <div style="display:flex;gap:8px;">
+                        <button type="button" id="parentGateCancelBtn" style="flex:1;padding:10px;border-radius:12px;border:none;background:#f1f5f9;color:#475569;font-weight:800;font-size:12px;cursor:pointer;">Cancelar</button>
+                        <button type="button" id="parentGateConfirmBtn" style="flex:1;padding:10px;border-radius:12px;border:none;background:#2563eb;color:#ffffff;font-weight:900;font-size:12px;cursor:pointer;">Confirmar</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(gate);
+
+            const inputEl = gate.querySelector('#parentGateInput');
+            const errEl = gate.querySelector('#parentGateError');
+            const cancelBtn = gate.querySelector('#parentGateCancelBtn');
+            const confirmBtn = gate.querySelector('#parentGateConfirmBtn');
+
+            const closeGate = () => {
+                if (gate && gate.parentNode) gate.remove();
+            };
+
+            const checkGate = () => {
+                const val = parseInt(inputEl ? inputEl.value : '', 10);
+                if (val === answer) {
+                    closeGate();
+                    if (typeof onAuthorized === 'function') onAuthorized();
+                } else if (errEl) {
+                    errEl.textContent = 'Resposta incorreta. Tente novamente.';
+                }
+            };
+
+            if (cancelBtn) cancelBtn.onclick = closeGate;
+            if (confirmBtn) confirmBtn.onclick = checkGate;
+            if (inputEl) {
+                inputEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        checkGate();
+                    }
+                });
+                setTimeout(() => inputEl.focus(), 50);
+            }
+            return gate;
         },
 
         deleteStudent(id) {
@@ -376,15 +571,26 @@
             _mirrorLegacyKeys(active);
         },
 
-        // Exportação de Backup JSON
+        // Exportação de Backup JSON (inclui Perfis, Camarim, Controles Parentais e Cadernos Leitner)
         exportBackup() {
             const active = this.getActive();
+            const students = this.getAll();
+            const reviewNotebooks = {};
+            students.forEach((st) => {
+                if (st && st.id) {
+                    const nb = this.getReviewNotebookItems(st.id);
+                    if (Array.isArray(nb) && nb.length > 0) {
+                        reviewNotebooks[st.id] = nb;
+                    }
+                }
+            });
             const data = {
                 app: 'KumonGen',
-                version: '4.4.0',
+                version: '4.5.0',
                 exportedAt: new Date().toISOString(),
                 activeStudentId: active ? active.id : SafeStorage.getItem(STORAGE_ACTIVE_ID),
-                students: this.getAll()
+                students,
+                reviewNotebooks
             };
 
             const jsonStr = JSON.stringify(data, null, 2);
@@ -425,30 +631,85 @@
                     return { success: false, error: 'Nenhum estudante válido localizado no arquivo de backup.' };
                 }
 
-                // Validação, sanitização e normalização estrita de cada perfil
+                // Validação, sanitização e normalização estrita de cada perfil (incluindo wardrobe e parentAuth)
+                const idRemap = {};
                 const validatedStudents = data.students.map(s => {
                     const cleanName = escapeHtml(String(s.name || 'Aluno').slice(0, 25).trim());
+                    const finalId = (typeof s.id === 'string' && s.id.startsWith('std_')) ? s.id : _generateId();
+                    if (s && typeof s.id === 'string') idRemap[s.id] = finalId;
+
+                    const rawW = (s.wardrobe && typeof s.wardrobe === 'object') ? s.wardrobe : null;
+                    const safeWardrobe = rawW ? {
+                        unlocked: Array.isArray(rawW.unlocked) ? rawW.unlocked.filter(x => typeof x === 'string').slice(0, 100) : ['hat_crown_starter'],
+                        equipped: (rawW.equipped && typeof rawW.equipped === 'object') ? {
+                            hat: typeof rawW.equipped.hat === 'string' ? rawW.equipped.hat : null,
+                            glasses: typeof rawW.equipped.glasses === 'string' ? rawW.equipped.glasses : null,
+                            outfit: typeof rawW.equipped.outfit === 'string' ? rawW.equipped.outfit : null,
+                            aura: typeof rawW.equipped.aura === 'string' ? rawW.equipped.aura : null
+                        } : { hat: 'hat_crown_starter', glasses: null, outfit: null, aura: null },
+                        starsSpent: Number.isInteger(rawW.starsSpent) ? Math.max(0, rawW.starsSpent) : 0
+                    } : {
+                        unlocked: ['hat_crown_starter'],
+                        equipped: { hat: 'hat_crown_starter', glasses: null, outfit: null, aura: null },
+                        starsSpent: 0
+                    };
+
+                    const rawAuth = (s.parentAuth && typeof s.parentAuth === 'object') ? s.parentAuth : null;
+                    const validCustomAuth = !!(
+                        rawAuth &&
+                        rawAuth.mode === 'custom' &&
+                        typeof rawAuth.hash === 'string' &&
+                        /^[0-9a-f]{64}$/i.test(rawAuth.hash) &&
+                        typeof rawAuth.salt === 'string' &&
+                        rawAuth.salt.length > 0
+                    );
+
                     return {
-                        id: (typeof s.id === 'string' && s.id.startsWith('std_')) ? s.id : _generateId(),
+                        id: finalId,
                         name: cleanName || 'Aluno',
                         ageTier: (s.ageTier in AGE_TIERS) ? s.ageTier : 'age_6_7',
                         mascot: (s.mascot in MASCOT_PRESETS) ? s.mascot : 'jaguar',
                         createdAt: typeof s.createdAt === 'string' ? s.createdAt : new Date().toISOString(),
                         gamification: (s.gamification && typeof s.gamification === 'object') ? {
                             stars: Number.isInteger(s.gamification.stars) ? Math.max(0, s.gamification.stars) : 0,
+                            xp: Number.isInteger(s.gamification.xp) ? Math.max(0, s.gamification.xp) : ((Number.isInteger(s.gamification.stars) ? s.gamification.stars : 0) * 15),
                             streak: Number.isInteger(s.gamification.streak) ? Math.max(0, s.gamification.streak) : 0,
                             bestStreak: Number.isInteger(s.gamification.bestStreak) ? Math.max(0, s.gamification.bestStreak) : 0,
                             totalRounds: Number.isInteger(s.gamification.totalRounds) ? Math.max(0, s.gamification.totalRounds) : 0,
                             totalCorrect: Number.isInteger(s.gamification.totalCorrect) ? Math.max(0, s.gamification.totalCorrect) : 0,
                             badges: Array.isArray(s.gamification.badges) ? s.gamification.badges.slice(0, 50) : [],
+                            personalRecords: (s.gamification.personalRecords && typeof s.gamification.personalRecords === 'object') ? s.gamification.personalRecords : {},
                             lastPlayed: typeof s.gamification.lastPlayed === 'string' ? s.gamification.lastPlayed : null
-                        } : { stars: 0, streak: 0, bestStreak: 0, totalRounds: 0, totalCorrect: 0, badges: [], lastPlayed: null },
+                        } : { stars: 0, xp: 0, streak: 0, bestStreak: 0, totalRounds: 0, totalCorrect: 0, badges: [], personalRecords: {}, lastPlayed: null },
+                        wardrobe: safeWardrobe,
                         history: Array.isArray(s.history) ? s.history.slice(0, 50) : [],
-                        mastery: (s.mastery && typeof s.mastery === 'object') ? s.mastery : {}
+                        mastery: (s.mastery && typeof s.mastery === 'object') ? s.mastery : {},
+                        progression: (s.progression && typeof s.progression === 'object') ? s.progression : {},
+                        parentControls: (s.parentControls && typeof s.parentControls === 'object') ? Object.assign(_defaultParentControls(), s.parentControls) : _defaultParentControls(),
+                        parentAuth: validCustomAuth ? {
+                            mode: 'custom',
+                            hash: rawAuth.hash,
+                            salt: rawAuth.salt,
+                            updatedAt: typeof rawAuth.updatedAt === 'string' ? rawAuth.updatedAt : new Date().toISOString()
+                        } : _defaultParentAuth(),
+                        weaknessStats: (s.weaknessStats && typeof s.weaknessStats === 'object') ? s.weaknessStats : {}
                     };
                 });
 
                 SafeStorage.setItem(STORAGE_STUDENTS, JSON.stringify(validatedStudents));
+
+                // Restaura Cadernos de Revisão Leitner por aluno quando presentes no backup
+                if (data.reviewNotebooks && typeof data.reviewNotebooks === 'object') {
+                    Object.keys(data.reviewNotebooks).forEach((origSid) => {
+                        const targetSid = idRemap[origSid] || origSid;
+                        const nbList = data.reviewNotebooks[origSid];
+                        if (validatedStudents.some(st => st.id === targetSid) && Array.isArray(nbList)) {
+                            const safeNb = nbList.filter(it => it && typeof it === 'object' && it.item).slice(0, 200);
+                            SafeStorage.setItem('kumongen_review_notebook_' + targetSid, JSON.stringify(safeNb));
+                        }
+                    });
+                }
+
                 if (data.activeStudentId && validatedStudents.some(s => s.id === data.activeStudentId)) {
                     this.setActive(data.activeStudentId);
                 } else {
@@ -461,7 +722,596 @@
             }
         },
 
-        // Registra maestria de um nível curricular (Gauntlet Kumon 100%)
+        // Obtém o degrau atual de um nível específico para o aluno alvo (objeto ou ID) ou ativo
+        getLevelStage(subjectKey, levelId, student = null) {
+            const s = (typeof student === 'string') ? this.getById(student) : (student || this.getActive());
+            const subKey = subjectKey || 'matematica';
+            const lvlId = levelId || 'm2';
+            let stage = 1;
+            if (s && s.progression && s.progression[subKey] && s.progression[subKey][lvlId]) {
+                stage = Number(s.progression[subKey][lvlId].currentStage) || 1;
+            }
+            if (typeof window !== 'undefined' && window.KumonProgression && typeof window.KumonProgression.clampStage === 'function') {
+                return window.KumonProgression.clampStage(subKey, lvlId, stage);
+            }
+            return Math.max(1, stage);
+        },
+
+        // Salva manualmente (ou por promoção) o degrau de um nível específico no perfil alvo (ou ativo)
+        setLevelStage(subjectKey, levelId, stageIndex, studentId = null) {
+            const target = studentId ? this.getById(studentId) : this.getActive();
+            if (!target) return 1;
+            const subKey = subjectKey || 'matematica';
+            const lvlId = levelId || 'm2';
+            const clamped = (typeof window !== 'undefined' && window.KumonProgression && typeof window.KumonProgression.clampStage === 'function')
+                ? window.KumonProgression.clampStage(subKey, lvlId, stageIndex)
+                : Math.max(1, parseInt(stageIndex, 10) || 1);
+
+            target.progression = target.progression || {};
+            target.progression[subKey] = target.progression[subKey] || {};
+            const prev = target.progression[subKey][lvlId] || {};
+            target.progression[subKey][lvlId] = {
+                currentStage: clamped,
+                highestStage: Math.max(prev.highestStage || 1, clamped),
+                completedAllStages: !!prev.completedAllStages,
+                updatedAt: new Date().toISOString()
+            };
+
+            const list = this.getAll();
+            const idx = list.findIndex(st => st.id === target.id);
+            if (idx !== -1) {
+                list[idx] = target;
+                SafeStorage.setItem(STORAGE_STUDENTS, JSON.stringify(list));
+            }
+            const activeId = SafeStorage.getItem(STORAGE_ACTIVE_ID);
+            if (activeId === target.id) {
+                _mirrorLegacyKeys(target);
+            }
+            return clamped;
+        },
+
+        // Recomenda o próximo nível e degrau ideal para a criança com base no seu histórico e idade
+        getRecommendedNextLevel(subjectKey, levelsList = []) {
+            const active = this.getActive();
+            const subKey = subjectKey || 'matematica';
+            const subObj = CURRICULUM_25_LEVELS[subKey];
+            const catalog = (Array.isArray(levelsList) && levelsList.length > 0)
+                ? levelsList
+                : (subObj ? subObj.levels : []);
+            if (!catalog.length) return { id: 'm2', title: 'M2 · Adição', stage: 1 };
+
+            const ageInfo = AGE_TIERS[(active && active.ageTier) || 'age_6_7'] || AGE_TIERS.age_6_7;
+            const defaultRecId = (ageInfo.recommended && ageInfo.recommended[subKey] && ageInfo.recommended[subKey][0]) || catalog[0].id;
+            const progMap = (active && active.progression && active.progression[subKey]) || {};
+            const masteryMap = (active && active.mastery && active.mastery[subKey]) || {};
+
+            // 1. Se existe um nível já em treino cuja trilha de degraus ainda não terminou, continua exatamente nele
+            let latestPlayed = null;
+            Object.keys(progMap).forEach(lvlId => {
+                const entry = progMap[lvlId];
+                if (!entry || entry.completedAllStages) return;
+                if (!latestPlayed || (entry.updatedAt || '') > (latestPlayed.updatedAt || '')) {
+                    latestPlayed = { id: lvlId, stage: entry.currentStage || 1, updatedAt: entry.updatedAt || '' };
+                }
+            });
+            if (latestPlayed) {
+                const found = catalog.find(l => l.id === latestPlayed.id);
+                if (found) {
+                    return {
+                        id: found.id,
+                        title: found.title,
+                        stage: this.getLevelStage(subKey, found.id, active)
+                    };
+                }
+            }
+
+            // 2. Caso contrário, busca o primeiro nível a partir do recomendado para a idade que ainda não concluiu todas as etapas
+            const startIdx = Math.max(0, catalog.findIndex(l => l.id === defaultRecId));
+            for (let i = startIdx; i < catalog.length; i++) {
+                const cand = catalog[i];
+                const pEntry = progMap[cand.id];
+                const mEntry = masteryMap[cand.id];
+                if (!(pEntry && pEntry.completedAllStages) && !(mEntry && mEntry.masteredAllStages)) {
+                    return {
+                        id: cand.id,
+                        title: cand.title,
+                        stage: this.getLevelStage(subKey, cand.id, active)
+                    };
+                }
+            }
+
+            const fallback = catalog.find(l => l.id === defaultRecId) || catalog[0];
+            return { id: fallback.id, title: fallback.title, stage: this.getLevelStage(subKey, fallback.id, active) };
+        },
+
+        // Persiste resultado de progressão, XP, recordes pessoais e eventual promoção de degrau
+        recordProgressionOutcome(outcome) {
+            if (!outcome) return null;
+            const active = this.getActive();
+            if (!active) return null;
+
+            const subKey = outcome.subjectKey || 'matematica';
+            const lvlId = outcome.levelId || 'm2';
+
+            active.gamification = active.gamification || { stars: 0, xp: 0, streak: 0, bestStreak: 0, totalRounds: 0, totalCorrect: 0, badges: [], personalRecords: {} };
+            active.gamification.xp = outcome.newXp;
+            active.gamification.personalRecords = active.gamification.personalRecords || {};
+            if (outcome.recKey) {
+                active.gamification.personalRecords[outcome.recKey] = {
+                    bestTimeSec: outcome.bestTimeAfter,
+                    bestAccuracy: outcome.bestAccuracyAfter,
+                    updatedAt: new Date().toISOString()
+                };
+            }
+
+            active.progression = active.progression || {};
+            active.progression[subKey] = active.progression[subKey] || {};
+            const prevProg = active.progression[subKey][lvlId] || {};
+            const targetStage = (outcome.promoted || outcome.protectedStepDown) ? outcome.nextStage : outcome.currentStage;
+            active.progression[subKey][lvlId] = {
+                currentStage: targetStage,
+                highestStage: Math.max(prevProg.highestStage || 1, targetStage),
+                completedAllStages: !!prevProg.completedAllStages || !!outcome.levelMasteredComplete,
+                updatedAt: new Date().toISOString()
+            };
+
+            if (outcome.levelMasteredComplete) {
+                active.mastery = active.mastery || {};
+                active.mastery[subKey] = active.mastery[subKey] || {};
+                active.mastery[subKey][lvlId] = Object.assign({}, active.mastery[subKey][lvlId] || {}, {
+                    mastered: true,
+                    mastered100: true,
+                    masteredAllStages: true
+                });
+            }
+
+            const list = this.getAll();
+            const idx = list.findIndex(st => st.id === active.id);
+            if (idx !== -1) {
+                list[idx] = active;
+                SafeStorage.setItem(STORAGE_STUDENTS, JSON.stringify(list));
+            }
+            _mirrorLegacyKeys(active);
+            return active;
+        },
+
+        // ============================================================
+        // CONTROLES PARENTAIS, TELEMETRIA DE FRAQUEZAS & SENHA HÍBRIDA
+        // ============================================================
+        getParentControls(student = null) {
+            const s = student || this.getActive();
+            const def = _defaultParentControls();
+            if (!s || !s.parentControls || typeof s.parentControls !== 'object') return def;
+            return Object.assign({}, def, s.parentControls, {
+                trackLimits: Object.assign({}, (s.parentControls.trackLimits && typeof s.parentControls.trackLimits === 'object') ? s.parentControls.trackLimits : {})
+            });
+        },
+
+        updateParentControls(patch, studentId = null) {
+            const target = studentId ? this.getById(studentId) : this.getActive();
+            if (!target || !patch || typeof patch !== 'object') return null;
+            const cur = this.getParentControls(target);
+            const next = Object.assign({}, cur, patch);
+            if (patch.trackLimits && typeof patch.trackLimits === 'object') {
+                next.trackLimits = Object.assign({}, cur.trackLimits || {}, patch.trackLimits);
+            }
+            next.promoteThreshold = Math.max(60, Math.min(100, Number(next.promoteThreshold) || 80));
+            next.reviewMixRatio = Math.max(0, Math.min(0.8, Number(next.reviewMixRatio !== undefined ? next.reviewMixRatio : 0.25)));
+            next.dailyTargetSheets = Math.max(1, Math.min(6, Number(next.dailyTargetSheets) || 1));
+            const updated = this.update(target.id, { parentControls: next });
+            try { window.dispatchEvent(new CustomEvent('kumongen:parent_controls_changed', { detail: { studentId: target.id, parentControls: next } })); } catch (e) {}
+            return updated;
+        },
+
+        getTrackLimits(subjectKey, levelId, student = null) {
+            const s = student || this.getActive();
+            const ctrl = this.getParentControls(s);
+            const maxPossible = (typeof window !== 'undefined' && window.KumonProgression)
+                ? window.KumonProgression.getStagesForLevel(subjectKey, levelId).length
+                : 13;
+            const entry = (ctrl.trackLimits && ctrl.trackLimits[`${subjectKey}_${levelId}`]) || {};
+            const minStage = Math.max(1, Math.min(maxPossible, Number(entry.minStage) || 1));
+            const maxStage = Math.max(minStage, Math.min(maxPossible, Number(entry.maxStage) || maxPossible));
+            return { minStage, maxStage, maxPossible };
+        },
+
+        setTrackLimits(subjectKey, levelId, minStage, maxStage, studentId = null) {
+            const target = studentId ? this.getById(studentId) : this.getActive();
+            if (!target) return null;
+            const maxPossible = (typeof window !== 'undefined' && window.KumonProgression)
+                ? window.KumonProgression.getStagesForLevel(subjectKey, levelId).length
+                : 13;
+            const cleanMin = Math.max(1, Math.min(maxPossible, parseInt(minStage, 10) || 1));
+            const cleanMax = Math.max(cleanMin, Math.min(maxPossible, parseInt(maxStage, 10) || maxPossible));
+            const ctrl = this.getParentControls(target);
+            const nextLimits = Object.assign({}, ctrl.trackLimits || {});
+            nextLimits[`${subjectKey}_${levelId}`] = { minStage: cleanMin, maxStage: cleanMax };
+            this.updateParentControls({ trackLimits: nextLimits }, target.id);
+
+            // Garante que o degrau atual do aluno alvo também fique dentro da janela escolhida pelo pai
+            const curStage = this.getLevelStage(subjectKey, levelId, target);
+            if (curStage < cleanMin) this.setLevelStage(subjectKey, levelId, cleanMin, target.id);
+            if (curStage > cleanMax) this.setLevelStage(subjectKey, levelId, cleanMax, target.id);
+            return { minStage: cleanMin, maxStage: cleanMax };
+        },
+
+        getDefaultParentPassword(student = null) {
+            const s = student || this.getActive();
+            const cands = _getReversedNameCandidates(s ? s.name : 'Aluno');
+            return cands[0] || 'onula';
+        },
+
+        isParentCustomPasswordEnabled(student = null) {
+            const s = student || this.getActive();
+            return !!(s && s.parentAuth && s.parentAuth.mode === 'custom' && s.parentAuth.hash);
+        },
+
+        verifyParentPassword(rawInput, student = null) {
+            const s = student || this.getActive();
+            if (!s) return false;
+            const clean = String(rawInput || '').trim();
+            if (!clean) return false;
+
+            const auth = s.parentAuth || _defaultParentAuth();
+            if (auth.mode === 'custom' && auth.hash && auth.salt) {
+                const candidateHash = _sha256HexSync(`${auth.salt}:${clean}`);
+                return candidateHash === auth.hash;
+            }
+
+            // Modo padrão de testes: nome do usuário invertido (Clarice -> eciralc)
+            const lowerClean = clean.toLowerCase();
+            const cands = _getReversedNameCandidates(s.name || 'Aluno');
+            return cands.includes(lowerClean);
+        },
+
+        setCustomParentPassword(newPassword, studentId = null) {
+            const target = studentId ? this.getById(studentId) : this.getActive();
+            if (!target) return { success: false, error: 'Perfil não encontrado.' };
+            const clean = String(newPassword || '').trim();
+            if (clean.length < 4) {
+                return { success: false, error: 'A senha personalizada deve ter pelo menos 4 caracteres.' };
+            }
+            const salt = 'kg_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now().toString(36);
+            const hash = _sha256HexSync(`${salt}:${clean}`);
+            const updatedAuth = {
+                mode: 'custom',
+                salt,
+                hash,
+                updatedAt: new Date().toISOString()
+            };
+            this.update(target.id, { parentAuth: updatedAuth });
+            _parentUnlockSessions[target.id] = Date.now() + 10 * 60 * 1000;
+            return { success: true, mode: 'custom' };
+        },
+
+        resetParentPasswordToDefault(studentId = null) {
+            const target = studentId ? this.getById(studentId) : this.getActive();
+            if (!target) return false;
+            this.update(target.id, { parentAuth: _defaultParentAuth() });
+            return true;
+        },
+
+        isParentUnlocked(studentId = null) {
+            const target = studentId ? this.getById(studentId) : this.getActive();
+            if (!target) return false;
+            const until = _parentUnlockSessions[target.id] || 0;
+            return Date.now() < until;
+        },
+
+        unlockParentSession(studentId = null, durationMs = 10 * 60 * 1000) {
+            const target = studentId ? this.getById(studentId) : this.getActive();
+            if (!target) return false;
+            _parentUnlockSessions[target.id] = Date.now() + durationMs;
+            try { window.dispatchEvent(new CustomEvent('kumongen:parent_lock_changed', { detail: { unlocked: true, studentId: target.id } })); } catch (e) {}
+            return true;
+        },
+
+        lockParentArea(studentId = null) {
+            const target = studentId ? this.getById(studentId) : this.getActive();
+            if (!target) return;
+            delete _parentUnlockSessions[target.id];
+            try { window.dispatchEvent(new CustomEvent('kumongen:parent_lock_changed', { detail: { unlocked: false, studentId: target.id } })); } catch (e) {}
+        },
+
+        // Modal de Senha dos Pais (Híbrido: Clarice -> eciralc inicial ou senha SHA-256 personalizada)
+        requireParentPassword(onAuthorized, options = {}) {
+            const target = options.studentId ? this.getById(options.studentId) : this.getActive();
+            if (!target) {
+                if (typeof onAuthorized === 'function') onAuthorized(null);
+                return null;
+            }
+            if (!options.forcePrompt && this.isParentUnlocked(target.id)) {
+                if (typeof onAuthorized === 'function') onAuthorized(target);
+                return null;
+            }
+            if (typeof document === 'undefined' || !document.body) {
+                if (typeof onAuthorized === 'function') onAuthorized(target);
+                return null;
+            }
+
+            const existingGate = document.getElementById('kumonParentPasswordModal');
+            if (existingGate) existingGate.remove();
+
+            const isCustom = this.isParentCustomPasswordEnabled(target);
+            const actionLabel = options.actionLabel || 'Acessar Área dos Pais & Dificuldades';
+            const modal = document.createElement('div');
+            modal.id = 'kumonParentPasswordModal';
+            modal.style.cssText = 'position:fixed;inset:0;z-index:100010;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(15,23,42,0.74);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-sizing:border-box;';
+            modal.innerHTML = `
+                <div style="background:#ffffff;color:#0f172a;border-radius:24px;max-width:380px;width:100%;padding:22px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);border:3px solid #2563eb;text-align:center;box-sizing:border-box;" onclick="event.stopPropagation()">
+                    <div style="width:46px;height:46px;border-radius:14px;background:#eff6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:20px;">
+                        <i class="fas fa-lock"></i>
+                    </div>
+                    <h4 style="margin:0 0 4px;font-weight:900;font-size:16px;color:#0f172a;">Área Protegida dos Pais</h4>
+                    <p style="margin:0 0 12px;font-size:11px;color:#64748b;line-height:1.4;">
+                        ${escapeHtml(actionLabel)}<br>
+                        Perfil: <strong style="color:#0f172a;">${escapeHtml(target.name)}</strong>
+                    </p>
+                    <div style="position:relative;margin-bottom:8px;">
+                        <input type="password" id="parentPwdInput" autocomplete="off" placeholder="Digite a senha dos pais" style="width:100%;padding:11px 38px 11px 14px;font-size:15px;font-weight:800;text-align:center;color:#0f172a !important;-webkit-text-fill-color:#0f172a !important;background:#ffffff !important;border:2px solid #94a3b8;border-radius:12px;box-sizing:border-box;">
+                        <button type="button" id="toggleParentPwdVisBtn" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:none;color:#64748b;cursor:pointer;padding:6px;" title="Mostrar/ocultar senha" aria-label="Mostrar senha">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    ${!isCustom ? `
+                        <div style="font-size:10px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:7px 10px;margin-bottom:8px;line-height:1.35;">
+                            <i class="fas fa-flask text-blue-500"></i> <strong>Modo Teste Ativo:</strong> senha padrão é o nome do aluno escrito <em>ao contrário</em> (você pode criar sua senha própria ao entrar).
+                        </div>
+                    ` : `
+                        <div style="font-size:10px;color:#059669;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:6px 10px;margin-bottom:8px;font-weight:700;">
+                            <i class="fas fa-shield-alt"></i> Senha personalizada SHA-256 ativa
+                        </div>
+                    `}
+                    <div id="parentPwdError" style="min-height:16px;font-size:11px;font-weight:bold;color:#ef4444;margin-bottom:8px;"></div>
+                    <div style="display:flex;gap:8px;">
+                        <button type="button" id="parentPwdCancelBtn" style="flex:1;padding:10px;border-radius:12px;border:none;background:#f1f5f9;color:#475569;font-weight:800;font-size:12px;cursor:pointer;">Cancelar</button>
+                        <button type="button" id="parentPwdConfirmBtn" style="flex:1;padding:10px;border-radius:12px;border:none;background:#2563eb;color:#ffffff;font-weight:900;font-size:12px;cursor:pointer;">Desbloquear</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            const inputEl = modal.querySelector('#parentPwdInput');
+            const errEl = modal.querySelector('#parentPwdError');
+            const cancelBtn = modal.querySelector('#parentPwdCancelBtn');
+            const confirmBtn = modal.querySelector('#parentPwdConfirmBtn');
+            const visBtn = modal.querySelector('#toggleParentPwdVisBtn');
+
+            const closePwdModal = () => {
+                document.removeEventListener('keydown', escPwd);
+                if (modal && modal.parentNode) modal.remove();
+            };
+            const escPwd = (e) => {
+                if (e.key === 'Escape') closePwdModal();
+            };
+            document.addEventListener('keydown', escPwd);
+
+            if (visBtn && inputEl) {
+                visBtn.onclick = () => {
+                    inputEl.type = inputEl.type === 'password' ? 'text' : 'password';
+                };
+            }
+
+            const submitPwd = () => {
+                const raw = inputEl ? inputEl.value : '';
+                if (this.verifyParentPassword(raw, target)) {
+                    this.unlockParentSession(target.id);
+                    closePwdModal();
+                    if (typeof onAuthorized === 'function') onAuthorized(target);
+                } else if (errEl) {
+                    errEl.textContent = isCustom
+                        ? 'Senha dos pais incorreta.'
+                        : 'Senha incorreta. Para testar, digite o nome do perfil ao contrário.';
+                }
+            };
+
+            if (cancelBtn) cancelBtn.onclick = closePwdModal;
+            if (confirmBtn) confirmBtn.onclick = submitPwd;
+            if (inputEl) {
+                inputEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        submitPwd();
+                    }
+                });
+                setTimeout(() => inputEl.focus(), 40);
+            }
+            return modal;
+        },
+
+        // Registra telemetria detalhada da rodada (erros + acertos lentos/hesitações por skillTag)
+        recordRoundWeaknessTelemetry(itemMetrics, studentId = null) {
+            if (!Array.isArray(itemMetrics) || itemMetrics.length === 0) return null;
+            const target = studentId ? this.getById(studentId) : this.getActive();
+            if (!target) return null;
+
+            const stats = Object.assign({}, (target.weaknessStats && typeof target.weaknessStats === 'object') ? target.weaknessStats : {});
+            const nowIso = new Date().toISOString();
+
+            itemMetrics.forEach((m) => {
+                if (!m || !m.skillTag) return;
+                const prev = stats[m.skillTag] || {
+                    tag: m.skillTag,
+                    label: m.skillLabel || m.skillTag,
+                    subjectKey: m.subjectKey || 'matematica',
+                    levelId: m.levelId || 'm2',
+                    errors: 0,
+                    slowHits: 0,
+                    totalAttempts: 0,
+                    totalLatencyMs: 0,
+                    lastSeenAt: nowIso
+                };
+                stats[m.skillTag] = {
+                    tag: m.skillTag,
+                    label: m.skillLabel || prev.label,
+                    subjectKey: m.subjectKey || prev.subjectKey,
+                    levelId: m.levelId || prev.levelId,
+                    errors: prev.errors + (Number(m.wrongCount) || 0),
+                    slowHits: prev.slowHits + (m.slow ? 1 : 0),
+                    totalAttempts: prev.totalAttempts + 1,
+                    totalLatencyMs: prev.totalLatencyMs + Math.max(0, Number(m.latencyMs) || 0),
+                    lastSeenAt: nowIso
+                };
+            });
+
+            this.update(target.id, { weaknessStats: stats });
+            return stats;
+        },
+
+        getReviewNotebookItems(studentId = null) {
+            const target = studentId ? this.getById(studentId) : this.getActive();
+            const sid = (target && target.id) || 'default';
+            try {
+                const raw = SafeStorage.getItem('kumongen_review_notebook_' + sid);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed)) return parsed;
+                }
+            } catch (e) {}
+            return [];
+        },
+
+        removeReviewNotebookItemById(itemId, studentId = null) {
+            const target = studentId ? this.getById(studentId) : this.getActive();
+            const sid = (target && target.id) || 'default';
+            const items = this.getReviewNotebookItems(sid).filter(it => it && it.id !== itemId);
+            SafeStorage.setItem('kumongen_review_notebook_' + sid, JSON.stringify(items));
+            return items;
+        },
+
+        // Consolida Radar de Fraquezas (Padrões + Itens Pendentes em Caixa Leitner) para Pais e Gerador
+        getWeaknessSummary(student = null, limit = 6) {
+            const s = student || this.getActive();
+            if (!s) {
+                return { patterns: [], pendingItems: [], totalPending: 0, criticalPending: 0, weakestSubject: 'matematica', weakestLevel: 'm2' };
+            }
+            const stats = (s.weaknessStats && typeof s.weaknessStats === 'object') ? s.weaknessStats : {};
+            const pendingItems = this.getReviewNotebookItems(s.id);
+
+            const patternMap = {};
+            Object.values(stats).forEach((st) => {
+                if (!st || !st.tag) return;
+                patternMap[st.tag] = {
+                    tag: st.tag,
+                    label: st.label || st.tag,
+                    subjectKey: st.subjectKey || 'matematica',
+                    levelId: st.levelId || 'm2',
+                    errors: Number(st.errors) || 0,
+                    slowHits: Number(st.slowHits) || 0,
+                    totalAttempts: Number(st.totalAttempts) || 0,
+                    avgTimeSec: st.totalAttempts > 0 ? Math.round(((st.totalLatencyMs || 0) / st.totalAttempts) / 100) / 10 : 0,
+                    pendingCount: 0,
+                    severity: 0
+                };
+            });
+
+            pendingItems.forEach((ent) => {
+                const sk = (ent && ent.skillTag) || (window.KumonProgression && ent && ent.item ? window.KumonProgression.getItemSkillTag(ent.item, ent.subjectKey, ent.levelId).tag : null);
+                const lbl = (ent && ent.skillLabel) || (window.KumonProgression && ent && ent.item ? window.KumonProgression.getItemSkillTag(ent.item, ent.subjectKey, ent.levelId).label : sk);
+                if (!sk) return;
+                if (!patternMap[sk]) {
+                    patternMap[sk] = {
+                        tag: sk,
+                        label: lbl || sk,
+                        subjectKey: ent.subjectKey || 'matematica',
+                        levelId: ent.levelId || 'm2',
+                        errors: Number(ent.attempts) || 1,
+                        slowHits: ent.lastReason === 'slow' ? 1 : 0,
+                        totalAttempts: Number(ent.attempts) || 1,
+                        avgTimeSec: 0,
+                        pendingCount: 0,
+                        severity: 0
+                    };
+                }
+                patternMap[sk].pendingCount++;
+            });
+
+            const patterns = Object.values(patternMap)
+                .map((p) => {
+                    p.severity = Math.round((p.errors * 3 + p.slowHits * 1.5 + p.pendingCount * 2) * 10) / 10;
+                    p.errorRatePct = p.totalAttempts > 0 ? Math.min(100, Math.round((p.errors / Math.max(1, p.totalAttempts)) * 100)) : 0;
+                    return p;
+                })
+                .filter((p) => p.errors > 0 || p.slowHits > 0 || p.pendingCount > 0)
+                .sort((a, b) => b.severity - a.severity)
+                .slice(0, limit);
+
+            const criticalPending = pendingItems.filter(it => (it.box || 0) === 0).length;
+            const topPattern = patterns[0] || null;
+            return {
+                patterns,
+                pendingItems,
+                totalPending: pendingItems.length,
+                criticalPending,
+                weakestSubject: topPattern ? topPattern.subjectKey : 'matematica',
+                weakestLevel: topPattern ? topPattern.levelId : 'm2'
+            };
+        },
+
+        formatPendingItemPreview(entry) {
+            if (!entry || !entry.item) return 'Exercício';
+            const it = entry.item;
+            if (it.type === 'math') {
+                const res = it.result !== undefined ? it.result : (it.operator === '+' ? it.operand1 + it.operand2 : it.operator === '-' ? it.operand1 - it.operand2 : it.operator === '×' ? it.operand1 * it.operand2 : Math.floor(it.operand1 / Math.max(1, it.operand2)));
+                if (it.missingPos === 'op1') return `__ ${it.operator} ${it.operand2} = ${res}`;
+                if (it.missingPos === 'op2') return `${it.operand1} ${it.operator} __ = ${res}`;
+                return `${it.operand1} ${it.operator} ${it.operand2} = ?`;
+            }
+            if (it.type === 'syllable') return `${it.word || it.target || ''} (${it.targetSyl || '__'})`;
+            if (it.type === 'word' || it.type === 'rhyme' || it.type === 'opposite') return String(it.word || '');
+            if (it.type === 'sentence') return String(it.sentence || '').slice(0, 28);
+            if (it.type === 'fraction') return `${it.numerator}/${it.denominator}`;
+            if (it.type === 'quantity') return `Contagem (${it.value})`;
+            if (it.type === 'trace') return `Letra ${it.char || it.letter || ''}`;
+            return String(entry.id || 'Item');
+        },
+
+        createClassroomShareUrl(subjectKey = 'matematica', levelId = 'm2', stage = 1, classLabel = '') {
+            if (typeof window === 'undefined' || !window.KumonProgression) return '';
+            const payload = {
+                v: 1,
+                subject: subjectKey,
+                level: levelId,
+                stage: Number(stage) || 1,
+                label: String(classLabel || '').trim().slice(0, 24)
+            };
+            const token = window.KumonProgression.encodeShareMission(payload);
+            const base = (typeof location !== 'undefined' && location.origin && location.origin !== 'null')
+                ? `${location.origin}${location.pathname.replace(/[^/]*$/, '')}tablet.html`
+                : 'tablet.html';
+            return `${base}?share=${encodeURIComponent(token)}&autostart=true`;
+        },
+
+        openParentDashboard(studentId = null, options = {}) {
+            const target = studentId ? this.getById(studentId) : this.getActive();
+            this.requireParentPassword((authorizedStudent) => {
+                const stId = authorizedStudent ? authorizedStudent.id : studentId;
+                this.showEvolutionModal(stId, Object.assign({ initialEvolutionTab: 'weaknesses' }, options || {}));
+            }, {
+                studentId: target ? target.id : null,
+                actionLabel: 'Entre com a senha dos pais para ver o Radar de Fraquezas e ajustar níveis.'
+            });
+        },
+
+        getActiveLeagueInfo(student = null) {
+            const s = student || this.getActive();
+            if (typeof window !== 'undefined' && window.KumonProgression) {
+                const xp = window.KumonProgression.computeFallbackXpFromGamification(s && s.gamification);
+                return window.KumonProgression.getLeagueForXp(xp);
+            }
+            return { current: { id: 'seed', name: 'Semente', short: 'Semente', icon: '🌱', minXp: 0 }, next: null, xp: 0, progressPct: 0, xpToNext: 150 };
+        },
+
+        getActiveRanking(student = null) {
+            const s = student || this.getActive();
+            const all = this.getAll();
+            if (typeof window !== 'undefined' && window.KumonProgression) {
+                return window.KumonProgression.getRankingBoard(s, all);
+            }
+            return { entries: [], activeRank: 1, totalEntries: 1, nextTarget: null };
+        },
+
+        // Registra maestria de um nível curricular (somente promove mastered=true quando realmente dominado)
         recordLevelMastery(subjectKey, levelId, stats = {}) {
             const active = this.getActive();
             if (!active) return null;
@@ -469,16 +1319,24 @@
             active.mastery[subjectKey] = active.mastery[subjectKey] || {};
 
             const prev = active.mastery[subjectKey][levelId] || {};
-            const bestTime = prev.bestTimeSec ? Math.min(prev.bestTimeSec, stats.timeSec || 9999) : (stats.timeSec || null);
+            const acc = typeof stats.accuracy === 'number' ? stats.accuracy : 100;
+            const qualifiedMastery = (stats.mastered !== undefined)
+                ? !!stats.mastered
+                : (acc >= 80 && !stats.partialOnly);
+            const bestTime = (acc >= 80 && stats.timeSec)
+                ? (prev.bestTimeSec ? Math.min(prev.bestTimeSec, stats.timeSec) : stats.timeSec)
+                : (prev.bestTimeSec || null);
             const timesCompleted = (prev.timesCompleted || 0) + 1;
 
             active.mastery[subjectKey][levelId] = {
-                mastered: true,
-                mastered100: true,
-                lastMasteredAt: new Date().toISOString(),
+                mastered: !!prev.mastered || qualifiedMastery,
+                mastered100: !!prev.mastered100 || (qualifiedMastery && acc >= 80),
+                masteredAllStages: !!prev.masteredAllStages || !!stats.masteredAllStages,
+                lastMasteredAt: qualifiedMastery ? new Date().toISOString() : (prev.lastMasteredAt || null),
+                lastPracticedAt: new Date().toISOString(),
                 bestTimeSec: bestTime,
                 targetSec: stats.targetSec || prev.targetSec || 300,
-                bestAccuracy: Math.max(prev.bestAccuracy || 0, stats.accuracy || 100),
+                bestAccuracy: Math.max(prev.bestAccuracy || 0, acc),
                 timesCompleted: timesCompleted,
                 lastGauntletCycles: stats.gauntletCycles || 0
             };
@@ -508,12 +1366,12 @@
             return count;
         },
 
-        // Abre diretamente a visão do Boletim de Evolução & Histórico
-        showEvolutionModal(studentId = null) {
-            this.showProfileModal({
+        // Abre diretamente a visão do Boletim de Evolução & Histórico (ou Ranking & Ligas)
+        showEvolutionModal(studentId = null, extraOptions = {}) {
+            this.showProfileModal(Object.assign({
                 initialView: 'evolution',
                 studentId: studentId
-            });
+            }, extraOptions || {}));
         },
 
         // Emite o Boletim Oficial Consolidado em PDF (A4 Paisagem com a matriz dos 25 Níveis)
@@ -1201,43 +2059,52 @@
                     const ageInfo = AGE_TIERS[s.ageTier] || AGE_TIERS.age_6_7;
                     const stars = (s.gamification && s.gamification.stars) || 0;
                     const rounds = (s.gamification && s.gamification.totalRounds) || 0;
+                    const leagueInfo = self.getActiveLeagueInfo(s);
+                    const avatarInnerHtml = (window.AvatarWardrobe && typeof window.AvatarWardrobe.renderAvatarHtml === 'function')
+                        ? window.AvatarWardrobe.renderAvatarHtml(s)
+                        : `<img src="${mascotInfo.avatar}" alt="${mascotInfo.name}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid white;display:block;">`;
 
                     return `
-                        <div style="padding:12px;border-radius:16px;border:2px solid ${isSelected ? '#f59e0b' : '#e2e8f0'};background:${isSelected ? '#fffbeb' : '#f8fafc'};display:flex;align-items:center;justify-content:space-between;gap:12px;transition:all 0.15s ease;">
-                            <button type="button" class="btn-select-student" data-student-id="${s.id}" style="display:flex;align-items:center;gap:12px;flex:1;text-align:left;border:none;background:none;cursor:pointer;padding:0;">
+                        <div class="student-profile-card-item" style="padding:12px;border-radius:16px;border:2px solid ${isSelected ? '#f59e0b' : '#e2e8f0'};background:${isSelected ? '#fffbeb' : '#f8fafc'};display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;transition:all 0.15s ease;box-sizing:border-box;">
+                            <button type="button" class="btn-select-student" data-student-id="${s.id}" style="display:flex;align-items:center;gap:10px;flex:1 1 180px;min-width:0;text-align:left;border:none;background:none;cursor:pointer;padding:0;">
                                 <div style="width:46px;height:46px;border-radius:50%;padding:2px;background:linear-gradient(to top right, #f59e0b, #eab308);flex-shrink:0;">
-                                    <img src="${mascotInfo.avatar}" alt="${mascotInfo.name}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid white;display:block;">
+                                    ${avatarInnerHtml}
                                 </div>
                                 <div style="min-width:0;flex:1;">
-                                    <div style="display:flex;align-items:center;gap:6px;">
-                                        <h4 style="font-weight:900;font-size:14px;color:#0f172a;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.name)}</h4>
-                                        ${isSelected ? '<span style="font-size:9px;font-weight:900;text-transform:uppercase;color:#b45309;background:#fef3c7;padding:2px 8px;border-radius:999px;">Ativo</span>' : ''}
+                                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                        <h4 style="font-weight:900;font-size:14px;color:#0f172a;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;">${escapeHtml(s.name)}</h4>
+                                        ${isSelected ? '<span style="font-size:9px;font-weight:900;text-transform:uppercase;color:#b45309;background:#fef3c7;padding:2px 8px;border-radius:999px;flex-shrink:0;">Ativo</span>' : ''}
                                     </div>
-                                    <div style="font-size:10px;color:#64748b;font-weight:600;display:flex;align-items:center;gap:6px;margin-top:2px;">
+                                    <div style="font-size:10px;color:#64748b;font-weight:600;display:flex;align-items:center;gap:5px;margin-top:2px;white-space:nowrap;">
                                         <span>${ageInfo.emoji} ${ageInfo.label}</span>
                                         <span>·</span>
-                                        <span>${mascotInfo.name}</span>
+                                        <span>${leagueInfo.current.icon} ${leagueInfo.current.short}</span>
                                     </div>
                                     <div style="font-size:10px;font-weight:bold;color:#d97706;display:flex;align-items:center;gap:4px;margin-top:2px;">
-                                        <i class="fas fa-star" style="color:#f59e0b;"></i> ${stars} ★
+                                        <i class="fas fa-star" style="color:#f59e0b;"></i> <span>${stars}</span>
                                         <span style="color:#94a3b8;">·</span>
-                                        <span style="color:#64748b;font-weight:normal;">${rounds} rodadas</span>
+                                        <span style="color:#2563eb;font-weight:800;">${leagueInfo.xp} XP</span>
+                                        <span style="color:#94a3b8;">·</span>
+                                        <span style="color:#64748b;font-weight:normal;">${rounds} rod.</span>
                                     </div>
                                 </div>
                             </button>
 
-                            <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+                            <div class="student-profile-card-actions" style="display:flex;align-items:center;flex-wrap:wrap;gap:5px;flex-shrink:0;margin-left:auto;">
+                                <button type="button" class="btn-wardrobe-student" data-student-id="${s.id}" title="Abrir Camarim do Mascote" style="padding:6px 9px;background:#fffbeb;border:1px solid #fde68a;color:#b45309;font-weight:bold;font-size:10px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                                    <i class="fas fa-hat-wizard" style="color:#f59e0b;"></i> Camarim
+                                </button>
                                 <button type="button" class="btn-evolution-student" data-student-id="${s.id}" title="Ver Boletim e Gráficos de Evolução" style="padding:6px 9px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-weight:bold;font-size:10px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:4px;">
                                     <i class="fas fa-chart-line"></i> Evolução
                                 </button>
                                 <button type="button" class="btn-mastery-report" data-student-id="${s.id}" title="Emitir Boletim Oficial de Maestria (PDF)" style="padding:6px 9px;background:#ecfdf5;border:1px solid #a7f3d0;color:#059669;font-weight:bold;font-size:10px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:4px;">
                                     <i class="fas fa-file-pdf"></i> PDF
                                 </button>
-                                <button type="button" class="btn-edit-student" data-student-id="${s.id}" title="Editar Criança" style="padding:8px;border:none;background:none;color:#94a3b8;cursor:pointer;border-radius:8px;">
+                                <button type="button" class="btn-edit-student" data-student-id="${s.id}" title="Editar Criança" style="padding:7px;border:none;background:none;color:#64748b;cursor:pointer;border-radius:8px;">
                                     <i class="fas fa-pen" style="font-size:12px;"></i>
                                 </button>
                                 ${students.length > 1 ? `
-                                    <button type="button" class="btn-delete-student" data-student-id="${s.id}" title="Excluir Perfil" style="padding:8px;border:none;background:none;color:#ef4444;cursor:pointer;border-radius:8px;">
+                                    <button type="button" class="btn-delete-student" data-student-id="${s.id}" title="Excluir Perfil (Protegido para Pais)" style="padding:7px;border:none;background:none;color:#ef4444;cursor:pointer;border-radius:8px;">
                                         <i class="fas fa-trash-alt" style="font-size:12px;"></i>
                                     </button>
                                 ` : ''}
@@ -1260,10 +2127,7 @@
                                 </div>
                             </div>
                             <div style="display:flex;align-items:center;gap:6px;">
-                                <button type="button" id="btnHeaderAddStudent" style="padding:6px 12px;background:#f59e0b;color:white;font-weight:900;font-size:11px;border:none;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:4px;">
-                                    <i class="fas fa-user-plus" style="font-size:10px;"></i> + Novo
-                                </button>
-                                <button type="button" id="btnCloseProfileModal" style="padding:8px;border:none;background:none;color:#94a3b8;font-size:15px;cursor:pointer;border-radius:8px;">
+                                <button type="button" id="btnCloseProfileModal" style="padding:8px;border:none;background:none;color:#94a3b8;font-size:15px;cursor:pointer;border-radius:8px;" aria-label="Fechar">
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
@@ -1271,10 +2135,15 @@
 
                         <!-- Corpo Rolar -->
                         <div style="padding:16px 18px;overflow-y:auto;flex:1;min-height:0;">
-                            <!-- Botão Destacado Cadastrar Outra Criança -->
-                            <button type="button" id="btnShowAddStudentForm" style="width:100%;padding:12px;background:linear-gradient(to right, #f59e0b, #ea580c);color:white;font-weight:900;font-size:12px;border:2px solid #fde68a;border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);margin-bottom:14px;">
-                                <i class="fas fa-user-plus" style="font-size:14px;"></i> + Cadastrar Outro Perfil / Criança
-                            </button>
+                            <!-- Botão Destacado Cadastrar Outra Criança / Modo Colega -->
+                            <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:8px;margin-bottom:14px;">
+                                <button type="button" id="btnShowAddStudentForm" style="padding:11px 10px;background:linear-gradient(to right, #f59e0b, #ea580c);color:white;font-weight:900;font-size:11px;border:2px solid #fde68a;border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">
+                                    <i class="fas fa-user-plus" style="font-size:12px;"></i> + Novo Perfil
+                                </button>
+                                <button type="button" id="btnQuickGuestStudent" style="padding:11px 10px;background:#eff6ff;color:#1d4ed8;font-weight:900;font-size:11px;border:2px solid #bfdbfe;border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;" title="Cria um perfil isolado para colega da escola testar sem alterar os dados da filha">
+                                    <i class="fas fa-user-friends" style="font-size:12px;"></i> + Colega
+                                </button>
+                            </div>
 
                             <!-- Lista de Crianças -->
                             <div style="display:flex;flex-direction:column;gap:10px;">
@@ -1282,10 +2151,13 @@
                             </div>
                         </div>
 
-                        <!-- Rodapé Fixo: Backup, Boletim Geral & Restauração -->
-                        <div style="padding:12px 18px;border-top:1px solid #f1f5f9;background:#f8fafc;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;font-size:11px;color:#64748b;">
+                        <!-- Rodapé Fixo: Backup, Pais & Fraquezas, Evolução, PDF & Restauração -->
+                        <div style="padding:12px 14px;border-top:1px solid #f1f5f9;background:#f8fafc;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;flex-shrink:0;font-size:11px;color:#64748b;">
                             <button type="button" id="btnExportProfiles" style="border:none;background:none;color:#b45309;font-weight:bold;cursor:pointer;display:flex;align-items:center;gap:4px;padding:0;">
                                 <i class="fas fa-download" style="color:#f59e0b;"></i> Backup
+                            </button>
+                            <button type="button" id="btnOpenParentAreaFromCards" style="border:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:4px 8px;color:#1d4ed8;font-weight:900;cursor:pointer;display:flex;align-items:center;gap:4px;" title="Abrir Área Protegida dos Pais & Radar de Fraquezas">
+                                <i class="fas fa-lock" style="color:#2563eb;font-size:10px;"></i> Pais
                             </button>
                             <button type="button" id="btnActiveEvolution" style="border:none;background:none;color:#2563eb;font-weight:bold;cursor:pointer;display:flex;align-items:center;gap:4px;padding:0;" title="Ver Gráficos e Desempenho do Aluno Ativo">
                                 <i class="fas fa-chart-line" style="color:#3b82f6;"></i> Evolução
@@ -1315,6 +2187,18 @@
                     };
                 });
 
+                modal.querySelectorAll('.btn-wardrobe-student').forEach(btn => {
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        const sid = btn.getAttribute('data-student-id');
+                        if (window.AvatarWardrobe) {
+                            window.AvatarWardrobe.openModal(sid, {
+                                onClose: () => renderCardsView()
+                            });
+                        }
+                    };
+                });
+
                 modal.querySelectorAll('.btn-evolution-student').forEach(btn => {
                     btn.onclick = (e) => {
                         e.stopPropagation();
@@ -1329,6 +2213,33 @@
                     activeEvoBtn.onclick = () => {
                         const active = self.getActive();
                         if (active) renderEvolutionView(active);
+                    };
+                }
+
+                const openParentBtn = modal.querySelector('#btnOpenParentAreaFromCards');
+                if (openParentBtn) {
+                    openParentBtn.onclick = () => {
+                        const act = self.getActive();
+                        if (!act) return;
+                        self.requireParentPassword(() => {
+                            renderEvolutionView(self.getById(act.id), 'weaknesses');
+                        }, {
+                            studentId: act.id,
+                            actionLabel: 'Entre com a senha dos pais para ver fraquezas e controles.'
+                        });
+                    };
+                }
+
+                const quickGuestBtn = modal.querySelector('#btnQuickGuestStudent');
+                if (quickGuestBtn) {
+                    quickGuestBtn.onclick = () => {
+                        const guestNum = self.getAll().filter(st => String(st.name || '').startsWith('Colega')).length + 1;
+                        const guestName = `Colega ${guestNum}`;
+                        const created = self.create({ name: guestName, ageTier: 'age_6_7', mascot: 'golfinho' });
+                        if (created) {
+                            closeModal();
+                            if (typeof options.onSelect === 'function') options.onSelect(created);
+                        }
                     };
                 }
 
@@ -1363,9 +2274,16 @@
                         const sid = btn.getAttribute('data-student-id');
                         const target = self.getById(sid);
                         if (!target) return;
-                        if (confirm(`Deseja realmente remover o perfil de "${target.name}"? As estrelas e histórico deste perfil serão excluídos.`)) {
-                            self.deleteStudent(sid);
-                            renderCardsView();
+                        if (self.isParentCustomPasswordEnabled(target)) {
+                            self.requireParentPassword(() => {
+                                self.deleteStudent(sid);
+                                renderCardsView();
+                            }, { studentId: target.id, actionLabel: `Remover perfil de "${target.name}"` });
+                        } else {
+                            self.requireParentGate(() => {
+                                self.deleteStudent(sid);
+                                renderCardsView();
+                            }, `Remover perfil de "${target.name}"`);
                         }
                     };
                 });
@@ -1581,7 +2499,9 @@
             // ==========================================
             // VISTA 3: BOLETIM DE EVOLUÇÃO & HISTÓRICO
             // ==========================================
-            const renderEvolutionView = (studentToInspect) => {
+            let selectedParentCtrlSubj = 'matematica';
+            let selectedParentCtrlLvl = null;
+            const renderEvolutionView = (studentToInspect, forcedSubTab = null) => {
                 const s = studentToInspect || self.getActive() || self.getAll()[0];
                 if (!s) {
                     renderCardsView();
@@ -1733,23 +2653,29 @@
                         const mInfo = subMastery[lvl.id] || {};
                         const isDone = !!mInfo.mastered;
                         const inHistory = historyList.some(h => (h.levelId === lvl.id || (h.levelTitle && h.levelTitle.includes(lvl.code))));
+                        const lvlProg = (s.progression && s.progression[sKey] && s.progression[sKey][lvl.id]) || null;
+                        const totalStages = (typeof window !== 'undefined' && window.KumonProgression)
+                            ? window.KumonProgression.getStagesForLevel(sKey, lvl.id).length
+                            : 1;
+                        const curStage = (lvlProg && lvlProg.currentStage) ? Math.min(totalStages, lvlProg.currentStage) : 1;
+                        const stageBadgeTxt = (lvlProg || isDone) && totalStages > 1 ? `Degrau ${curStage}/${totalStages}` : '';
 
                         let bg = '#f8fafc';
                         let border = '#e2e8f0';
                         let icon = '<i class="far fa-circle" style="color:#94a3b8;font-size:11px;"></i>';
-                        let statusText = '<span style="color:#94a3b8;font-size:10px;font-weight:bold;">Pendente</span>';
+                        let statusText = `<span style="color:#94a3b8;font-size:10px;font-weight:bold;">${stageBadgeTxt || 'Pendente'}</span>`;
 
                         if (isDone) {
                             bg = '#f0fdf4';
                             border = '#bbf7d0';
                             icon = `<button type="button" class="btn-cert-level" data-level-id="${lvl.id}" data-level-title="${escapeHtml(lvl.title)}" data-subject="${sKey}" title="Emitir Diploma deste Nível" style="border:none;background:none;cursor:pointer;padding:4px;color:#f59e0b;display:flex;align-items:center;justify-content:center;"><i class="fas fa-trophy" style="font-size:12px;"></i></button>`;
                             const bestTimeStr = mInfo.bestTimeSec ? `${Math.floor(mInfo.bestTimeSec / 60)}:${String(mInfo.bestTimeSec % 60).padStart(2, '0')}m` : '';
-                            statusText = `<span style="color:#059669;font-size:10px;font-weight:900;">100% Maestria ${bestTimeStr ? '· ' + bestTimeStr : ''}</span>`;
-                        } else if (inHistory) {
+                            statusText = `<span style="color:#059669;font-size:10px;font-weight:900;">${stageBadgeTxt ? stageBadgeTxt + ' · ' : '100% Maestria '}${bestTimeStr ? '⏱ ' + bestTimeStr : ''}</span>`;
+                        } else if (inHistory || lvlProg) {
                             bg = '#fffbeb';
                             border = '#fde68a';
                             icon = '<i class="fas fa-hourglass-half" style="color:#d97706;font-size:11px;"></i>';
-                            statusText = '<span style="color:#b45309;font-size:10px;font-weight:bold;">Em Treino</span>';
+                            statusText = `<span style="color:#b45309;font-size:10px;font-weight:bold;">${stageBadgeTxt || 'Em Treino'}</span>`;
                         }
 
                         return `
@@ -1822,23 +2748,140 @@
                     </div>
                 `;
 
+                // Cálculo do Resumo de 15 Segundos para os Pais
+                let reviewPendingCount = 0;
+                try {
+                    const rawRev = SafeStorage.getItem('kumongen_review_notebook_' + s.id);
+                    if (rawRev) {
+                        const parsedRev = JSON.parse(rawRev);
+                        if (Array.isArray(parsedRev)) reviewPendingCount = parsedRev.length;
+                    }
+                } catch (e) {}
+
+                const recMat = self.getRecommendedNextLevel('matematica', CURRICULUM_25_LEVELS.matematica.levels);
+                const nextRecommendedLvl = (recMat && recMat.id) || 'm2';
+                const recMatStage = (recMat && recMat.stage) || self.getLevelStage('matematica', nextRecommendedLvl, s);
+                const recMatStageSpec = (typeof window !== 'undefined' && window.KumonProgression)
+                    ? window.KumonProgression.getStageSpec('matematica', nextRecommendedLvl, recMatStage)
+                    : { shortLabel: `+${recMatStage}`, xpMultiplier: 1.0 };
+                const recMatStagesTotal = (typeof window !== 'undefined' && window.KumonProgression)
+                    ? window.KumonProgression.getStagesForLevel('matematica', nextRecommendedLvl).length
+                    : 1;
+
+                const leagueInfo = self.getActiveLeagueInfo(s);
+                const rankingBoard = self.getActiveRanking(s);
+                const rankPos = rankingBoard ? rankingBoard.activeRank : 1;
+
+                const praiseText = masteredCount > 0
+                    ? `Já dominou ${masteredCount} nível(is) com 100% de maestria! Liga atual: ${leagueInfo.current.icon} ${leagueInfo.current.name}.`
+                    : (streak >= 2
+                        ? `Sequência ativa de ${streak} dias seguidos (${leagueInfo.xp} XP · ${leagueInfo.current.icon} ${leagueInfo.current.short})!`
+                        : `Em Matemática está em ${nextRecommendedLvl.toUpperCase()} · Degrau ${recMatStage}/${recMatStagesTotal} (${recMatStageSpec.shortLabel}).`);
+
+                const reviewAdviceText = reviewPendingCount > 0
+                    ? `${reviewPendingCount} questão(ões) no Caderno de Revisão prontas para reforço rápido.`
+                    : `Posição #${rankPos} no Ranking · ${rankingBoard && rankingBoard.nextTarget ? `faltam ${rankingBoard.nextTarget.xpGap} XP para passar ${escapeHtml(rankingBoard.nextTarget.name)}` : 'Líder do Ranking!'}.`;
+
+                const evoAvatarHtml = (window.AvatarWardrobe && typeof window.AvatarWardrobe.renderAvatarHtml === 'function')
+                    ? window.AvatarWardrobe.renderAvatarHtml(s)
+                    : `<img src="${mascotInfo.avatar}" alt="${mascotInfo.name}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid white;display:block;">`;
+
+                const parentSummaryCardHtml = `
+                    <div id="parent15SecSummaryCard" style="background:linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);border:1.5px solid #bfdbfe;border-radius:16px;padding:12px 14px;margin-bottom:12px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <span style="width:24px;height:24px;border-radius:8px;background:#2563eb;color:white;display:inline-flex;align-items:center;justify-content:center;font-size:11px;"><i class="fas fa-lightbulb"></i></span>
+                                <span style="font-weight:900;font-size:12px;color:#0f172a;">Resumo de 15s para os Pais</span>
+                            </div>
+                            <a href="tablet.html?subject=matematica&level=${nextRecommendedLvl}&stage=${recMatStage}&autostart=true" style="padding:5px 10px;border-radius:999px;background:#2563eb;color:white;font-weight:900;font-size:10px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+                                <i class="fas fa-play" style="font-size:8px;"></i> Treinar ${nextRecommendedLvl.toUpperCase()} (${recMatStageSpec.shortLabel})
+                            </a>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr;gap:4px;font-size:11px;color:#334155;line-height:1.35;">
+                            <div><strong style="color:#059669;">👏 Onde parou / Progresso:</strong> ${praiseText}</div>
+                            <div><strong style="color:#d97706;">🏆 Ranking & Revisão:</strong> ${reviewAdviceText}</div>
+                        </div>
+                    </div>
+                `;
+
+                // Painel de Ligas, Ranking Pessoal & Controles de Degrau para os Pais
+                const rankingRowsHtml = (rankingBoard && Array.isArray(rankingBoard.entries) ? rankingBoard.entries : []).map(ent => {
+                    const rankBadgeBg = ent.rank === 1 ? '#fef3c7' : (ent.rank === 2 ? '#f1f5f9' : (ent.rank === 3 ? '#ffedd5' : '#f8fafc'));
+                    const rankBadgeColor = ent.rank === 1 ? '#b45309' : (ent.rank === 2 ? '#475569' : (ent.rank === 3 ? '#9a3412' : '#64748b'));
+                    const avatarSrc = ent.isRival ? ent.avatar : ((MASCOT_PRESETS[ent.mascot] && MASCOT_PRESETS[ent.mascot].avatar) || MASCOT_PRESETS.jaguar.avatar);
+                    return `
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:12px;border:${ent.isActive ? '2px solid #3b82f6' : '1px solid #e2e8f0'};background:${ent.isActive ? '#eff6ff' : '#ffffff'};">
+                            <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">
+                                <span style="width:24px;height:24px;border-radius:8px;background:${rankBadgeBg};color:${rankBadgeColor};font-weight:900;font-size:11px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">#${ent.rank}</span>
+                                <img src="${avatarSrc}" alt="${escapeHtml(ent.name)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:1.5px solid #cbd5e1;flex-shrink:0;">
+                                <div style="min-width:0;flex:1;">
+                                    <div style="font-weight:900;font-size:12px;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                        ${escapeHtml(ent.name)} ${ent.isActive ? '<span style="font-size:9px;background:#2563eb;color:white;padding:1px 6px;border-radius:999px;margin-left:4px;">VOCÊ</span>' : (ent.isRival ? '<span style="font-size:9px;background:#f1f5f9;color:#64748b;padding:1px 6px;border-radius:999px;margin-left:4px;">Mascote Meta</span>' : '')}
+                                    </div>
+                                    <div style="font-size:10px;color:#64748b;font-weight:700;">${ent.league.icon} ${ent.league.name} · ${ent.stars} ★</div>
+                                </div>
+                            </div>
+                            <span style="font-weight:900;font-size:12px;color:#2563eb;flex-shrink:0;">${ent.xp} XP</span>
+                        </div>
+                    `;
+                }).join('');
+
+                const rankingPanelHtml = `
+                    <div style="background:linear-gradient(135deg, ${leagueInfo.current.bg} 0%, #ffffff 100%);border:1.5px solid ${leagueInfo.current.border};border-radius:16px;padding:12px 14px;margin-bottom:10px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <span style="font-size:24px;line-height:1;">${leagueInfo.current.icon}</span>
+                                <div>
+                                    <div style="font-size:10px;font-weight:900;text-transform:uppercase;color:${leagueInfo.current.color};">Liga Atual</div>
+                                    <div style="font-size:14px;font-weight:900;color:#0f172a;">${leagueInfo.current.name} · ${leagueInfo.xp} XP</div>
+                                </div>
+                            </div>
+                            <div style="text-align:right;font-size:10px;font-weight:bold;color:#475569;">
+                                ${leagueInfo.next ? `Próxima: ${leagueInfo.next.icon} ${leagueInfo.next.short}<br><span style="color:#2563eb;">Faltam ${leagueInfo.xpToNext} XP</span>` : '<span style="color:#be123c;font-weight:900;">Liga Máxima Alcançada! 👑</span>'}
+                            </div>
+                        </div>
+                        <div style="width:100%;height:7px;background:#e2e8f0;border-radius:999px;overflow:hidden;">
+                            <div style="width:${leagueInfo.progressPct}%;height:100%;background:linear-gradient(90deg, #3b82f6, #6366f1);border-radius:999px;"></div>
+                        </div>
+                    </div>
+                    <div id="kumonPersonalRankingBoard" style="background:white;border:1px solid #e2e8f0;border-radius:16px;padding:12px;margin-bottom:10px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                            <span style="font-weight:900;font-size:12px;color:#0f172a;"><i class="fas fa-ranking-star text-amber-500" style="color:#f59e0b;margin-right:4px;"></i> Ranking Pessoal & Mascotes-Rival</span>
+                            <span style="font-size:10px;font-weight:800;color:#2563eb;">Sua Posição: #${rankPos}</span>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:6px;">
+                            ${rankingRowsHtml}
+                        </div>
+                    </div>
+                    <div style="background:white;border:1px solid #e2e8f0;border-radius:16px;padding:12px;">
+                        <div style="font-weight:900;font-size:12px;color:#0f172a;margin-bottom:6px;"><i class="fas fa-sliders-h" style="color:#2563eb;margin-right:4px;"></i> Degrau Atual em Matemática (Ajuste dos Pais)</div>
+                        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 10px;">
+                            <div style="font-size:11px;font-weight:800;color:#1e293b;">${nextRecommendedLvl.toUpperCase()} · Degrau <span id="evoParentStageVal">${recMatStage}/${recMatStagesTotal}</span> (${recMatStageSpec.shortLabel})</div>
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <button type="button" id="evoStageDownBtn" style="width:28px;height:28px;border-radius:8px;border:1px solid #cbd5e1;background:white;color:#0f172a;font-weight:900;cursor:pointer;">−</button>
+                                <button type="button" id="evoStageUpBtn" style="width:28px;height:28px;border-radius:8px;border:none;background:#2563eb;color:white;font-weight:900;cursor:pointer;">+</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
                 modal.innerHTML = `
                     <div style="background:white;border-radius:24px;max-width:620px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);border:4px solid #3b82f6;overflow:hidden;margin:auto;box-sizing:border-box;" onclick="event.stopPropagation()">
                         <!-- Header Fixo -->
-                        <div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:white;">
-                            <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                        <div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;background:white;">
+                            <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
                                 <div style="width:40px;height:40px;border-radius:50%;padding:2px;background:linear-gradient(to top right, #3b82f6, #60a5fa);flex-shrink:0;">
-                                    <img src="${mascotInfo.avatar}" alt="${mascotInfo.name}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid white;display:block;">
+                                    ${evoAvatarHtml}
                                 </div>
-                                <div style="min-width:0;">
-                                    <div style="display:flex;align-items:center;gap:6px;">
+                                <div style="min-width:0;flex:1;">
+                                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;">
                                         <h3 style="font-weight:900;font-size:15px;color:#0f172a;margin:0;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.name)}</h3>
-                                        <span style="font-size:9px;font-weight:900;text-transform:uppercase;color:#1d4ed8;background:#dbeafe;padding:2px 8px;border-radius:999px;">${ageInfo.label}</span>
+                                        <span style="font-size:9px;font-weight:900;text-transform:uppercase;color:#1d4ed8;background:#dbeafe;padding:2px 8px;border-radius:999px;white-space:nowrap;flex-shrink:0;">${ageInfo.label}</span>
                                     </div>
-                                    <div style="font-size:10px;color:#64748b;font-weight:600;display:flex;align-items:center;gap:6px;margin-top:2px;">
-                                        <span>${mascotInfo.name}</span>
+                                    <div style="font-size:10px;color:#64748b;font-weight:600;display:flex;align-items:center;gap:6px;margin-top:2px;white-space:nowrap;">
+                                        <span>${leagueInfo.current.icon} ${leagueInfo.current.short} (${leagueInfo.xp} XP)</span>
                                         <span>·</span>
-                                        <span style="color:#d97706;font-weight:bold;"><i class="fas fa-star" style="color:#f59e0b;"></i> ${stars} ★</span>
+                                        <span style="color:#d97706;font-weight:bold;"><i class="fas fa-star" style="color:#f59e0b;"></i> ${stars}</span>
                                         <span>·</span>
                                         <span style="color:#ea580c;font-weight:bold;"><i class="fas fa-fire" style="color:#f97316;"></i> ${streak}d</span>
                                     </div>
@@ -1867,15 +2910,15 @@
                                 </div>
 
                                 <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:10px 12px;text-align:center;">
-                                    <div style="font-size:18px;font-weight:900;color:#2563eb;">${sctRate !== null ? `${sctRate}%` : '---'}</div>
-                                    <div style="font-size:9px;color:#64748b;font-weight:bold;text-transform:uppercase;margin-top:1px;">Ritmo Fluente SCT</div>
-                                    <div style="font-size:9px;color:#94a3b8;margin-top:4px;">${sctBeatenCount} no tempo ideal</div>
+                                    <div style="font-size:18px;font-weight:900;color:#2563eb;">#${rankPos} <span style="font-size:11px;color:#94a3b8;font-weight:normal;">${leagueInfo.current.icon}</span></div>
+                                    <div style="font-size:9px;color:#64748b;font-weight:bold;text-transform:uppercase;margin-top:1px;">Ranking & Liga</div>
+                                    <div style="font-size:9px;color:#94a3b8;margin-top:4px;">${leagueInfo.xp} XP acumulados</div>
                                 </div>
 
                                 <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:10px 12px;text-align:center;">
-                                    <div style="font-size:18px;font-weight:900;color:#d97706;">${streak} <span style="font-size:10px;font-weight:bold;color:#f59e0b;">dias</span></div>
-                                    <div style="font-size:9px;color:#64748b;font-weight:bold;text-transform:uppercase;margin-top:1px;">Sequência Atual</div>
-                                    <div style="font-size:9px;color:#94a3b8;margin-top:4px;">Recorde: ${bestStreak}d</div>
+                                    <div style="font-size:18px;font-weight:900;color:#d97706;">${sctRate !== null ? `${sctRate}%` : '---'}</div>
+                                    <div style="font-size:9px;color:#64748b;font-weight:bold;text-transform:uppercase;margin-top:1px;">Ritmo Fluente SCT</div>
+                                    <div style="font-size:9px;color:#94a3b8;margin-top:4px;">${sctBeatenCount} no tempo ideal</div>
                                 </div>
 
                                 <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:10px 12px;text-align:center;">
@@ -1886,21 +2929,238 @@
                             </div>
 
                             <!-- Navegação por Abas Internas -->
-                            <div style="display:flex;align-items:center;gap:6px;padding:4px;background:#e2e8f0;border-radius:12px;margin-bottom:12px;">
-                                <button type="button" id="tabBtnMetrics" style="flex:1;padding:7px 10px;border-radius:8px;border:none;background:white;color:#0f172a;font-weight:900;font-size:11px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,0.05);transition:all 0.15s ease;">
-                                    <i class="fas fa-chart-line" style="color:#2563eb;margin-right:4px;"></i> Gráficos
+                            <div style="display:flex;align-items:center;gap:4px;padding:4px;background:#e2e8f0;border-radius:12px;margin-bottom:12px;flex-wrap:wrap;">
+                                <button type="button" id="tabBtnMetrics" style="flex:1 1 70px;padding:7px 8px;border-radius:8px;border:none;background:white;color:#0f172a;font-weight:900;font-size:11px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,0.05);transition:all 0.15s ease;">
+                                    <i class="fas fa-chart-line" style="color:#2563eb;margin-right:3px;"></i> Gráficos
                                 </button>
-                                <button type="button" id="tabBtnMatrix" style="flex:1;padding:7px 10px;border-radius:8px;border:none;background:none;color:#64748b;font-weight:bold;font-size:11px;cursor:pointer;transition:all 0.15s ease;">
-                                    <i class="fas fa-th" style="color:#d97706;margin-right:4px;"></i> 25 Níveis (${masteredCount}/25)
+                                <button type="button" id="tabBtnRanking" style="flex:1 1 78px;padding:7px 8px;border-radius:8px;border:none;background:none;color:#64748b;font-weight:bold;font-size:11px;cursor:pointer;transition:all 0.15s ease;">
+                                    <i class="fas fa-trophy" style="color:#f59e0b;margin-right:3px;"></i> Ranking #${rankPos}
                                 </button>
-                                <button type="button" id="tabBtnHistory" style="flex:1;padding:7px 10px;border-radius:8px;border:none;background:none;color:#64748b;font-weight:bold;font-size:11px;cursor:pointer;transition:all 0.15s ease;">
-                                    <i class="fas fa-history" style="color:#059669;margin-right:4px;"></i> Histórico (${historyList.length})
+                                <button type="button" id="tabBtnWeaknesses" style="flex:1 1 92px;padding:7px 8px;border-radius:8px;border:none;background:none;color:#64748b;font-weight:bold;font-size:11px;cursor:pointer;transition:all 0.15s ease;">
+                                    <i class="fas fa-lock" style="color:#dc2626;margin-right:3px;"></i> Pais & Fraquezas
+                                </button>
+                                <button type="button" id="tabBtnMatrix" style="flex:1 1 78px;padding:7px 8px;border-radius:8px;border:none;background:none;color:#64748b;font-weight:bold;font-size:11px;cursor:pointer;transition:all 0.15s ease;">
+                                    <i class="fas fa-th" style="color:#d97706;margin-right:3px;"></i> 25 Níveis (${masteredCount}/25)
+                                </button>
+                                <button type="button" id="tabBtnHistory" style="flex:1 1 75px;padding:7px 8px;border-radius:8px;border:none;background:none;color:#64748b;font-weight:bold;font-size:11px;cursor:pointer;transition:all 0.15s ease;">
+                                    <i class="fas fa-history" style="color:#059669;margin-right:3px;"></i> Histórico (${historyList.length})
                                 </button>
                             </div>
 
                             <!-- Painel 1: Gráficos & Fluência -->
                             <div id="panelEvolutionMetrics" style="display:block;">
+                                ${parentSummaryCardHtml}
                                 ${chartSvgHtml}
+                            </div>
+
+                            <!-- Painel 1b: Ranking Pessoal, Ligas & Degraus -->
+                            <div id="panelEvolutionRanking" style="display:none;">
+                                ${rankingPanelHtml}
+                            </div>
+
+                            <!-- Painel 1c: Área dos Pais — Radar de Fraquezas, Senha & Controles -->
+                            <div id="panelEvolutionWeaknesses" style="display:none;">
+                                ${(() => {
+                                    const unlocked = self.isParentUnlocked(s.id);
+                                    if (!unlocked) {
+                                        const isCustomPwd = self.isParentCustomPasswordEnabled(s);
+                                        return `
+                                            <div id="parentWeaknessLockedCard" style="background:white;border:2px solid #cbd5e1;border-radius:18px;padding:20px;text-align:center;">
+                                                <div style="width:48px;height:48px;border-radius:16px;background:#eff6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:20px;">
+                                                    <i class="fas fa-user-shield"></i>
+                                                </div>
+                                                <h4 style="margin:0 0 6px;font-size:14px;font-weight:900;color:#0f172a;">Área Protegida dos Pais</h4>
+                                                <p style="margin:0 0 12px;font-size:11px;color:#64748b;line-height:1.45;">
+                                                    Veja o que <strong>${escapeHtml(s.name)}</strong> mais erra ou hesita, ajuste travas de dificuldade e gere cadernos cirúrgicos de reforço.${isCustomPwd ? '' : '<br><span style="color:#2563eb;">Padrão inicial de testes: nome do perfil ao contrário.</span>'}
+                                                </p>
+                                                <button type="button" id="unlockWeaknessesTabBtn" style="padding:10px 18px;border-radius:12px;border:none;background:#2563eb;color:white;font-weight:900;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 4px 10px rgba(37,99,235,0.25);">
+                                                    <i class="fas fa-unlock-alt"></i> Desbloquear Área dos Pais
+                                                </button>
+                                            </div>
+                                        `;
+                                    }
+
+                                    const weak = self.getWeaknessSummary(s, 6);
+                                    const pCtrl = self.getParentControls(s);
+                                    const isCustomPwd = self.isParentCustomPasswordEnabled(s);
+                                    const ctrlSubjCatalog = CURRICULUM_25_LEVELS[selectedParentCtrlSubj] || CURRICULUM_25_LEVELS.matematica;
+                                    if (!selectedParentCtrlLvl || !ctrlSubjCatalog.levels.some(l => l.id === selectedParentCtrlLvl)) {
+                                        selectedParentCtrlLvl = ctrlSubjCatalog.levels.some(l => l.id === weak.weakestLevel) ? weak.weakestLevel : ctrlSubjCatalog.levels[0].id;
+                                    }
+                                    const limits = self.getTrackLimits(selectedParentCtrlSubj, selectedParentCtrlLvl, s);
+                                    const curStageCtrl = self.getLevelStage(selectedParentCtrlSubj, selectedParentCtrlLvl, s);
+                                    const curStageSpec = (typeof window !== 'undefined' && window.KumonProgression)
+                                        ? window.KumonProgression.getStageSpec(selectedParentCtrlSubj, selectedParentCtrlLvl, curStageCtrl)
+                                        : { shortLabel: `Deg. ${curStageCtrl}`, label: `Degrau ${curStageCtrl}` };
+
+                                    const patternsHtml = weak.patterns.length > 0 ? weak.patterns.map((pt) => {
+                                        const barPct = Math.min(100, Math.max(15, Math.round((pt.severity / Math.max(4, weak.patterns[0].severity || 4)) * 100)));
+                                        const barColor = pt.severity >= 6 ? '#ef4444' : (pt.severity >= 3 ? '#f59e0b' : '#3b82f6');
+                                        return `
+                                            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 10px;">
+                                                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;margin-bottom:4px;">
+                                                    <strong style="color:#0f172a;">${escapeHtml(pt.label)}</strong>
+                                                    <span style="font-size:10px;font-weight:800;color:${barColor};white-space:nowrap;">${pt.errors} err. · ${pt.slowHits} lent.${pt.avgTimeSec ? ` · ${pt.avgTimeSec}s` : ''}</span>
+                                                </div>
+                                                <div style="width:100%;height:5px;background:#e2e8f0;border-radius:999px;overflow:hidden;">
+                                                    <div style="width:${barPct}%;height:100%;background:${barColor};border-radius:999px;"></div>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('') : `
+                                        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:12px;text-align:center;font-size:11px;color:#166534;font-weight:700;">
+                                            ✨ Nenhuma dificuldade recorrente acumulada até o momento! Continue o ritmo diário.
+                                        </div>
+                                    `;
+
+                                    const pendingItemsHtml = weak.pendingItems.slice(0, 8).map((entry) => {
+                                        const boxLvl = Number(entry.box) || 0;
+                                        const badgeTxt = boxLvl === 0 ? 'Box 0 · Crítico' : 'Box 1 · Consolidando';
+                                        const badgeBg = boxLvl === 0 ? '#fee2e2' : '#fef3c7';
+                                        const badgeColor = boxLvl === 0 ? '#b91c1c' : '#b45309';
+                                        const previewTxt = self.formatPendingItemPreview(entry);
+                                        return `
+                                            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 9px;background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;font-size:11px;">
+                                                <div style="min-width:0;display:flex;align-items:center;gap:6px;">
+                                                    <span style="font-size:9px;font-weight:900;background:${badgeBg};color:${badgeColor};padding:2px 6px;border-radius:999px;white-space:nowrap;">${badgeTxt}</span>
+                                                    <span style="font-weight:800;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(previewTxt)}</span>
+                                                </div>
+                                                <button type="button" class="btn-clear-weakness-item" data-item-id="${escapeHtml(entry.id)}" title="Marcar como já praticado fora do tablet" style="border:none;background:#f1f5f9;color:#64748b;border-radius:8px;padding:3px 7px;font-size:10px;font-weight:bold;cursor:pointer;">✓</button>
+                                            </div>
+                                        `;
+                                    }).join('');
+
+                                    const paperHrefPage = weak.weakestSubject === 'portugues' ? 'portugues.html' : (weak.weakestSubject === 'ingles' ? 'ingles.html' : 'matematica.html');
+
+                                    return `
+                                        <div id="parentWeaknessDashboard" style="display:flex;flex-direction:column;gap:10px;">
+                                            <!-- Barra Sessão Segura dos Pais -->
+                                            <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:14px;padding:10px 12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;">
+                                                <div style="font-size:11px;font-weight:900;color:#1e3a8a;display:flex;align-items:center;gap:6px;">
+                                                    <i class="fas fa-unlock text-blue-600"></i> Sessão dos Pais Ativa
+                                                    <span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:999px;background:${isCustomPwd ? '#dcfce7' : '#fef3c7'};color:${isCustomPwd ? '#166534' : '#92400e'};">${isCustomPwd ? 'SHA-256 Própria' : 'Modo Teste (Invertida)'}</span>
+                                                </div>
+                                                <div style="display:flex;align-items:center;gap:6px;">
+                                                    <button type="button" id="btnToggleParentPwdForm" style="padding:5px 9px;border-radius:8px;border:1px solid #93c5fd;background:white;color:#1d4ed8;font-size:10px;font-weight:900;cursor:pointer;">🔑 Senha</button>
+                                                    <button type="button" id="btnLockParentArea" style="padding:5px 9px;border-radius:8px;border:none;background:#1e293b;color:white;font-size:10px;font-weight:900;cursor:pointer;">🔒 Trancar</button>
+                                                </div>
+                                            </div>
+
+                                            <!-- Form Colapsável Senha Própria SHA-256 -->
+                                            <div id="parentPwdChangeFormBox" style="display:none;background:white;border:1.5px solid #93c5fd;border-radius:14px;padding:12px;">
+                                                <div style="font-size:11px;font-weight:900;color:#0f172a;margin-bottom:6px;">Definir Senha Própria dos Pais (SHA-256 Local)</div>
+                                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+                                                    <input type="password" id="newParentPwdInput" placeholder="Nova senha (min 4)" style="min-width:0;width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:11px;color:#0f172a;background:white;">
+                                                    <input type="password" id="confirmParentPwdInput" placeholder="Confirmar senha" style="min-width:0;width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:11px;color:#0f172a;background:white;">
+                                                </div>
+                                                <div id="parentPwdChangeFeedback" style="font-size:10px;font-weight:bold;min-height:14px;margin-bottom:6px;color:#ef4444;"></div>
+                                                <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                                                    <button type="button" id="btnSaveCustomParentPwd" style="padding:6px 12px;border:none;border-radius:8px;background:#2563eb;color:white;font-size:11px;font-weight:900;cursor:pointer;">Salvar Senha SHA-256</button>
+                                                    ${isCustomPwd ? '<button type="button" id="btnResetParentPwdDefault" style="padding:6px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;color:#475569;font-size:10px;font-weight:bold;cursor:pointer;">Voltar ao Padrão de Teste</button>' : ''}
+                                                </div>
+                                            </div>
+
+                                            <!-- Radar de Fraquezas -->
+                                            <div id="parentWeaknessRadarBox" style="background:white;border:1px solid #e2e8f0;border-radius:16px;padding:12px;">
+                                                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
+                                                    <span style="font-weight:900;font-size:12px;color:#0f172a;"><i class="fas fa-radar text-rose-500" style="color:#f43f5e;margin-right:4px;"></i> Radar de Fraquezas & Dificuldades</span>
+                                                    <span style="font-size:10px;font-weight:800;color:#dc2626;">${weak.totalPending} pendente(s)</span>
+                                                </div>
+                                                <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;">
+                                                    ${patternsHtml}
+                                                </div>
+                                                ${weak.pendingItems.length > 0 ? `
+                                                    <div style="font-size:10px;font-weight:800;color:#64748b;margin:6px 0 4px;">Itens ativos na fila espaçada (Box Leitner):</div>
+                                                    <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(175px, 1fr));gap:5px;margin-bottom:8px;">
+                                                        ${pendingItemsHtml}
+                                                    </div>
+                                                ` : ''}
+                                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+                                                    <a id="btnParentTrainWeaknessTablet" href="tablet.html?mode=weakness&subject=${encodeURIComponent(weak.weakestSubject)}&level=${encodeURIComponent(weak.weakestLevel)}&autostart=true" style="padding:8px 10px;border-radius:10px;background:#dc2626;color:white;font-weight:900;font-size:11px;text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center;gap:5px;">
+                                                        <i class="fas fa-tablet-alt"></i> Treinar Fraquezas no Tablet
+                                                    </a>
+                                                    <a id="btnParentPrintWeaknessPaper" href="${paperHrefPage}?mode=weakness&level=${encodeURIComponent(weak.weakestLevel)}" style="padding:8px 10px;border-radius:10px;background:#0f172a;color:white;font-weight:900;font-size:11px;text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center;gap:5px;">
+                                                        <i class="fas fa-print"></i> Folha de Reforço (Papel/PDF)
+                                                    </a>
+                                                </div>
+                                            </div>
+
+                                            <!-- Controles Pedagógicos & Travas dos Pais -->
+                                            <div style="background:white;border:1px solid #e2e8f0;border-radius:16px;padding:12px;">
+                                                <div style="font-weight:900;font-size:12px;color:#0f172a;margin-bottom:8px;">
+                                                    <i class="fas fa-sliders-h" style="color:#2563eb;margin-right:4px;"></i> Limites de Dificuldade & Automação Adaptativa
+                                                </div>
+                                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+                                                    <select id="parentLimitSubjSelect" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:8px;font-size:11px;font-weight:bold;color:#0f172a;background:#f8fafc;">
+                                                        <option value="matematica" ${selectedParentCtrlSubj === 'matematica' ? 'selected' : ''}>Matemática (M1–M10)</option>
+                                                        <option value="portugues" ${selectedParentCtrlSubj === 'portugues' ? 'selected' : ''}>Português (P1–P8)</option>
+                                                        <option value="ingles" ${selectedParentCtrlSubj === 'ingles' ? 'selected' : ''}>Inglês (I1–I7)</option>
+                                                    </select>
+                                                    <select id="parentLimitLvlSelect" style="padding:6px 8px;border:1px solid #cbd5e1;border-radius:8px;font-size:11px;font-weight:bold;color:#0f172a;background:#f8fafc;">
+                                                        ${ctrlSubjCatalog.levels.map(l => `<option value="${l.id}" ${l.id === selectedParentCtrlLvl ? 'selected' : ''}>${escapeHtml(l.code)} · ${escapeHtml(l.title)}</option>`).join('')}
+                                                    </select>
+                                                </div>
+                                                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;margin-bottom:8px;font-size:11px;">
+                                                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                                                        <span style="font-weight:800;color:#1e293b;">Degrau Atual: <strong>${curStageCtrl}/${limits.maxPossible}</strong> (${escapeHtml(curStageSpec.shortLabel)})</span>
+                                                        <div style="display:flex;gap:4px;">
+                                                            <button type="button" id="btnParentStageDec" style="width:24px;height:24px;border-radius:6px;border:1px solid #cbd5e1;background:white;font-weight:900;cursor:pointer;">−</button>
+                                                            <button type="button" id="btnParentStageInc" style="width:24px;height:24px;border-radius:6px;border:none;background:#2563eb;color:white;font-weight:900;cursor:pointer;">+</button>
+                                                        </div>
+                                                    </div>
+                                                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:10px;color:#475569;">
+                                                        <label style="display:flex;align-items:center;justify-content:space-between;gap:4px;">
+                                                            <span>Mínimo permitido:</span>
+                                                            <input type="number" id="parentMinStageInput" min="1" max="${limits.maxPossible}" value="${limits.minStage}" style="width:46px;padding:3px 5px;border:1px solid #cbd5e1;border-radius:6px;text-align:center;font-weight:bold;color:#0f172a;background:white;">
+                                                        </label>
+                                                        <label style="display:flex;align-items:center;justify-content:space-between;gap:4px;">
+                                                            <span>Teto máximo:</span>
+                                                            <input type="number" id="parentMaxStageInput" min="1" max="${limits.maxPossible}" value="${limits.maxStage}" style="width:46px;padding:3px 5px;border:1px solid #cbd5e1;border-radius:6px;text-align:center;font-weight:bold;color:#0f172a;background:white;">
+                                                        </label>
+                                                    </div>
+                                                </div>
+
+                                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;margin-bottom:8px;">
+                                                    <label style="display:flex;flex-direction:column;gap:3px;font-weight:bold;color:#334155;">
+                                                        <span style="font-size:10px;color:#64748b;">Subir degrau com:</span>
+                                                        <select id="parentPromoteThreshSelect" style="padding:6px;border:1px solid #cbd5e1;border-radius:8px;font-size:11px;color:#0f172a;background:white;">
+                                                            <option value="75" ${pCtrl.promoteThreshold === 75 ? 'selected' : ''}>75% (Ritmo leve)</option>
+                                                            <option value="80" ${pCtrl.promoteThreshold === 80 ? 'selected' : ''}>80% (Padrão Kumon)</option>
+                                                            <option value="90" ${pCtrl.promoteThreshold === 90 ? 'selected' : ''}>90% (Maestria firme)</option>
+                                                        </select>
+                                                    </label>
+                                                    <label style="display:flex;flex-direction:column;gap:3px;font-weight:bold;color:#334155;">
+                                                        <span style="font-size:10px;color:#64748b;">Mix de revisão nas rodadas:</span>
+                                                        <select id="parentReviewMixSelect" style="padding:6px;border:1px solid #cbd5e1;border-radius:8px;font-size:11px;color:#0f172a;background:white;">
+                                                            <option value="0" ${pCtrl.reviewMixRatio === 0 ? 'selected' : ''}>0% (Só inéditas)</option>
+                                                            <option value="0.2" ${pCtrl.reviewMixRatio === 0.2 ? 'selected' : ''}>20% (Reforço suave)</option>
+                                                            <option value="0.25" ${pCtrl.reviewMixRatio === 0.25 ? 'selected' : ''}>25% (Ideal híbrido)</option>
+                                                            <option value="0.3" ${pCtrl.reviewMixRatio >= 0.3 && pCtrl.reviewMixRatio < 0.45 ? 'selected' : ''}>30% (Reforço ativo)</option>
+                                                            <option value="0.5" ${pCtrl.reviewMixRatio >= 0.45 ? 'selected' : ''}>50% (Revisão intensa)</option>
+                                                        </select>
+                                                    </label>
+                                                </div>
+
+                                                <label style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;font-weight:bold;color:#334155;padding-top:6px;border-top:1px solid #f1f5f9;cursor:pointer;">
+                                                    <span>Recuo protetor automático (se &lt;50% ou 4+ erros no padrão)</span>
+                                                    <input type="checkbox" id="parentAutoProtectCheck" ${pCtrl.autoProtectDown !== false ? 'checked' : ''} style="width:16px;height:16px;accent-color:#2563eb;">
+                                                </label>
+                                            </div>
+
+                                            <!-- Compartilhar com Colegas da Escola -->
+                                            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                                                <div style="font-size:11px;color:#334155;">
+                                                    <strong style="color:#0f172a;display:block;">Enviar Missão p/ Colegas da Escola</strong>
+                                                    <span style="font-size:10px;color:#64748b;">Gera link offline da tarefa (${selectedParentCtrlLvl.toUpperCase()} · Deg. ${curStageCtrl})</span>
+                                                </div>
+                                                <button type="button" id="btnCopyClassroomShareUrl" style="padding:7px 11px;border:none;border-radius:10px;background:#4f46e5;color:white;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap;">
+                                                    <i class="fas fa-share-alt"></i> Gerar Link Turma
+                                                </button>
+                                            </div>
+                                            <div id="classroomShareResultBox" style="display:none;background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;padding:8px;font-size:10px;word-break:break-all;color:#312e81;"></div>
+                                        </div>
+                                    `;
+                                })()}
                             </div>
 
                             <!-- Painel 2: Matriz dos 25 Níveis Curriculares -->
@@ -1946,6 +3206,136 @@
                     certBtn.onclick = () => self.generateMasteryCertificatePDF(s.id);
                 }
 
+                // Controles de Ajuste de Degrau na aba Ranking
+                const evoStageDown = modal.querySelector('#evoStageDownBtn');
+                const evoStageUp = modal.querySelector('#evoStageUpBtn');
+                const handleEvoStageDelta = (delta) => {
+                    self.setActive(s.id);
+                    const cur = self.getLevelStage('matematica', nextRecommendedLvl);
+                    const nextVal = self.setLevelStage('matematica', nextRecommendedLvl, cur + delta);
+                    try { window.dispatchEvent(new CustomEvent('kumongen:stage_changed', { detail: { subjectKey: 'matematica', levelId: nextRecommendedLvl, stage: nextVal } })); } catch (err) {}
+                    renderEvolutionView(self.getById(s.id), 'ranking');
+                };
+                if (evoStageDown) evoStageDown.onclick = () => handleEvoStageDelta(-1);
+                if (evoStageUp) evoStageUp.onclick = () => handleEvoStageDelta(1);
+
+                // Handlers da aba Pais & Fraquezas
+                const unlockBtn = modal.querySelector('#unlockWeaknessesTabBtn');
+                if (unlockBtn) {
+                    unlockBtn.onclick = () => {
+                        self.requireParentPassword(() => {
+                            renderEvolutionView(self.getById(s.id), 'weaknesses');
+                        }, { studentId: s.id, actionLabel: 'Desbloqueie para acessar o Radar de Fraquezas e controles.' });
+                    };
+                }
+                const lockBtn = modal.querySelector('#btnLockParentArea');
+                if (lockBtn) {
+                    lockBtn.onclick = () => {
+                        self.lockParentArea(s.id);
+                        renderEvolutionView(self.getById(s.id), 'weaknesses');
+                    };
+                }
+                const togglePwdFormBtn = modal.querySelector('#btnToggleParentPwdForm');
+                const pwdFormBox = modal.querySelector('#parentPwdChangeFormBox');
+                if (togglePwdFormBtn && pwdFormBox) {
+                    togglePwdFormBtn.onclick = () => {
+                        pwdFormBox.style.display = pwdFormBox.style.display === 'none' ? 'block' : 'none';
+                    };
+                }
+                const savePwdBtn = modal.querySelector('#btnSaveCustomParentPwd');
+                if (savePwdBtn) {
+                    savePwdBtn.onclick = () => {
+                        const p1 = modal.querySelector('#newParentPwdInput')?.value || '';
+                        const p2 = modal.querySelector('#confirmParentPwdInput')?.value || '';
+                        const fb = modal.querySelector('#parentPwdChangeFeedback');
+                        if (p1 !== p2) {
+                            if (fb) fb.textContent = 'As senhas digitadas não coincidem.';
+                            return;
+                        }
+                        const res = self.setCustomParentPassword(p1, s.id);
+                        if (!res.success) {
+                            if (fb) fb.textContent = res.error;
+                            return;
+                        }
+                        renderEvolutionView(self.getById(s.id), 'weaknesses');
+                    };
+                }
+                const resetPwdBtn = modal.querySelector('#btnResetParentPwdDefault');
+                if (resetPwdBtn) {
+                    resetPwdBtn.onclick = () => {
+                        self.resetParentPasswordToDefault(s.id);
+                        renderEvolutionView(self.getById(s.id), 'weaknesses');
+                    };
+                }
+                modal.querySelectorAll('.btn-clear-weakness-item').forEach(btn => {
+                    btn.onclick = () => {
+                        const itemId = btn.getAttribute('data-item-id');
+                        self.removeReviewNotebookItemById(itemId, s.id);
+                        renderEvolutionView(self.getById(s.id), 'weaknesses');
+                    };
+                });
+                const trainWeakLink = modal.querySelector('#btnParentTrainWeaknessTablet');
+                const printWeakLink = modal.querySelector('#btnParentPrintWeaknessPaper');
+                if (trainWeakLink) trainWeakLink.onclick = () => { self.setActive(s.id); };
+                if (printWeakLink) printWeakLink.onclick = () => { self.setActive(s.id); };
+                const subjSel = modal.querySelector('#parentLimitSubjSelect');
+                const lvlSel = modal.querySelector('#parentLimitLvlSelect');
+                if (subjSel) {
+                    subjSel.onchange = (e) => {
+                        selectedParentCtrlSubj = e.target.value;
+                        selectedParentCtrlLvl = null;
+                        renderEvolutionView(self.getById(s.id), 'weaknesses');
+                    };
+                }
+                if (lvlSel) {
+                    lvlSel.onchange = (e) => {
+                        selectedParentCtrlLvl = e.target.value;
+                        renderEvolutionView(self.getById(s.id), 'weaknesses');
+                    };
+                }
+                const btnPDec = modal.querySelector('#btnParentStageDec');
+                const btnPInc = modal.querySelector('#btnParentStageInc');
+                const minInp = modal.querySelector('#parentMinStageInput');
+                const maxInp = modal.querySelector('#parentMaxStageInput');
+                const applyParentStageDelta = (delta) => {
+                    self.setActive(s.id);
+                    const cur = self.getLevelStage(selectedParentCtrlSubj, selectedParentCtrlLvl, s);
+                    const nextVal = self.setLevelStage(selectedParentCtrlSubj, selectedParentCtrlLvl, cur + delta);
+                    try { window.dispatchEvent(new CustomEvent('kumongen:stage_changed', { detail: { subjectKey: selectedParentCtrlSubj, levelId: selectedParentCtrlLvl, stage: nextVal } })); } catch (err) {}
+                    renderEvolutionView(self.getById(s.id), 'weaknesses');
+                };
+                if (btnPDec) btnPDec.onclick = () => applyParentStageDelta(-1);
+                if (btnPInc) btnPInc.onclick = () => applyParentStageDelta(1);
+                const applyTrackLimitsFromInputs = () => {
+                    const mn = minInp ? minInp.value : 1;
+                    const mx = maxInp ? maxInp.value : 13;
+                    self.setTrackLimits(selectedParentCtrlSubj, selectedParentCtrlLvl, mn, mx, s.id);
+                    renderEvolutionView(self.getById(s.id), 'weaknesses');
+                };
+                if (minInp) minInp.onchange = applyTrackLimitsFromInputs;
+                if (maxInp) maxInp.onchange = applyTrackLimitsFromInputs;
+
+                const threshSel = modal.querySelector('#parentPromoteThreshSelect');
+                const mixSel = modal.querySelector('#parentReviewMixSelect');
+                const autoProtChk = modal.querySelector('#parentAutoProtectCheck');
+                if (threshSel) threshSel.onchange = (e) => self.updateParentControls({ promoteThreshold: Number(e.target.value) }, s.id);
+                if (mixSel) mixSel.onchange = (e) => self.updateParentControls({ reviewMixRatio: Number(e.target.value) }, s.id);
+                if (autoProtChk) autoProtChk.onchange = (e) => self.updateParentControls({ autoProtectDown: !!e.target.checked }, s.id);
+
+                const shareBtn = modal.querySelector('#btnCopyClassroomShareUrl');
+                const shareOut = modal.querySelector('#classroomShareResultBox');
+                if (shareBtn && shareOut) {
+                    shareBtn.onclick = () => {
+                        const stg = self.getLevelStage(selectedParentCtrlSubj, selectedParentCtrlLvl, s);
+                        const shareUrl = self.createClassroomShareUrl(selectedParentCtrlSubj, selectedParentCtrlLvl, stg, 'Turma');
+                        shareOut.style.display = 'block';
+                        shareOut.innerHTML = `<strong>Link pronto para colegas:</strong><br><span>${escapeHtml(shareUrl)}</span>`;
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(shareUrl).catch(() => {});
+                        }
+                    };
+                }
+
                 // Delegação de cliques para emissão de diploma por nível específico na matriz
                 const matrixPanel = modal.querySelector('#panelEvolutionMatrix');
                 if (matrixPanel) {
@@ -1969,47 +3359,64 @@
 
                 // Alternância das Abas Internas
                 const tabMetrics = modal.querySelector('#tabBtnMetrics');
+                const tabRanking = modal.querySelector('#tabBtnRanking');
+                const tabWeaknesses = modal.querySelector('#tabBtnWeaknesses');
                 const tabMatrix = modal.querySelector('#tabBtnMatrix');
                 const tabHistory = modal.querySelector('#tabBtnHistory');
                 const panelMetrics = modal.querySelector('#panelEvolutionMetrics');
+                const panelRanking = modal.querySelector('#panelEvolutionRanking');
+                const panelWeaknesses = modal.querySelector('#panelEvolutionWeaknesses');
                 const panelMatrix = modal.querySelector('#panelEvolutionMatrix');
                 const panelHistory = modal.querySelector('#panelEvolutionHistory');
 
                 const switchSubTab = (activeTab) => {
-                    [tabMetrics, tabMatrix, tabHistory].forEach(t => {
+                    if (activeTab === 'weaknesses' && !self.isParentUnlocked(s.id) && !forcedSubTab) {
+                        self.requireParentPassword(() => {
+                            renderEvolutionView(self.getById(s.id), 'weaknesses');
+                        }, { studentId: s.id, actionLabel: 'Digite a senha dos pais para acessar fraquezas e controles.' });
+                    }
+                    [tabMetrics, tabRanking, tabWeaknesses, tabMatrix, tabHistory].forEach(t => {
+                        if (!t) return;
                         t.style.background = 'none';
                         t.style.color = '#64748b';
                         t.style.fontWeight = 'bold';
                         t.style.boxShadow = 'none';
                     });
-                    panelMetrics.style.display = 'none';
-                    panelMatrix.style.display = 'none';
-                    panelHistory.style.display = 'none';
+                    if (panelMetrics) panelMetrics.style.display = 'none';
+                    if (panelRanking) panelRanking.style.display = 'none';
+                    if (panelWeaknesses) panelWeaknesses.style.display = 'none';
+                    if (panelMatrix) panelMatrix.style.display = 'none';
+                    if (panelHistory) panelHistory.style.display = 'none';
 
-                    if (activeTab === 'metrics') {
-                        tabMetrics.style.background = 'white';
-                        tabMetrics.style.color = '#0f172a';
-                        tabMetrics.style.fontWeight = '900';
-                        tabMetrics.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                        panelMetrics.style.display = 'block';
-                    } else if (activeTab === 'matrix') {
-                        tabMatrix.style.background = 'white';
-                        tabMatrix.style.color = '#0f172a';
-                        tabMatrix.style.fontWeight = '900';
-                        tabMatrix.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                        panelMatrix.style.display = 'block';
-                    } else if (activeTab === 'history') {
-                        tabHistory.style.background = 'white';
-                        tabHistory.style.color = '#0f172a';
-                        tabHistory.style.fontWeight = '900';
-                        tabHistory.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                        panelHistory.style.display = 'flex';
+                    const mapTabs = {
+                        metrics: { tab: tabMetrics, panel: panelMetrics, display: 'block' },
+                        ranking: { tab: tabRanking, panel: panelRanking, display: 'block' },
+                        weaknesses: { tab: tabWeaknesses, panel: panelWeaknesses, display: 'block' },
+                        matrix: { tab: tabMatrix, panel: panelMatrix, display: 'block' },
+                        history: { tab: tabHistory, panel: panelHistory, display: 'flex' }
+                    };
+                    const picked = mapTabs[activeTab] || mapTabs.metrics;
+                    if (picked.tab) {
+                        picked.tab.style.background = 'white';
+                        picked.tab.style.color = '#0f172a';
+                        picked.tab.style.fontWeight = '900';
+                        picked.tab.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                    }
+                    if (picked.panel) {
+                        picked.panel.style.display = picked.display;
                     }
                 };
 
                 tabMetrics.onclick = () => switchSubTab('metrics');
+                if (tabRanking) tabRanking.onclick = () => switchSubTab('ranking');
+                if (tabWeaknesses) tabWeaknesses.onclick = () => switchSubTab('weaknesses');
                 tabMatrix.onclick = () => switchSubTab('matrix');
                 tabHistory.onclick = () => switchSubTab('history');
+
+                const initSubTab = forcedSubTab || (options && options.initialEvolutionTab);
+                if (initSubTab) {
+                    switchSubTab(initSubTab);
+                }
             };
 
             // Anexa modal ao DOM antes da renderização para garantir binding de eventos e foco imediato

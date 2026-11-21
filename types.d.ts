@@ -19,11 +19,13 @@ export type MascotId = 'jaguar' | 'capivara' | 'calango' | 'golfinho';
  */
 export interface GamificationState {
     stars: number;
+    xp?: number;
     streak: number;
     bestStreak: number;
     totalRounds: number;
     totalCorrect: number;
     badges: string[];
+    personalRecords?: Record<string, { bestTimeSec: number; bestAccuracy: number; updatedAt?: string }>;
     lastPlayed: string | null;
 }
 
@@ -53,9 +55,28 @@ export interface LevelMastery {
     lastCompleted: string;
 }
 
+export interface WardrobeState {
+    unlocked: string[];
+    equipped: {
+        hat: string | null;
+        glasses: string | null;
+        outfit: string | null;
+        aura: string | null;
+        [key: string]: string | null;
+    };
+    starsSpent: number;
+}
+
 /**
  * Perfil Canônico do Aluno
  */
+export interface LevelStageProgress {
+    currentStage: number;
+    highestStage: number;
+    completedAllStages?: boolean;
+    updatedAt?: string;
+}
+
 export interface StudentProfile {
     id: string;
     name: string;
@@ -63,8 +84,13 @@ export interface StudentProfile {
     mascot: MascotId;
     createdAt: string;
     gamification: GamificationState;
+    wardrobe?: WardrobeState;
     history: HistoryRecord[];
     mastery: Record<string, LevelMastery>;
+    progression?: Record<string, Record<string, LevelStageProgress>>;
+    parentControls?: Record<string, any>;
+    parentAuth?: { mode: 'reversed_name' | 'custom'; hash?: string | null; salt?: string | null; updatedAt?: string | null };
+    weaknessStats?: Record<string, any>;
 }
 
 /**
@@ -167,6 +193,8 @@ export interface KumonSubject {
 export interface TabletSessionState {
     subjectKey: SubjectKey | string;
     levelId: string;
+    currentStage?: number;
+    autoAdvance?: boolean;
     studentName: string;
     handicap?: HandicapConfig;
     items: ExerciseItem[];
@@ -268,11 +296,36 @@ declare global {
             deleteProfile: (id: string) => boolean;
             recordRound: (result: HistoryRecord) => void;
             showProfileModal?: (mode?: any) => void;
-            showEvolutionModal?: () => void;
+            showEvolutionModal?: (studentId?: string | null, extraOptions?: any) => void;
             recordLevelMastery?: (subject: string, levelId: string, stats: any) => void;
+            getLevelStage?: (subjectKey: string, levelId: string, student?: any) => number;
+            setLevelStage?: (subjectKey: string, levelId: string, stageIndex: number, studentId?: string | null) => number;
+            getRecommendedNextLevel?: (subjectKey: string, levelsList?: any[]) => any;
+            recordProgressionOutcome?: (outcome: any) => any;
+            getActiveLeagueInfo?: (student?: any) => any;
+            getActiveRanking?: (student?: any) => any;
             addActiveHistoryItem?: (item: any) => void;
             generateMasteryCertificatePDF?: (studentId: string | null, certData: any) => Promise<any>;
             MASCOTS?: Record<string, any>;
+            [key: string]: any;
+        };
+        KumonProgression?: {
+            LEAGUES: any[];
+            RIVAL_MASCOTS: any[];
+            SKILL_LABELS?: Record<string, string>;
+            getStagesForLevel: (subjectKey: string, levelId: string) => any[];
+            clampStage: (subjectKey: string, levelId: string, stageIndex: number) => number;
+            getStageSpec: (subjectKey: string, levelId: string, stageIndex: number) => any;
+            stageToGeneratorOptions: (subjectKey: string, levelId: string, stageIndex: number) => any;
+            findStageFromHandicap: (subjectKey: string, levelId: string, handicap: any) => number;
+            getItemSkillTag?: (item: any, subjectKey?: string, levelId?: string) => any;
+            getExpectedItemSec?: (subjectKey?: string, levelId?: string, stageIndex?: number, item?: any) => number;
+            getLeagueForXp: (xp: number) => any;
+            evaluateRoundProgression: (student: any, params: any) => any;
+            buildAdaptiveSessionItems?: (options: any) => any;
+            encodeShareMission?: (payload: any) => string;
+            decodeShareMission?: (encoded: string) => any;
+            getRankingBoard: (activeStudent: any, allStudents: any[]) => any;
             [key: string]: any;
         };
         TabletPlayer: {
@@ -298,6 +351,19 @@ declare global {
             [key: string]: any;
         };
         SafeStorage: SafeStorageInterface;
+        AvatarWardrobe?: {
+            SLOTS: Record<string, any>;
+            CATALOG: any[];
+            ensureWardrobe: (student?: any) => WardrobeState;
+            getSpendableStars: (student?: any) => number;
+            getTotalEarnedStars: (student?: any) => number;
+            getItemById: (itemId: string) => any;
+            unlockItem: (itemId: string, studentId?: string) => any;
+            toggleEquip: (itemId: string, studentId?: string) => any;
+            renderAvatarHtml: (student?: any, imgExtraClass?: string, imgId?: string) => string;
+            openModal: (studentId?: string | null, options?: any) => void;
+            [key: string]: any;
+        };
         KumonParentGuide?: {
             open: () => void;
             close: () => void;

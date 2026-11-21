@@ -1,6 +1,6 @@
 {
-  "total": 26,
-  "passed": 26,
+  "total": 35,
+  "passed": 35,
   "failed": 0,
   "assertions": [
     {
@@ -15,7 +15,12 @@
     },
     {
       "status": "PASS",
-      "message": "Botão do Boletim na Home verificado via motor de perfis",
+      "message": "Botão Área dos Pais (#homeParentAreaBtn) existe na Home",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "Modal do Boletim de Evolução abre e fecha corretamente a partir da Home",
       "details": ""
     },
     {
@@ -35,6 +40,11 @@
     },
     {
       "status": "PASS",
+      "message": "Slider PC (M2 Degrau 12) atualizou badge (Degrau 12/13 · + até 20), gerou contas estendidas e sincronizou link Tablet (tablet.html?subject=matematica&level=m2&stage=12&autostart=true)",
+      "details": ""
+    },
+    {
+      "status": "PASS",
       "message": "Função window.selectLevel(\"m10\") executada com sucesso",
       "details": ""
     },
@@ -45,8 +55,13 @@
     },
     {
       "status": "PASS",
-      "message": "window.printSheet() dispara diálogo de impressão nativo sem lançar erros",
-      "details": ""
+      "message": "window.printSheet() gerou spool multipágina (3 folhas + Gabarito + Nome em Branco), sobreviveu >950ms sem destruição prematura e limpou no afterprint",
+      "details": "{\"printCalled\":true,\"spoolCount\":3,\"hasAnswerKeyInSpool\":true,\"hasBlankNameInSpool\":true,\"stillAliveAfter950ms\":true,\"cleanedAfterPrintEvent\":true,\"navButtonsPreserved\":true}"
+    },
+    {
+      "status": "PASS",
+      "message": "Link \"Folha de Reforço\" (?mode=weakness&level=m2) ativa modo Só Fraquezas e abre o montador A4",
+      "details": "{\"ok\":true,\"mode\":\"weakness_only\",\"accOpen\":true,\"weakBtnActive\":true}"
     },
     {
       "status": "PASS",
@@ -100,6 +115,36 @@
     },
     {
       "status": "PASS",
+      "message": "Card \"Resumo de 15s para os Pais\" (#parent15SecSummaryCard) presente no Boletim de Evolução",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "Motor AvatarWardrobe funcional (12 acessórios SVG, economia de estrelas preserva total histórico)",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "Parent Gate anti-exclusão e Caderno de Revisão Multi-Matéria (Matemática → Inglês) validados",
+      "details": ""
+    },
+    {
+      "status": "PASS",
+      "message": "Progressão Automática M2, Slider na Gaveta (+3), XP/Recorde e Ranking Dual validados (degrau promovido: 2, XP: 160)",
+      "details": "{\"ok\":true,\"drawerOpen\":true,\"afterSliderOp2\":3,\"s12HasExtended\":true,\"s13HasMissingHole\":true,\"promotedStage\":2,\"summaryBannerExists\":true,\"xp\":160,\"hasRankingUI\":true}"
+    },
+    {
+      "status": "PASS",
+      "message": "Senha Híbrida (Clarice->eciralc / SHA-256), Leitner 3-Caixas, Recuo Protetor, Radar de Fraquezas e Link Turma validados",
+      "details": "{\"ok\":true,\"revOk\":true,\"revReject\":true,\"countBeforeHits\":2,\"hasInjected\":true,\"leitnerOk\":true,\"protectOk\":true,\"hasWeakPattern\":true,\"customOk\":true,\"weakRadarDom\":true,\"shareOk\":true}"
+    },
+    {
+      "status": "PASS",
+      "message": "Suíte Adversarial Sprint 5.1 (Hardening Real: P0-2, P0-4, P0-5, P1-1..P1-7) validada 100%",
+      "details": "{\"ok\":true,\"skillTagOk\":true,\"mix50Ok\":true,\"keyOk\":true,\"leitnerSpacingOk\":true,\"keptAfterWrongInReview\":true,\"noFalseMasteryOk\":true,\"isolatedLimitsOk\":true,\"sliderClampedOk\":true,\"noKeyLeakOk\":true,\"backupOk\":true,\"seqHoleDescOk\":true}"
+    },
+    {
+      "status": "PASS",
       "message": "manifest.json acessível com HTTP 200",
       "details": ""
     },
@@ -137,10 +182,10 @@
   "consoleErrors": [],
   "networkErrors": [],
   "pageTimings": {
-    "index.html": 139,
-    "matematica.html": 54,
-    "portugues.html": 81,
+    "index.html": 153,
+    "matematica.html": 156,
+    "portugues.html": 41,
     "ingles.html": 39,
-    "tablet.html": 124
+    "tablet.html": 120
   }
 }

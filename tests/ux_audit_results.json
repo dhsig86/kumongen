@@ -1,16 +1,16 @@
 {
   "metadata": {
     "title": "KumonGen UX/UI Audit Results",
-    "generatedAt": "2026-09-09T02:57:46.144Z",
+    "generatedAt": "2026-11-21T03:13:01.245Z",
     "viewportsTested": 6,
     "pagesTested": 5,
     "scenariosTested": 11
   },
   "summary": {
-    "total": 95,
-    "passed": 95,
+    "total": 110,
+    "passed": 110,
     "failed": 0,
-    "warnings": 1,
+    "warnings": 0,
     "passRate": "100.0%"
   },
   "bugs": [],
@@ -397,9 +397,64 @@
       "message": "[Tablet Retrato] Teclado virtual visível na carga inicial (exercício numérico M1)"
     },
     {
-      "status": "WARN",
-      "message": "[Tablet] #activeAnswerBox não renderizado — exercício pode ser de tipo seleção/arrasto",
-      "details": ""
+      "status": "PASS",
+      "message": "[Tablet] Dígito \"5\" registrado no answer box"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet] Backspace removeu dígito do answer box"
+    },
+    {
+      "status": "PASS",
+      "message": "[matematica.html][Mobile 390px] #kumonGlobalNavDock cabe 100% sem cortar o 6º item (Boletim)"
+    },
+    {
+      "status": "PASS",
+      "message": "[matematica.html][Mobile 390px] Folha A4 com escala proporcional sem colisão entre Logo, Título e Nota"
+    },
+    {
+      "status": "PASS",
+      "message": "[Profile Modal][Mobile 390px] Todos os botões ([Camarim], [Evolução], [PDF], [✏️], [🗑️]) cabem 100% dentro do card"
+    },
+    {
+      "status": "PASS",
+      "message": "[Camarim do Mascote][Mobile 390px] Modal responsivo e camadas SVG renderizadas (1 SVG ativo)"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet][Mobile Paisagem 812×375] Wizard exibe botão 1-Toque e matérias em grid de 3 colunas (3 cols)"
+    },
+    {
+      "status": "PASS",
+      "message": "[Tablet][Mobile 390px] Gaveta Lateral Deslizante (#tabletSettingsDrawer) e Slider de Dificuldade cabem 100% no viewport"
+    },
+    {
+      "status": "PASS",
+      "message": "[Boletim][Desktop 1280×800] Aba Ranking & Ligas (#kumonPersonalRankingBoard) renderizada com sucesso"
+    },
+    {
+      "status": "PASS",
+      "message": "[Boletim][Desktop 1280×800] Aba Pais & Fraquezas (#parentWeaknessRadarBox) renderizada sem estouro"
+    },
+    {
+      "status": "PASS",
+      "message": "[Boletim][Mobile 390px] Aba Pais & Fraquezas cabe 100% dentro do viewport mobile"
+    },
+    {
+      "status": "PASS",
+      "message": "[matematica.html][Desktop 1280×800] Slider PC e Montador de Papel/Turma (#paperAssemblerContainer) operacionais"
+    },
+    {
+      "status": "PASS",
+      "message": "[portugues.html][Desktop 1280×800] Slider PC e Montador de Papel/Turma (#paperAssemblerContainer) operacionais"
+    },
+    {
+      "status": "PASS",
+      "message": "[ingles.html][Desktop 1280×800] Slider PC e Montador de Papel/Turma (#paperAssemblerContainer) operacionais"
+    },
+    {
+      "status": "PASS",
+      "message": "[index.html][Mobile 390px] Card do aluno com botão Área dos Pais cabe sem estouro"
     }
   ]
 }

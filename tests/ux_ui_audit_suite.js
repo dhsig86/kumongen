@@ -772,6 +772,231 @@ async function testTabletKeypadInteraction(page, baseUrl) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  CENÁRIO 12: Kumon GEN 3.0 — Camarim SVG, A4 Mobile, Nav Dock & Cards
+// ═══════════════════════════════════════════════════════════════
+async function testKumonGen3Polish(page, baseUrl) {
+    console.log('\n[CENÁRIO 12] Kumon GEN 3.0 — Camarim SVG, A4 Mobile, Nav Dock & Cards');
+
+    // 1. Mobile Portrait (390×844): Nav Dock, Profile Cards sem corte e A4 Sheet Header sem colisão
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${baseUrl}/matematica.html`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(500);
+
+    // Verifica que #kumonGlobalNavDock cabe 100% na tela 390px
+    const dockBox = await getBoundingBox(page, '#kumonGlobalNavDock');
+    if (dockBox) {
+        const dockFits = dockBox.x >= 0 && (dockBox.x + dockBox.width) <= 390 + 2;
+        assert(dockFits,
+            '[matematica.html][Mobile 390px] #kumonGlobalNavDock cabe 100% sem cortar o 6º item (Boletim)',
+            `x: ${dockBox.x.toFixed(1)}, right: ${(dockBox.x + dockBox.width).toFixed(1)}`
+        );
+    }
+
+    // Verifica que os elementos do cabeçalho da folha A4 não colidem no preview mobile proporcional
+    const a4HeaderNoCollision = await page.evaluate(() => {
+        const header = document.querySelector('#a4-sheet .page-header');
+        if (!header) return true;
+        const logo = header.querySelector('img');
+        const titleBox = header.querySelector('.title-box');
+        const scoreBox = header.querySelector('.score-box');
+        if (!logo || !titleBox || !scoreBox) return true;
+        const rLogo = logo.getBoundingClientRect();
+        const rTitle = titleBox.getBoundingClientRect();
+        const rScore = scoreBox.getBoundingClientRect();
+        return (rLogo.right <= rTitle.left + 4) && (rTitle.right <= rScore.left + 4);
+    });
+    assert(a4HeaderNoCollision,
+        '[matematica.html][Mobile 390px] Folha A4 com escala proporcional sem colisão entre Logo, Título e Nota'
+    );
+
+    // 2. Modal de Perfis em 390×844: Botões dentro de .student-profile-card-item não transbordam a borda direita
+    await page.evaluate(() => {
+        if (window.StudentProfileEngine) window.StudentProfileEngine.showProfileModal();
+    });
+    await page.waitForTimeout(400);
+
+    const profileCardsButtonsFit = await page.evaluate(() => {
+        const cards = document.querySelectorAll('.student-profile-card-item');
+        if (!cards.length) return false;
+        for (const card of cards) {
+            const cRect = card.getBoundingClientRect();
+            const btns = card.querySelectorAll('button');
+            for (const b of btns) {
+                const bRect = b.getBoundingClientRect();
+                if (bRect.right > cRect.right + 2) return false;
+            }
+        }
+        return true;
+    });
+    assert(profileCardsButtonsFit,
+        '[Profile Modal][Mobile 390px] Todos os botões ([Camarim], [Evolução], [PDF], [✏️], [🗑️]) cabem 100% dentro do card'
+    );
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(250);
+
+    // 3. Camarim do Mascote (#avatarWardrobeModal) em Mobile (390×844) e Tablet (1024×768)
+    await page.evaluate(() => {
+        if (window.AvatarWardrobe) window.AvatarWardrobe.openModal();
+    });
+    await page.waitForTimeout(400);
+
+    const wardrobeMobileCheck = await page.evaluate(() => {
+        const modal = document.getElementById('avatarWardrobeModal');
+        if (!modal) return { open: false };
+        const card = modal.querySelector('div');
+        const rect = card ? card.getBoundingClientRect() : { width: 999, height: 999 };
+        const svgCount = modal.querySelectorAll('svg.avatar-layer-svg').length;
+        return {
+            open: true,
+            fitsWidth: rect.width <= 390 + 2,
+            svgCount
+        };
+    });
+    assert(wardrobeMobileCheck.open && wardrobeMobileCheck.fitsWidth && wardrobeMobileCheck.svgCount >= 1,
+        `[Camarim do Mascote][Mobile 390px] Modal responsivo e camadas SVG renderizadas (${wardrobeMobileCheck.svgCount} SVG ativo)`
+    );
+    await screenshot(page, 'modal_wardrobe_mobile');
+
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await page.waitForTimeout(300);
+    await screenshot(page, 'modal_wardrobe_tablet');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(250);
+
+    // 4. Mobile Landscape (812×375) no Tablet Player: TaskWizard com atalho 1-toque e grid horizontal
+    await page.setViewportSize({ width: 812, height: 375 });
+    await page.goto(`${baseUrl}/tablet.html`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(500);
+
+    const wizardLandscapeCheck = await page.evaluate(() => {
+        const quickBtn = document.getElementById('wizardQuickStartBtn');
+        const grid = document.querySelector('.wizard-subject-grid');
+        if (!quickBtn || !grid) return { ok: false };
+        const cs = getComputedStyle(grid);
+        return {
+            ok: true,
+            display: cs.display,
+            cols: (cs.gridTemplateColumns || '').split(' ').filter(Boolean).length
+        };
+    });
+    assert(wizardLandscapeCheck.ok && wizardLandscapeCheck.display === 'grid' && wizardLandscapeCheck.cols === 3,
+        `[Tablet][Mobile Paisagem 812×375] Wizard exibe botão 1-Toque e matérias em grid de 3 colunas (${wizardLandscapeCheck.cols} cols)`
+    );
+    await screenshot(page, 'wizard_mobile_landscape');
+
+    // 5. KumonGen 4.0: Gaveta Lateral Deslizante (#tabletSettingsDrawer) em Mobile 390×844 e Desktop 1280×800 + Slider PC
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${baseUrl}/tablet.html?subject=matematica&level=m2&autostart=true`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(450);
+
+    const drawerMobileCheck = await page.evaluate(() => {
+        const dismiss = document.getElementById('dismissExampleBtn');
+        if (dismiss) dismiss.click();
+        const btn = document.getElementById('tabletDrawerBtn');
+        if (btn) btn.click();
+        return new Promise(resolve => {
+            setTimeout(() => {
+                const drawer = document.getElementById('tabletSettingsDrawer');
+                const slider = document.getElementById('tabletDifficultySlider');
+                const rect = drawer ? drawer.getBoundingClientRect() : null;
+                resolve({
+                    open: !!(drawer && drawer.classList.contains('open')),
+                    hasSlider: slider !== null,
+                    fitsWidth: !!(rect && rect.left >= -2 && rect.right <= 390 + 2 && rect.width <= 390 + 2)
+                });
+            }, 320);
+        });
+    });
+    assert(drawerMobileCheck.open && drawerMobileCheck.hasSlider && drawerMobileCheck.fitsWidth,
+        '[Tablet][Mobile 390px] Gaveta Lateral Deslizante (#tabletSettingsDrawer) e Slider de Dificuldade cabem 100% no viewport'
+    );
+    await screenshot(page, 'tablet_drawer_mobile');
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.waitForTimeout(300);
+    await screenshot(page, 'tablet_drawer_desktop');
+
+    // Aba Ranking & Ligas no Boletim de Evolução
+    await page.evaluate(() => {
+        if (window.TabletPlayer) window.TabletPlayer.closeDrawer();
+        if (window.StudentProfileEngine) window.StudentProfileEngine.showEvolutionModal(null, { initialEvolutionTab: 'ranking' });
+    });
+    await page.waitForTimeout(350);
+    const rankModalVisible = await page.evaluate(() => !!document.getElementById('kumonPersonalRankingBoard'));
+    assert(rankModalVisible, '[Boletim][Desktop 1280×800] Aba Ranking & Ligas (#kumonPersonalRankingBoard) renderizada com sucesso');
+    await screenshot(page, 'modal_ranking_desktop');
+    await page.keyboard.press('Escape');
+
+    // Aba Pais & Fraquezas desbloqueada em Desktop 1280×800 e Mobile 390×844
+    await page.evaluate(() => {
+        if (!window.StudentProfileEngine) return;
+        const act = window.StudentProfileEngine.getActive();
+        window.StudentProfileEngine.recordRoundWeaknessTelemetry([
+            { skillTag: 'math:+:add_f7', skillLabel: 'Adição com +7', subjectKey: 'matematica', levelId: 'm2', latencyMs: 13200, wrongCount: 3, slow: true }
+        ], act ? act.id : null);
+        window.StudentProfileEngine.unlockParentSession(act ? act.id : null);
+        window.StudentProfileEngine.showEvolutionModal(null, { initialEvolutionTab: 'weaknesses' });
+    });
+    await page.waitForTimeout(350);
+    const weakDeskCheck = await page.evaluate(() => {
+        const box = document.getElementById('parentWeaknessRadarBox');
+        const m = document.getElementById('studentProfileManagerModal');
+        const inner = m ? m.querySelector('div[style*="max-width:620px"]') : null;
+        return !!(box && inner && inner.getBoundingClientRect().width <= 1280);
+    });
+    assert(weakDeskCheck, '[Boletim][Desktop 1280×800] Aba Pais & Fraquezas (#parentWeaknessRadarBox) renderizada sem estouro');
+    await screenshot(page, 'modal_parent_weaknesses_desktop');
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(250);
+    const weakMobFits = await page.evaluate(() => {
+        const m = document.getElementById('studentProfileManagerModal');
+        const inner = m ? m.querySelector('div[style*="max-width:620px"]') : null;
+        return !!(inner && inner.getBoundingClientRect().right <= 392);
+    });
+    assert(weakMobFits, '[Boletim][Mobile 390px] Aba Pais & Fraquezas cabe 100% dentro do viewport mobile');
+    await screenshot(page, 'modal_parent_weaknesses_mobile');
+    await page.keyboard.press('Escape');
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    // Slider PC e Montador de Papel & Turma nos 3 Geradores (MAT, POR, ENG)
+    for (const pgUrl of ['matematica.html', 'portugues.html', 'ingles.html']) {
+        await page.goto(`${baseUrl}/${pgUrl}`, { waitUntil: 'networkidle' });
+        await page.waitForTimeout(350);
+        const pcCheck = await page.evaluate(() => {
+            const s = document.getElementById('pcDifficultySlider');
+            const acc = document.getElementById('paperAssemblerAccordion');
+            if (acc) acc.open = true;
+            const pCtrl = document.getElementById('paperAssemblerContainer');
+            return {
+                hasSlider: s !== null && s.offsetHeight > 0,
+                hasAssembler: pCtrl !== null && pCtrl.querySelectorAll('.pc-sheet-mode-btn').length === 3
+            };
+        });
+        assert(pcCheck.hasSlider && pcCheck.hasAssembler, `[${pgUrl}][Desktop 1280×800] Slider PC e Montador de Papel/Turma (#paperAssemblerContainer) operacionais`);
+        if (pgUrl === 'matematica.html') {
+            await page.waitForTimeout(200);
+            await screenshot(page, 'gen_assembler_desktop');
+        }
+    }
+
+    // Home Mobile 390×844 com botão Área dos Pais no card
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${baseUrl}/index.html`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(350);
+    const homeCardCheck = await page.evaluate(() => {
+        const card = document.getElementById('homeStudentCard');
+        const pBtn = document.getElementById('homeParentAreaBtn');
+        if (!card || !pBtn) return false;
+        const cRect = card.getBoundingClientRect();
+        const pRect = pBtn.getBoundingClientRect();
+        return cRect.right <= 392 && pRect.right <= cRect.right + 1;
+    });
+    assert(homeCardCheck, '[index.html][Mobile 390px] Card do aluno com botão Área dos Pais cabe sem estouro');
+    await screenshot(page, 'home_mobile_retrato');
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  MAIN
 // ═══════════════════════════════════════════════════════════════
 async function runAudit() {
@@ -802,6 +1027,7 @@ async function runAudit() {
         await testTabletHeader(page, baseUrl);
         await testConsoleErrors(page, baseUrl);
         await testTabletKeypadInteraction(page, baseUrl);
+        await testKumonGen3Polish(page, baseUrl);
     } catch (err) {
         console.error(`\n💥 ERRO FATAL NA SUÍTE: ${err.message}\n${err.stack}`);
     } finally {

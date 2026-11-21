@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-08T19:48:03.444Z",
+  "timestamp": "2026-11-21T03:13:58.717Z",
   "environment": {
     "nodeVersion": "v24.15.0",
     "platform": "win32",
@@ -23,15 +23,21 @@
     "totalLevels": 25,
     "passedLevels": 25,
     "failedLevels": 0,
-    "averageScore": 99.4,
+    "averageScore": 99.5,
+    "totalStagesAudited": 119,
+    "stageFailuresCount": 0,
     "overallStatus": "PASS",
-    "durationMs": 19
+    "durationMs": 31
+  },
+  "stageAudit": {
+    "totalStagesAudited": 119,
+    "failures": []
   },
   "subjectSummaries": {
     "matematica": {
       "levelsCount": 10,
       "passedCount": 10,
-      "averageScore": 99.3,
+      "averageScore": 99.4,
       "status": "PASS"
     },
     "portugues": {
@@ -68,7 +74,7 @@
       "metrics": {
         "entropy": 1,
         "uniqueCount": 5,
-        "consecDuplicates": 1
+        "consecDuplicates": 0
       },
       "weakestDimension": {
         "name": "Apoio Concreto",
@@ -96,7 +102,7 @@
         "weighted": 99.3
       },
       "metrics": {
-        "entropy": 0.949,
+        "entropy": 0.969,
         "uniqueCount": 9,
         "consecDuplicates": 0
       },
@@ -216,8 +222,8 @@
         "weighted": 99.3
       },
       "metrics": {
-        "entropy": 0.973,
-        "uniqueCount": 9,
+        "entropy": 0.918,
+        "uniqueCount": 8,
         "consecDuplicates": 0
       },
       "weakestDimension": {
@@ -246,8 +252,8 @@
         "weighted": 99.3
       },
       "metrics": {
-        "entropy": 0.955,
-        "uniqueCount": 11,
+        "entropy": 0.982,
+        "uniqueCount": 12,
         "consecDuplicates": 0
       },
       "weakestDimension": {
@@ -276,8 +282,8 @@
         "weighted": 99.3
       },
       "metrics": {
-        "entropy": 0.924,
-        "uniqueCount": 9,
+        "entropy": 0.977,
+        "uniqueCount": 10,
         "consecDuplicates": 0
       },
       "weakestDimension": {
@@ -302,21 +308,18 @@
         "d2_kumon": 100,
         "d3_correctness": 100,
         "d4_concrete": 95,
-        "d5_variability": 90,
-        "weighted": 97.8
+        "d5_variability": 100,
+        "weighted": 99.3
       },
       "metrics": {
-        "entropy": 0.844,
-        "uniqueCount": 8,
-        "consecDuplicates": 4
+        "entropy": 0.924,
+        "uniqueCount": 9,
+        "consecDuplicates": 1
       },
       "weakestDimension": {
-        "name": "Variabilidade/Entropia",
-        "score": 90,
-        "notes": [
-          "Entropia moderada (0.844)",
-          "Repetições imediatas pontuais (4)"
-        ]
+        "name": "Apoio Concreto",
+        "score": 95,
+        "notes": []
       },
       "status": "PASS",
       "passed": true
@@ -369,8 +372,8 @@
         "weighted": 99.7
       },
       "metrics": {
-        "entropy": 0.884,
-        "uniqueCount": 15,
+        "entropy": 0.954,
+        "uniqueCount": 18,
         "consecDuplicates": 0
       },
       "weakestDimension": {
@@ -609,8 +612,8 @@
         "weighted": 99.7
       },
       "metrics": {
-        "entropy": 0.884,
-        "uniqueCount": 15,
+        "entropy": 0.907,
+        "uniqueCount": 16,
         "consecDuplicates": 0
       },
       "weakestDimension": {
@@ -639,8 +642,8 @@
         "weighted": 99.3
       },
       "metrics": {
-        "entropy": 0.931,
-        "uniqueCount": 17,
+        "entropy": 0.907,
+        "uniqueCount": 16,
         "consecDuplicates": 0
       },
       "weakestDimension": {
@@ -699,8 +702,8 @@
         "weighted": 99.3
       },
       "metrics": {
-        "entropy": 0.931,
-        "uniqueCount": 17,
+        "entropy": 0.861,
+        "uniqueCount": 14,
         "consecDuplicates": 0
       },
       "weakestDimension": {

@@ -18,43 +18,43 @@
         const dock = document.createElement('nav');
         dock.id = 'kumonGlobalNavDock';
         dock.className = 'no-print select-none transition-all duration-300 ease-out';
-        dock.style.cssText = 'position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 50;';
+        dock.style.cssText = 'position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); z-index: 50; max-width: calc(100vw - 12px); box-sizing: border-box;';
         dock.setAttribute('aria-label', 'Navegação principal');
 
         // Itens de navegação
         const items = [
-            { id: 'home', title: 'Início', icon: 'fa-home', href: 'index.html', color: 'text-amber-400', activeBg: 'bg-amber-500/20 border-amber-400/40 text-amber-300' },
-            { id: 'matematica', title: 'Matemática', icon: 'fa-calculator', href: 'matematica.html', color: 'text-blue-400', activeBg: 'bg-blue-600/30 border-blue-400/50 text-blue-300' },
-            { id: 'portugues', title: 'Português', icon: 'fa-font', href: 'portugues.html', color: 'text-emerald-400', activeBg: 'bg-emerald-600/30 border-emerald-400/50 text-emerald-300' },
-            { id: 'ingles', title: 'Inglês', icon: 'fa-language', href: 'ingles.html', color: 'text-red-400', activeBg: 'bg-red-600/30 border-red-400/50 text-red-300' },
-            { id: 'tablet', title: 'Tablet', icon: 'fa-tablet-alt', href: 'tablet.html', color: 'text-indigo-400', activeBg: 'bg-indigo-600/30 border-indigo-400/50 text-indigo-300' }
+            { id: 'home', title: 'Início', shortTitle: 'Início', icon: 'fa-home', href: 'index.html', color: 'text-amber-500', activeBg: 'bg-amber-500/20 border-amber-400/40 text-amber-700' },
+            { id: 'matematica', title: 'Matemática', shortTitle: 'Mat.', icon: 'fa-calculator', href: 'matematica.html', color: 'text-blue-500', activeBg: 'bg-blue-600/20 border-blue-400/50 text-blue-700' },
+            { id: 'portugues', title: 'Português', shortTitle: 'Port.', icon: 'fa-font', href: 'portugues.html', color: 'text-emerald-500', activeBg: 'bg-emerald-600/20 border-emerald-400/50 text-emerald-700' },
+            { id: 'ingles', title: 'Inglês', shortTitle: 'Ing.', icon: 'fa-language', href: 'ingles.html', color: 'text-red-500', activeBg: 'bg-red-600/20 border-red-400/50 text-red-700' },
+            { id: 'tablet', title: 'Tablet', shortTitle: 'Tablet', icon: 'fa-tablet-alt', href: 'tablet.html', color: 'text-indigo-500', activeBg: 'bg-indigo-600/20 border-indigo-400/50 text-indigo-700' }
         ];
 
         let itemsHtml = items.map(it => {
             const isActive = it.id === activePage;
             const activeClasses = isActive 
                 ? `${it.activeBg} font-black shadow-inner` 
-                : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100 border-transparent';
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-transparent';
             
             return `
-                <a href="${it.href}" class="nav-dock-item flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 px-3 py-2 sm:py-2.5 rounded-2xl border transition-all duration-200 text-center ${activeClasses} min-w-[48px] min-h-[44px] cursor-pointer" title="${it.title}">
-                    <i class="fas ${it.icon} text-sm sm:text-base ${it.color}"></i>
-                    <span class="text-[10px] sm:text-xs font-bold leading-none">${it.title}</span>
+                <a href="${it.href}" class="nav-dock-item flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 px-1.5 sm:px-3 py-1.5 sm:py-2.5 rounded-2xl border transition-all duration-200 text-center ${activeClasses} cursor-pointer" style="min-width: 42px; min-height: 44px;" title="${it.title}">
+                    <i class="fas ${it.icon} text-xs sm:text-base ${it.color}"></i>
+                    <span class="text-[9px] sm:text-xs font-bold leading-none">${it.shortTitle}</span>
                 </a>
             `;
         }).join('');
 
         // Botão para abrir o seletor de perfil de qualquer página
         const profileBtnHtml = `
-            <button type="button" id="navDockProfileBtn" class="nav-dock-item flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 px-3 py-2 sm:py-2.5 rounded-2xl border border-transparent text-amber-300/80 hover:text-amber-200 hover:bg-amber-400/10 transition-all text-center min-w-[48px] min-h-[44px] cursor-pointer" title="Gerenciar Perfis de Aluno">
-                <i class="fas fa-users text-sm sm:text-base text-amber-400"></i>
-                <span class="text-[10px] sm:text-xs font-bold leading-none">Alunos</span>
+            <button type="button" id="navDockProfileBtn" class="nav-dock-item flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 px-1.5 sm:px-3 py-1.5 sm:py-2.5 rounded-2xl border border-transparent text-amber-700 hover:text-amber-800 hover:bg-amber-50 transition-all text-center cursor-pointer" style="min-width: 42px; min-height: 44px;" title="Gerenciar Perfis de Aluno">
+                <i class="fas fa-users text-xs sm:text-base text-amber-500"></i>
+                <span class="text-[9px] sm:text-xs font-bold leading-none">Alunos</span>
             </button>
         `;
 
         // Botão de minimizar/expandir o dock
         const toggleBtnHtml = `
-            <button type="button" id="navDockToggleBtn" class="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-xs transition-transform cursor-pointer ml-0.5 sm:ml-1" title="Ocultar/Exibir Barra">
+            <button type="button" id="navDockToggleBtn" class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center text-xs transition-transform cursor-pointer ml-0.5 flex-shrink-0" title="Ocultar/Exibir Barra">
                 <i class="fas fa-chevron-down" id="navDockToggleIcon"></i>
             </button>
         `;
@@ -83,13 +83,25 @@
                             <i class="fas fa-language w-4 text-red-500"></i> <span>Inglês</span>
                         </a>
                         <div class="h-[1px] bg-gray-200 my-1"></div>
+                        <button type="button" id="navDockTabletWardrobeBtn" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 transition-colors text-left w-full cursor-pointer" title="Abrir Camarim do Mascote (Roupas e Acessórios)">
+                            <i class="fas fa-hat-wizard w-4 text-amber-500"></i> <span>Camarim do Mascote</span>
+                        </button>
                         <button type="button" id="navDockTabletEvolutionBtn" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors text-left w-full cursor-pointer">
                             <i class="fas fa-chart-line w-4 text-blue-500"></i> <span>Boletim de Evolução</span>
+                        </button>
+                        <button type="button" id="navDockTabletRankingBtn" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors text-left w-full cursor-pointer">
+                            <i class="fas fa-trophy w-4 text-amber-500"></i> <span>Ligas & Ranking</span>
+                        </button>
+                        <button type="button" id="navDockTabletDrawerBtn" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-blue-700 hover:bg-blue-50 transition-colors text-left w-full cursor-pointer">
+                            <i class="fas fa-sliders-h w-4 text-blue-600"></i> <span>Gaveta de Dificuldade</span>
                         </button>
                         <button type="button" id="navDockTabletProfileBtn" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors text-left w-full cursor-pointer">
                             <i class="fas fa-users w-4 text-amber-500"></i> <span>Trocar Aluno</span>
                         </button>
                         <div class="h-[1px] bg-gray-200 my-1"></div>
+                        <button type="button" id="navDockZenModeBtn" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors text-left w-full cursor-pointer" title="Ocultar cronômetro visível para treino sem ansiedade">
+                            <i class="fas fa-spa w-4 text-emerald-500" id="zenModeIcon"></i> <span id="zenModeLabel">Modo Zen: Desativado</span>
+                        </button>
                         <button type="button" id="navDockScreenModeBtn" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors text-left w-full cursor-pointer" title="Alternar modo de tela entre Compacto e Normal">
                             <i class="fas fa-mobile-alt w-4 text-indigo-500" id="screenModeIcon"></i> <span id="screenModeLabel">Modo: Normal</span>
                         </button>
@@ -132,12 +144,42 @@
                 });
             }
 
+            const tabletWardrobeBtn = document.getElementById('navDockTabletWardrobeBtn');
+            if (tabletWardrobeBtn) {
+                tabletWardrobeBtn.addEventListener('click', () => {
+                    flyout.classList.add('hidden');
+                    if (window.AvatarWardrobe) {
+                        window.AvatarWardrobe.openModal();
+                    }
+                });
+            }
+
             const tabletEvoBtn = document.getElementById('navDockTabletEvolutionBtn');
             if (tabletEvoBtn) {
                 tabletEvoBtn.addEventListener('click', () => {
                     flyout.classList.add('hidden');
                     if (window.StudentProfileEngine) {
                         window.StudentProfileEngine.showEvolutionModal();
+                    }
+                });
+            }
+
+            const tabletRankBtn = document.getElementById('navDockTabletRankingBtn');
+            if (tabletRankBtn) {
+                tabletRankBtn.addEventListener('click', () => {
+                    flyout.classList.add('hidden');
+                    if (window.StudentProfileEngine) {
+                        window.StudentProfileEngine.showEvolutionModal(null, { initialEvolutionTab: 'ranking' });
+                    }
+                });
+            }
+
+            const tabletDrawerLinkBtn = document.getElementById('navDockTabletDrawerBtn');
+            if (tabletDrawerLinkBtn) {
+                tabletDrawerLinkBtn.addEventListener('click', () => {
+                    flyout.classList.add('hidden');
+                    if (window.TabletPlayer && typeof window.TabletPlayer.openDrawer === 'function') {
+                        window.TabletPlayer.openDrawer();
                     }
                 });
             }
@@ -155,6 +197,42 @@
                             }
                         });
                     }
+                });
+            }
+
+            // ── Zen Mode Toggle (Ocultar Cronômetro Visível) ──
+            const zenModeBtn = document.getElementById('navDockZenModeBtn');
+            const zenModeLabel = document.getElementById('zenModeLabel');
+
+            function getZenMode() {
+                try {
+                    const st = window.SafeStorage || localStorage;
+                    return st.getItem('kumon_zen_mode') === 'true';
+                } catch (e) { return false; }
+            }
+
+            function setZenMode(val) {
+                try {
+                    const st = window.SafeStorage || localStorage;
+                    st.setItem('kumon_zen_mode', val ? 'true' : 'false');
+                } catch (e) {}
+            }
+
+            function applyZenMode(isZen) {
+                document.body.setAttribute('data-zen-mode', isZen ? 'true' : 'false');
+                if (zenModeLabel) {
+                    zenModeLabel.textContent = isZen ? 'Modo Zen: Ativo 🌿' : 'Modo Zen: Desativado';
+                }
+            }
+
+            applyZenMode(getZenMode());
+
+            if (zenModeBtn) {
+                zenModeBtn.addEventListener('click', () => {
+                    const next = !getZenMode();
+                    setZenMode(next);
+                    applyZenMode(next);
+                    flyout.classList.add('hidden');
                 });
             }
 
@@ -218,16 +296,16 @@
         }
 
         dock.innerHTML = `
-            <div id="navDockInner" class="flex items-center gap-1 sm:gap-1.5 p-1.5 rounded-3xl shadow-lg transition-all" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(229, 231, 235, 1);">
+            <div id="navDockInner" class="flex items-center gap-0.5 sm:gap-1.5 p-1 sm:p-1.5 rounded-3xl shadow-lg transition-all" style="background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(229, 231, 235, 1); max-width: 100%; box-sizing: border-box;">
                 ${itemsHtml}
-                <div class="w-[1px] h-6 bg-gray-200 mx-0.5"></div>
+                <div class="w-[1px] h-6 bg-gray-200 mx-0.5 flex-shrink-0"></div>
                 ${profileBtnHtml}
-                <button type="button" id="navDockEvolutionBtn" class="nav-dock-item flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 px-3 py-2 sm:py-2.5 rounded-2xl border border-transparent text-blue-300/80 hover:text-blue-200 hover:bg-blue-400/10 transition-all text-center min-w-[48px] min-h-[44px] cursor-pointer" title="Boletim de Evolução & Gráficos">
-                    <i class="fas fa-chart-line text-sm sm:text-base text-blue-400"></i>
-                    <span class="text-[10px] sm:text-xs font-bold leading-none">Boletim</span>
+                <button type="button" id="navDockEvolutionBtn" class="nav-dock-item flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 px-1.5 sm:px-3 py-1.5 sm:py-2.5 rounded-2xl border border-transparent text-blue-700 hover:text-blue-800 hover:bg-blue-50 transition-all text-center cursor-pointer" style="min-width: 42px; min-height: 44px;" title="Boletim de Evolução & Gráficos">
+                    <i class="fas fa-chart-line text-xs sm:text-base text-blue-500"></i>
+                    <span class="text-[9px] sm:text-xs font-bold leading-none">Boletim</span>
                 </button>
-                <button type="button" id="navDockGuideBtn" class="nav-dock-item hidden sm:flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 px-3 py-2 sm:py-2.5 rounded-2xl border border-transparent text-emerald-300/80 hover:text-emerald-200 hover:bg-emerald-400/10 transition-all text-center min-w-[48px] min-h-[44px] cursor-pointer" title="Guia dos Pais & Método">
-                    <i class="fas fa-book-open text-sm sm:text-base text-emerald-400"></i>
+                <button type="button" id="navDockGuideBtn" class="nav-dock-item hidden sm:flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 px-3 py-2 sm:py-2.5 rounded-2xl border border-transparent text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition-all text-center cursor-pointer" style="min-width: 48px; min-height: 44px;" title="Guia dos Pais & Método">
+                    <i class="fas fa-book-open text-sm sm:text-base text-emerald-500"></i>
                     <span class="text-[10px] sm:text-xs font-bold leading-none">Guia</span>
                 </button>
                 ${toggleBtnHtml}

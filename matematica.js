@@ -18,7 +18,11 @@
 
     // ---------- ESTADO LOCAL ----------
     let currentLevelId = 'm2';
+    let currentStage = 1;
+    let useStagePreset = true;
     let itemsPerPage = 8;
+    let previewSheetIdx = 0;
+    let lastGeneratedItems = [];
     let currentZoom = 0.7;
 
     // Elementos DOM
@@ -30,6 +34,7 @@
         qtyRepeat: 2,
         operator: '+',
         operand: 1,
+        mathCustomOperands: [], // Lista personalizada para misturar fatos específicos (ex: [6,7,8])
         min: 1,
         max: 9,
         allowNegative: false,
@@ -85,20 +90,30 @@
         if (!level) return [];
         const target = count || (itemsPerPage * 2);
 
+        let effOpts = options && typeof options === 'object' ? { ...options } : {};
+        if (effOpts.stage !== undefined && typeof window !== 'undefined' && window.KumonProgression) {
+            const stageOpts = window.KumonProgression.stageToGeneratorOptions('matematica', level.id, effOpts.stage);
+            effOpts = Object.assign({}, stageOpts, effOpts);
+        }
+
         let baseItems = [];
 
         switch (level.type) {
-            case 'quantity':
-                customParams.qtyNumbers.forEach(n => {
+            case 'quantity': {
+                const qtyPool = Array.isArray(effOpts.qtyNumbers) && effOpts.qtyNumbers.length > 0
+                    ? effOpts.qtyNumbers
+                    : customParams.qtyNumbers;
+                qtyPool.forEach(n => {
                     for (let i = 0; i < customParams.qtyRepeat; i++) {
                         baseItems.push({ type: 'quantity', value: n });
                     }
                 });
                 break;
+            }
 
             case 'math': {
                 const isLevelActive = (currentLevelId === level.id);
-                const optHandicap = (options && options.handicap) || null;
+                const optHandicap = effOpts.handicap || null;
                 let handicapMode = null;
                 let handicapVal = null;
                 if (optHandicap) {
@@ -113,19 +128,22 @@
                     }
                 }
 
-                const op = (options && options.operator) || ((isLevelActive && customParams.operator) ? customParams.operator : (level.operator || '+'));
-                const defaultOp2 = (isLevelActive && customParams.operand !== undefined) ? customParams.operand : ((level.operand !== undefined) ? level.operand : 1);
+                const op = (effOpts && effOpts.operator) || ((isLevelActive && customParams.operator && effOpts.stage === undefined) ? customParams.operator : (level.operator || '+'));
+                const defaultOp2 = (isLevelActive && customParams.operand !== undefined && effOpts.stage === undefined) ? customParams.operand : ((level.operand !== undefined) ? level.operand : 1);
                 const baseOp2 = (handicapMode === 'focus' && handicapVal !== null) ? handicapVal : defaultOp2;
 
-                const minVal = (options && options.min !== undefined) ? options.min : ((isLevelActive && customParams.min !== undefined) ? customParams.min : ((level.range && level.range[0] !== undefined) ? level.range[0] : 1));
-                const maxVal = (options && options.max !== undefined) ? options.max : ((isLevelActive && customParams.max !== undefined) ? customParams.max : ((level.range && level.range[1] !== undefined) ? level.range[1] : 10));
-                const isMissingHole = (options && options.mathMissingHole !== undefined) ? options.mathMissingHole : !!(isLevelActive && customParams.mathMissingHole);
+                const minVal = (effOpts && effOpts.min !== undefined) ? effOpts.min : ((isLevelActive && customParams.min !== undefined && effOpts.stage === undefined) ? customParams.min : ((level.range && level.range[0] !== undefined) ? level.range[0] : 1));
+                const maxVal = (effOpts && effOpts.max !== undefined) ? effOpts.max : ((isLevelActive && customParams.max !== undefined && effOpts.stage === undefined) ? customParams.max : ((level.range && level.range[1] !== undefined) ? level.range[1] : 10));
+                const isMissingHole = (effOpts && effOpts.mathMissingHole !== undefined) ? effOpts.mathMissingHole : !!(isLevelActive && customParams.mathMissingHole);
                 const isMixed = (handicapMode === 'mixed_basic' || handicapMode === 'mixed_full') || !!(isLevelActive && customParams.mathMixedTables);
 
                 if (op === '÷' || op === '/') {
                     for (let i = 0; i < target; i++) {
                         let effectiveDivisor;
-                        if (handicapMode === 'focus' && handicapVal !== null) {
+                        if (isLevelActive && effOpts.stage === undefined && Array.isArray(customParams.mathCustomOperands) && customParams.mathCustomOperands.length > 0) {
+                            const pool = customParams.mathCustomOperands;
+                            effectiveDivisor = Math.max(1, pool[Math.floor(Math.random() * pool.length)]);
+                        } else if (handicapMode === 'focus' && handicapVal !== null) {
                             effectiveDivisor = Math.max(1, handicapVal);
                         } else if (handicapMode === 'mixed_basic') {
                             effectiveDivisor = Math.floor(Math.random() * 4) + 2; // 2 a 5
@@ -164,7 +182,10 @@
                     lastA = a;
                     let displayA = a;
                     let effectiveOp2;
-                    if (handicapMode === 'focus' && handicapVal !== null) {
+                    if (isLevelActive && effOpts.stage === undefined && Array.isArray(customParams.mathCustomOperands) && customParams.mathCustomOperands.length > 0) {
+                        const pool = customParams.mathCustomOperands;
+                        effectiveOp2 = pool[Math.floor(Math.random() * pool.length)];
+                    } else if (handicapMode === 'focus' && handicapVal !== null) {
                         effectiveOp2 = handicapVal;
                     } else if (handicapMode === 'mixed_basic') {
                         if (op === '×' || op === '*') {
@@ -184,8 +205,20 @@
                         effectiveOp2 = baseOp2;
                     }
 
+                    if (op === '+' && effOpts.minSum !== undefined && (displayA + effectiveOp2) < effOpts.minSum) {
+                        const neededA = effOpts.minSum - effectiveOp2;
+                        displayA = Math.min(maxVal, Math.max(neededA, displayA));
+                        if ((displayA + effectiveOp2) < effOpts.minSum) {
+                            effectiveOp2 = Math.max(effectiveOp2, effOpts.minSum - displayA);
+                        }
+                    }
+
                     if (op === '-' && !customParams.allowNegative) {
-                        displayA = Math.max(a, effectiveOp2);
+                        if (displayA < effectiveOp2) {
+                            displayA = effectiveOp2 + Math.floor(Math.random() * Math.max(1, maxVal - minVal + 1));
+                        } else {
+                            displayA = Math.max(a, effectiveOp2);
+                        }
                     }
 
                     let resVal = 0;
@@ -209,9 +242,12 @@
             }
 
             case 'fraction': {
-                const fractionPool = (level && level.fractions && level.fractions.length > 0)
+                const rawPool = (level && level.fractions && level.fractions.length > 0)
                     ? level.fractions
                     : [[1,2],[1,3],[2,3],[1,4],[2,4],[3,4],[1,5],[2,5],[3,5],[4,5],[1,6],[2,6],[3,6],[4,6],[5,6],[1,8],[2,8],[3,8],[4,8],[5,8],[6,8],[7,8],[1,10],[3,10],[5,10],[7,10],[9,10]];
+                const fractionPool = (Array.isArray(effOpts.fractionSlice) && effOpts.fractionSlice.length === 2)
+                    ? rawPool.slice(effOpts.fractionSlice[0], effOpts.fractionSlice[1])
+                    : rawPool;
                 
                 const poolShuffled = [...fractionPool].sort(() => Math.random() - 0.5);
                 while (baseItems.length < target) {
@@ -226,19 +262,31 @@
                 return baseItems;
             }
 
-            case 'sequence':
-                if (customParams.seqFixed) {
+            case 'sequence': {
+                const useFixed = (effOpts.seqFixed !== undefined) ? effOpts.seqFixed : customParams.seqFixed;
+                const stepVal = effOpts.seqStep || customParams.seqStep || 1;
+                const stepPool = (Array.isArray(effOpts.seqSteps) && effOpts.seqSteps.length > 0) ? effOpts.seqSteps : [stepVal];
+                const holeCount = effOpts.seqHoles || customParams.seqHoles || 1;
+                const minStart = effOpts.seqMinStart || 1;
+                const maxStart = effOpts.seqMaxStart || 10;
+
+                if (useFixed) {
                     baseItems = level.sequences.map(seq => ({ type: 'sequence', sequence: seq }));
                 } else {
                     const numSequences = Math.max(customParams.seqCount, target);
                     for (let s = 0; s < numSequences; s++) {
-                        let start = Math.floor(Math.random() * 10) + 1;
+                        const chosenStep = stepPool[s % stepPool.length];
+                        const safeMinStart = chosenStep < 0
+                            ? Math.max(minStart, Math.abs(chosenStep) * (customParams.seqLength - 1) + 2)
+                            : minStart;
+                        const safeMaxStart = Math.max(safeMinStart + 2, maxStart);
+                        let start = Math.floor(Math.random() * Math.max(1, safeMaxStart - safeMinStart + 1)) + safeMinStart;
                         let seq = [];
                         for (let j = 0; j < customParams.seqLength; j++) {
-                            seq.push(start + j * customParams.seqStep);
+                            seq.push(start + j * chosenStep);
                         }
                         let holePositions = [];
-                        while (holePositions.length < Math.min(customParams.seqHoles, customParams.seqLength)) {
+                        while (holePositions.length < Math.min(holeCount, customParams.seqLength)) {
                             let pos = Math.floor(Math.random() * customParams.seqLength);
                             if (!holePositions.includes(pos)) {
                                 holePositions.push(pos);
@@ -251,33 +299,43 @@
                     }
                 }
                 break;
+            }
 
-            case 'tens':
-                let dezena = customParams.tensDezena;
-                let minNum = dezena * 10;
-                let maxNum = dezena * 10 + 9;
+            case 'tens': {
+                const dezenasPool = (Array.isArray(effOpts.tensDezenas) && effOpts.tensDezenas.length > 0)
+                    ? effOpts.tensDezenas
+                    : [effOpts.tensDezena !== undefined ? effOpts.tensDezena : customParams.tensDezena];
+                const isSeq = effOpts.tensSequencial !== undefined ? effOpts.tensSequencial : customParams.tensSequencial;
                 let allNumbers = [];
-                for (let n = minNum; n <= maxNum; n++) {
-                    allNumbers.push(n);
-                }
-                if (!customParams.tensSequencial) {
+                dezenasPool.forEach((dez) => {
+                    const minNum = dez * 10;
+                    const maxNum = dez * 10 + 9;
+                    for (let n = minNum; n <= maxNum; n++) {
+                        allNumbers.push(n);
+                    }
+                });
+                if (!isSeq) {
                     allNumbers = shuffleArray(allNumbers);
                 }
                 allNumbers.forEach(n => {
                     baseItems.push({ type: 'tens', number: n });
                 });
                 break;
+            }
 
-            case 'compare':
-                if (customParams.compRandom) {
+            case 'compare': {
+                const useRand = effOpts.compRandom !== undefined ? effOpts.compRandom : customParams.compRandom;
+                const cMin = effOpts.compMin !== undefined ? effOpts.compMin : customParams.compMin;
+                const cMax = effOpts.compMax !== undefined ? effOpts.compMax : customParams.compMax;
+                if (useRand) {
                     const compCount = Math.max(customParams.compCount, target);
                     let lastPairStr = null;
                     for (let i = 0; i < compCount; i++) {
                         let a, b, pairStr;
                         let attempts = 0;
                         do {
-                            a = Math.floor(Math.random() * (customParams.compMax - customParams.compMin + 1)) + customParams.compMin;
-                            b = Math.floor(Math.random() * (customParams.compMax - customParams.compMin + 1)) + customParams.compMin;
+                            a = Math.floor(Math.random() * (cMax - cMin + 1)) + cMin;
+                            b = Math.floor(Math.random() * (cMax - cMin + 1)) + cMin;
                             pairStr = `${a},${b}`;
                             attempts++;
                         } while (pairStr === lastPairStr && attempts < 10);
@@ -291,13 +349,18 @@
                     });
                 }
                 break;
+            }
 
-            case 'neighbors':
-                customParams.neighborCenters.forEach(c => {
+            case 'neighbors': {
+                const centersPool = Array.isArray(effOpts.neighborCenters) && effOpts.neighborCenters.length > 0
+                    ? effOpts.neighborCenters
+                    : customParams.neighborCenters;
+                centersPool.forEach(c => {
                     baseItems.push({ type: 'neighbors', center: c });
                     baseItems.push({ type: 'neighbors', center: c });
                 });
                 break;
+            }
 
             default:
                 return Array(target).fill({ type: 'unknown' });
@@ -364,10 +427,12 @@
     }
 
     function renderMathPanel() {
+        const customOpsStr = Array.isArray(customParams.mathCustomOperands) ? customParams.mathCustomOperands.join(',') : '';
         return `
             <div class="param-control">
                 <div class="param-row"><label>Operador:</label><select id="mathOperator"><option value="+" ${customParams.operator === '+' ? 'selected' : ''}>+</option><option value="-" ${customParams.operator === '-' ? 'selected' : ''}>-</option><option value="×" ${customParams.operator === '×' ? 'selected' : ''}>×</option><option value="÷" ${customParams.operator === '÷' ? 'selected' : ''}>÷</option></select></div>
                 <div class="param-row"><label>Valor:</label><input type="number" id="mathOperand" value="${customParams.operand}" min="1" max="20"></div>
+                <div class="param-row"><label title="Ex: 6,7,8 para misturar apenas essas tabuadas ou somas">Fatos múltiplos:</label><input type="text" id="mathCustomOperands" placeholder="ex: 6,7,8" value="${customOpsStr}"></div>
                 <div class="param-row"><label>Mínimo:</label><input type="number" id="mathMin" value="${customParams.min}" min="1" max="50"></div>
                 <div class="param-row"><label>Máximo:</label><input type="number" id="mathMax" value="${customParams.max}" min="1" max="50"></div>
                 <div class="param-row checkbox-row"><label>Permitir negativo?</label><input type="checkbox" id="mathAllowNegative" ${customParams.allowNegative ? 'checked' : ''}></div>
@@ -433,18 +498,25 @@
             if (type === 'math') {
                 const op = document.getElementById('mathOperator');
                 const operand = document.getElementById('mathOperand');
+                const customOps = document.getElementById('mathCustomOperands');
                 const min = document.getElementById('mathMin');
                 const max = document.getElementById('mathMax');
                 const allowNeg = document.getElementById('mathAllowNegative');
                 const missingHole = document.getElementById('mathMissingHole');
                 const mixedTabs = document.getElementById('mathMixedTables');
-                if (op) op.addEventListener('change', (e) => { customParams.operator = e.target.value; saveState(); refreshPreview(); });
-                if (operand) operand.addEventListener('change', (e) => { customParams.operand = parseInt(e.target.value) || 1; saveState(); refreshPreview(); });
-                if (min) min.addEventListener('change', (e) => { customParams.min = parseInt(e.target.value) || 1; saveState(); refreshPreview(); });
-                if (max) max.addEventListener('change', (e) => { customParams.max = parseInt(e.target.value) || 1; saveState(); refreshPreview(); });
-                if (allowNeg) allowNeg.addEventListener('change', (e) => { customParams.allowNegative = e.target.checked; saveState(); refreshPreview(); });
-                if (missingHole) missingHole.addEventListener('change', (e) => { customParams.mathMissingHole = e.target.checked; saveState(); refreshPreview(); });
-                if (mixedTabs) mixedTabs.addEventListener('change', (e) => { customParams.mathMixedTables = e.target.checked; saveState(); refreshPreview(); });
+                if (op) op.addEventListener('change', (e) => { useStagePreset = false; customParams.operator = e.target.value; saveState(); refreshPreview(); });
+                if (operand) operand.addEventListener('change', (e) => { useStagePreset = false; customParams.operand = parseInt(e.target.value) || 1; saveState(); refreshPreview(); });
+                if (customOps) customOps.addEventListener('change', (e) => {
+                    useStagePreset = false;
+                    customParams.mathCustomOperands = e.target.value.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n) && n > 0 && n <= 25);
+                    saveState();
+                    refreshPreview();
+                });
+                if (min) min.addEventListener('change', (e) => { useStagePreset = false; customParams.min = parseInt(e.target.value) || 1; saveState(); refreshPreview(); });
+                if (max) max.addEventListener('change', (e) => { useStagePreset = false; customParams.max = parseInt(e.target.value) || 1; saveState(); refreshPreview(); });
+                if (allowNeg) allowNeg.addEventListener('change', (e) => { useStagePreset = false; customParams.allowNegative = e.target.checked; saveState(); refreshPreview(); });
+                if (missingHole) missingHole.addEventListener('change', (e) => { useStagePreset = false; customParams.mathMissingHole = e.target.checked; saveState(); refreshPreview(); });
+                if (mixedTabs) mixedTabs.addEventListener('change', (e) => { useStagePreset = false; customParams.mathMixedTables = e.target.checked; saveState(); refreshPreview(); });
             }
             if (type === 'sequence') {
                 const fixed = document.getElementById('seqFixed');
@@ -513,32 +585,100 @@
     }
 
     function updateTabletLink() {
+        if (window.KumonGen && typeof window.KumonGen.syncTabletPracticeLink === 'function') {
+            window.KumonGen.syncTabletPracticeLink('matPracticeTabletBtn', 'matematica', currentLevelId, currentStage);
+            return;
+        }
         const btn = document.getElementById('matPracticeTabletBtn');
         if (btn) {
-            btn.href = `tablet.html?subject=matematica&level=${currentLevelId}`;
+            btn.href = `tablet.html?subject=matematica&level=${currentLevelId}&stage=${currentStage}&autostart=true`;
+        }
+    }
+
+    function syncStageToParamsAndUI(stage) {
+        currentStage = stage || 1;
+        useStagePreset = true;
+        if (typeof window !== 'undefined' && window.KumonProgression) {
+            const spec = window.KumonProgression.getStageSpec('matematica', currentLevelId, currentStage);
+            if (spec) {
+                if (spec.handicap && spec.handicap.mode === 'focus' && spec.handicap.value !== undefined) {
+                    customParams.operand = spec.handicap.value;
+                    customParams.mathMixedTables = false;
+                } else if (spec.handicap && (spec.handicap.mode === 'mixed_basic' || spec.handicap.mode === 'mixed_full')) {
+                    customParams.mathMixedTables = true;
+                }
+                if (spec.min !== undefined) customParams.min = spec.min;
+                if (spec.max !== undefined) customParams.max = spec.max;
+                if (spec.mathMissingHole !== undefined) customParams.mathMissingHole = !!spec.mathMissingHole;
+            }
+        }
+        updateParamPanel();
+        updateTabletLink();
+        refreshPreview();
+    }
+
+    function refreshDifficultySlider() {
+        if (window.KumonGen && typeof window.KumonGen.renderPcDifficultySlider === 'function') {
+            currentStage = window.KumonGen.renderPcDifficultySlider({
+                containerId: 'pcDifficultySliderContainer',
+                subjectKey: 'matematica',
+                levelId: currentLevelId,
+                tabletBtnId: 'matPracticeTabletBtn',
+                accentColor: '#2563eb',
+                onStageApplied: (nextStage) => {
+                    syncStageToParamsAndUI(nextStage);
+                }
+            });
+        } else {
+            updateTabletLink();
         }
     }
 
     window.selectLevel = function(id) {
         currentLevelId = id;
+        useStagePreset = true;
+        const lvlObj = LevelLibrary.matematica.find(l => l.id === id);
+        if (lvlObj && lvlObj.operator) {
+            customParams.operator = lvlObj.operator;
+        }
         saveState();
         renderLevelList();
+        refreshDifficultySlider();
         updateParamPanel();
         updateTabletLink();
         refreshPreview();
     };
+
+    function renderCurrentSheetOnly() {
+        const level = LevelLibrary.matematica.find(l => l.id === currentLevelId);
+        if (!level || !pageLeft || !pageRight) return;
+        previewSheetIdx = KumonGen.renderPreviewPagerSlice({
+            subjectKey: 'matematica',
+            level,
+            allItems: lastGeneratedItems,
+            pageLeft,
+            pageRight,
+            linesPerPage: itemsPerPage,
+            sheetIdx: previewSheetIdx,
+            onSheetChange: (nextIdx) => {
+                previewSheetIdx = nextIdx;
+                renderCurrentSheetOnly();
+            },
+            refreshFn: refreshPreview
+        });
+    }
 
     function refreshPreview() {
         if (!pageLeft || !pageRight) return;
         const level = LevelLibrary.matematica.find(l => l.id === currentLevelId);
         if (!level) return;
 
-        const allItems = generateItemsForLevel(level, itemsPerPage * 2);
-        const leftItems = allItems.slice(0, itemsPerPage);
-        const rightItems = allItems.slice(itemsPerPage, itemsPerPage * 2);
-
-        KumonGen.buildPage(pageLeft, level, 1, leftItems);
-        KumonGen.buildPage(pageRight, level, 2, rightItems);
+        const totalPages = KumonGen.getTotalPagesRequested ? KumonGen.getTotalPagesRequested() : 2;
+        const genOpts = useStagePreset ? { stage: currentStage } : {};
+        lastGeneratedItems = (typeof KumonGen.composeWorksheetItems === 'function')
+            ? KumonGen.composeWorksheetItems({ subjectKey: 'matematica', level, totalCount: totalPages * itemsPerPage, generatorFn: generateItemsForLevel, genOpts })
+            : generateItemsForLevel(level, totalPages * itemsPerPage, genOpts);
+        renderCurrentSheetOnly();
     }
 
     // ===== CONTROLES DE ABAS & WIZARD (KUMON 3.0) =====
@@ -599,11 +739,16 @@
 
     function selectWizardGoal(levelId, el) {
         currentLevelId = levelId;
+        const lvlObj = LevelLibrary.matematica.find(l => l.id === levelId);
+        if (lvlObj && lvlObj.operator) {
+            customParams.operator = lvlObj.operator;
+        }
         document.querySelectorAll('#panel-wizard .kumon-wizard-card').forEach(card => card.classList.remove('active'));
         if (el) el.classList.add('active');
 
         saveState();
         renderLevelList();
+        refreshDifficultySlider();
         updateParamPanel();
         refreshPreview();
     }
@@ -638,17 +783,52 @@
 
         loadSavedState();
 
+        try {
+            const urlP = new URLSearchParams(window.location.search);
+            const qLvl = urlP.get('level');
+            if (qLvl && LevelLibrary.matematica.some(l => l.id === qLvl)) {
+                currentLevelId = qLvl;
+            }
+            if (urlP.get('mode') === 'weakness') {
+                if (typeof KumonGen !== 'undefined' && typeof KumonGen.setPedagogicalConfig === 'function') {
+                    KumonGen.setPedagogicalConfig({ sheetSourceMode: 'weakness_only' }, { persist: false });
+                }
+                const acc = document.getElementById('paperAssemblerAccordion');
+                if (acc) acc.open = true;
+            }
+        } catch (e) {}
+
         KumonGen.initRefs();
 
+        refreshDifficultySlider();
         renderLevelList();
         updateParamPanel();
         updateTabletLink();
         refreshPreview();
 
+        window.addEventListener('kumongen:student_changed', () => {
+            refreshDifficultySlider();
+            refreshPreview();
+        });
+        window.addEventListener('kumongen:stage_changed', (e) => {
+            if (e && e.detail && e.detail.subjectKey === 'matematica') {
+                refreshDifficultySlider();
+                refreshPreview();
+            }
+        });
+
         const linesSelect = document.getElementById('linesPerPage');
         if (linesSelect) {
             linesSelect.addEventListener('change', (e) => {
                 itemsPerPage = parseInt(e.target.value);
+                previewSheetIdx = 0;
+                refreshPreview();
+            });
+        }
+        const pagesSelect = document.getElementById('pagesPerBook');
+        if (pagesSelect) {
+            pagesSelect.addEventListener('change', () => {
+                previewSheetIdx = 0;
                 refreshPreview();
             });
         }
@@ -672,7 +852,21 @@
     
     window.printSheet = () => {
         const level = LevelLibrary.matematica.find(l => l.id === currentLevelId);
-        KumonGen.printSheet('Matemática', level ? level.title : '');
+        const totalPages = KumonGen.getTotalPagesRequested ? KumonGen.getTotalPagesRequested() : 2;
+        const genOpts = useStagePreset ? { stage: currentStage } : {};
+        const makeBatch = (cnt) => (typeof KumonGen.composeWorksheetItems === 'function')
+            ? KumonGen.composeWorksheetItems({ subjectKey: 'matematica', level, totalCount: cnt, generatorFn: generateItemsForLevel, genOpts })
+            : generateItemsForLevel(level, cnt, genOpts);
+        const allItems = (lastGeneratedItems && lastGeneratedItems.length >= totalPages * itemsPerPage)
+            ? lastGeneratedItems.slice(0, totalPages * itemsPerPage)
+            : makeBatch(totalPages * itemsPerPage);
+        KumonGen.printSheet('Matemática', level ? level.title : '', {
+            allItems,
+            level,
+            totalPages,
+            linesPerPage: itemsPerPage,
+            makeVariationFn: makeBatch
+        });
     };
 
     window.generatePDF = () => {
@@ -681,10 +875,15 @@
 
         const pagesEl = document.getElementById('pagesPerBook');
         const totalPages = pagesEl ? parseInt(pagesEl.value) : 2;
+        const genOpts = useStagePreset ? { stage: currentStage } : {};
+        const makeBatch = (cnt) => (typeof KumonGen.composeWorksheetItems === 'function')
+            ? KumonGen.composeWorksheetItems({ subjectKey: 'matematica', level, totalCount: cnt, generatorFn: generateItemsForLevel, genOpts })
+            : generateItemsForLevel(level, cnt, genOpts);
+        const allItems = (lastGeneratedItems && lastGeneratedItems.length >= totalPages * itemsPerPage)
+            ? lastGeneratedItems.slice(0, totalPages * itemsPerPage)
+            : makeBatch(totalPages * itemsPerPage);
 
-        const allItems = generateItemsForLevel(level, totalPages * itemsPerPage);
-
-        KumonGen.generatePDF('a4-sheet', 'Matemática', level.title, totalPages, allItems, level, itemsPerPage);
+        KumonGen.generatePDF('a4-sheet', 'Matemática', level.title, totalPages, allItems, level, itemsPerPage, { makeVariationFn: makeBatch });
     };
 
     window.generateWeeklyPackagePDF = () => {
@@ -692,7 +891,10 @@
         if (!level) return;
 
         const totalPages = 10; // 5 dias x 2 páginas por dia
-        const allItems = generateItemsForLevel(level, totalPages * itemsPerPage);
+        const genOpts = useStagePreset ? { stage: currentStage } : {};
+        const allItems = (typeof KumonGen.composeWorksheetItems === 'function')
+            ? KumonGen.composeWorksheetItems({ subjectKey: 'matematica', level, totalCount: totalPages * itemsPerPage, generatorFn: generateItemsForLevel, genOpts })
+            : generateItemsForLevel(level, totalPages * itemsPerPage, genOpts);
 
         KumonGen.generateWeeklyPackagePDF('a4-sheet', 'Matemática', level.title, allItems, level, itemsPerPage);
     };

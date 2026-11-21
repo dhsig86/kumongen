@@ -40,20 +40,30 @@ const KumonGen = (function() {
         return div.innerHTML;
     }
 
-    // ===== CONFIGURAÇÃO PEDAGÓGICA KUMON 3.0 =====
+    // ===== CONFIGURAÇÃO PEDAGÓGICA & MONTADOR KUMON 4.5 =====
     let pedagogicalConfig = {
-        workedExample: true,   // Exemplo resolvido na questão 1 (Worked Example Effect)
-        sctEnabled: true,      // Tempo alvo sugerido no cabeçalho (Standard Completion Time)
-        answerKey: false       // Gerar folha de gabarito no PDF
+        workedExample: true,      // Exemplo resolvido na questão 1 (Worked Example Effect)
+        sctEnabled: true,         // Tempo alvo sugerido no cabeçalho (Standard Completion Time)
+        answerKey: false,         // Gerar folha de gabarito na impressão e no PDF
+        sheetSourceMode: 'stage', // 'stage' | 'smart_mix' | 'weakness_only'
+        blankNameForClass: false, // Nome em branco para distribuição a colegas/turma
+        classVariations: 1        // 1 | 3 | 5 cópias variadas anti-cola
     };
 
     function loadPedagogicalConfig() {
         try {
             const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
-            if (!storage) return;
-            const saved = storage.getItem('kumongen_pedagogical_config');
-            if (saved) {
-                pedagogicalConfig = { ...pedagogicalConfig, ...JSON.parse(saved) };
+            if (storage) {
+                const saved = storage.getItem('kumongen_pedagogical_config');
+                if (saved) {
+                    pedagogicalConfig = { ...pedagogicalConfig, ...JSON.parse(saved) };
+                }
+            }
+            if (typeof window !== 'undefined' && window.location && window.location.search) {
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('mode') === 'weakness') {
+                    pedagogicalConfig.sheetSourceMode = 'weakness_only';
+                }
             }
         } catch(e) {}
     }
@@ -64,6 +74,15 @@ const KumonGen = (function() {
             if (!storage) return;
             storage.setItem('kumongen_pedagogical_config', JSON.stringify(pedagogicalConfig));
         } catch(e) {}
+    }
+
+    function setPedagogicalConfig(patch, opts = {}) {
+        if (!patch || typeof patch !== 'object') return pedagogicalConfig;
+        pedagogicalConfig = { ...pedagogicalConfig, ...patch };
+        if (!opts || opts.persist !== false) {
+            savePedagogicalConfig();
+        }
+        return pedagogicalConfig;
     }
 
     loadPedagogicalConfig();
@@ -105,7 +124,11 @@ const KumonGen = (function() {
                                 }
                                 val = item.sequence[i-1] + step;
                             } else if (i < item.sequence.length - 1 && typeof item.sequence[i+1] === 'number') {
-                                val = item.sequence[i+1] - 1;
+                                let step = 1;
+                                if (i + 2 < item.sequence.length && typeof item.sequence[i+2] === 'number') {
+                                    step = item.sequence[i+2] - item.sequence[i+1];
+                                }
+                                val = item.sequence[i+1] - step;
                             }
                             holes.push(val !== null ? Math.round(val) : '?');
                         }
@@ -428,6 +451,7 @@ const KumonGen = (function() {
     function initRefs() {
         zoomContainer = document.getElementById('zoomContainer');
         zoomSpan = document.getElementById('zoomValue');
+        _doAdjustPreviewScale();
         adjustPreviewScale();
         renderStudentSelectorWidget();
         renderScoreboardWidget();
@@ -459,17 +483,26 @@ const KumonGen = (function() {
         const sheet = document.getElementById('a4-sheet');
         if (!container || !zoomContainer || !sheet) return;
 
-        const containerWidth = container.clientWidth;
+        const containerWidth = container.clientWidth || window.innerWidth;
         const sheetWidth = 1123;
+        const sheetHeight = 794;
 
         if (window.innerWidth <= 768) {
-            // Em telas pequenas (celular), escala para caber na largura disponível
-            const scale = Math.min((containerWidth - 16) / sheetWidth, 1);
+            // Em telas pequenas (celular), escala proporcionalmente mantendo o layout A4 (1123x794) intacto
+            const scale = Math.max(0.2, Math.min((containerWidth - 16) / sheetWidth, 1));
+            zoomContainer.style.width = sheetWidth + 'px';
+            zoomContainer.style.height = sheetHeight + 'px';
             zoomContainer.style.transform = `scale(${scale})`;
-            zoomContainer.style.transformOrigin = 'top center';
+            zoomContainer.style.transformOrigin = 'top left';
+            zoomContainer.style.marginRight = `${-(sheetWidth * (1 - scale))}px`;
+            zoomContainer.style.marginBottom = `${-(sheetHeight * (1 - scale))}px`;
             if (zoomSpan) zoomSpan.innerText = Math.round(scale * 100) + '%';
         } else {
             // Em telas maiores, usa o zoom atual
+            zoomContainer.style.width = '';
+            zoomContainer.style.height = '';
+            zoomContainer.style.marginRight = '';
+            zoomContainer.style.marginBottom = '';
             zoomContainer.style.transform = `scale(${currentZoom})`;
             zoomContainer.style.transformOrigin = 'top center';
             if (zoomSpan) zoomSpan.innerText = Math.round(currentZoom * 100) + '%';
@@ -497,19 +530,23 @@ const KumonGen = (function() {
 
         // Cabeçalho
         const activeStudent = window.StudentProfileEngine ? window.StudentProfileEngine.getActive() : null;
-        const studentNameDisplay = (activeStudent && activeStudent.name && activeStudent.name !== 'Super Aluno')
+        const useBlankName = !!pedagogicalConfig.blankNameForClass || !!options.blankName;
+        const studentNameDisplay = (!useBlankName && activeStudent && activeStudent.name && activeStudent.name !== 'Super Aluno')
             ? sanitizeText(activeStudent.name)
             : '____________________';
 
         const dayBadge = options.dayLabel
-            ? `<span class="ml-2 inline-block bg-amber-100 text-amber-900 border border-amber-300 text-[0.5rem] font-black px-1.5 py-0.5 rounded">${options.dayLabel}</span>`
+            ? `<span class="ml-2 inline-block bg-amber-100 text-amber-900 border border-amber-300 text-[0.5rem] font-black px-1.5 py-0.5 rounded">${sanitizeText(options.dayLabel)}</span>`
+            : '';
+        const copyBadge = options.copyLabel
+            ? `<span class="ml-1 inline-block bg-indigo-100 text-indigo-800 border border-indigo-300 text-[0.5rem] font-black px-1.5 py-0.5 rounded">${sanitizeText(options.copyLabel)}</span>`
             : '';
 
         const header = document.createElement('div');
         header.className = 'page-header';
         header.innerHTML = `
             <div>
-                <h3 class="flex items-center flex-wrap">${level?.title || ''}${dayBadge}</h3>
+                <h3 class="flex items-center flex-wrap">${level?.title || ''}${dayBadge}${copyBadge}</h3>
                 <p>${level?.instruction || ''}</p>
             </div>
             <div class="text-right flex flex-col items-end">
@@ -758,8 +795,93 @@ const KumonGen = (function() {
         }, 12000);
     }
 
-    // GERAÇÃO DE PDF MULTIPÁGINA
-    async function generatePDF(elementId = 'a4-sheet', subjectTitle, levelTitle, totalPages = 2, allItems, level, linesPerPage) {
+    // Helper compartilhado para gerar folha A4 Paisagem de Gabarito (usado em Impressão e PDF)
+    function buildAnswerKeyDom(subjectTitle, levelTitle, numPages, allItems, linesPerPage, copyLabel = '') {
+        const akSheet = document.createElement('div');
+        akSheet.className = 'answer-key-sheet kumon-print-sheet';
+        akSheet.style.width = '1123px';
+        akSheet.style.height = '794px';
+        akSheet.style.background = '#ffffff';
+        akSheet.style.boxSizing = 'border-box';
+        akSheet.style.padding = '32px';
+        akSheet.style.display = 'flex';
+        akSheet.style.flexDirection = 'column';
+
+        let cardsHtml = '';
+        const cols = Math.min(4, Math.max(2, numPages));
+        for (let p = 0; p < numPages; p++) {
+            const pageItems = allItems.slice(p * linesPerPage, (p + 1) * linesPerPage);
+            let itemsListHtml = '';
+            pageItems.forEach((it, idx) => {
+                const ans = solveItem(it);
+                itemsListHtml += `
+                    <div style="display:flex; justify-content:space-between; border-bottom:1px dotted #e2e8f0; padding:2px 0; font-size:11px;">
+                        <span style="font-weight:bold; color:#64748b;">${idx + 1}.</span>
+                        <span style="font-weight:900; color:#0f172a;">${sanitizeText(ans)}</span>
+                    </div>
+                `;
+            });
+            cardsHtml += `
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; display:flex; flex-direction:column;">
+                    <div style="font-weight:900; font-size:12px; color:#2563eb; border-bottom:1px solid #cbd5e1; padding-bottom:4px; margin-bottom:6px;">
+                        PÁGINA ${p + 1}
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:2px;">${itemsListHtml}</div>
+                </div>
+            `;
+        }
+
+        const copyBadgeHtml = copyLabel ? ` · <span style="color:#4f46e5;">${sanitizeText(copyLabel)}</span>` : '';
+        akSheet.innerHTML = `
+            <div style="border-bottom:2px solid #0f172a; padding-bottom:8px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h2 style="font-size:18px; font-weight:900; text-transform:uppercase; color:#0f172a; margin:0;">
+                        GABARITO DE RESPOSTAS · ${sanitizeText((subjectTitle || 'KUMON').toUpperCase())}${copyBadgeHtml}
+                    </h2>
+                    <p style="font-size:11px; color:#64748b; margin:2px 0 0 0; font-weight:600;">
+                        Nível: ${sanitizeText(levelTitle || '')} · Conferência rápida para os pais (1 minuto)
+                    </p>
+                </div>
+                <div style="text-align:right; font-size:11px; color:#64748b;">
+                    <strong>${numPages} PÁGINAS</strong> | DATA: ___/___/___
+                </div>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(${cols}, 1fr); gap:14px; flex:1;">
+                ${cardsHtml}
+            </div>
+        `;
+        return akSheet;
+    }
+
+    function _buildVariationBatches(baseItems, totalPages, linesPerPage, variationsCount, makeVariationFn) {
+        const numPages = Math.max(2, Math.ceil((totalPages || 2) / 2) * 2);
+        const needCount = numPages * (linesPerPage || 8);
+        const totalCopies = Math.max(1, Math.min(5, parseInt(variationsCount, 10) || 1));
+        const letters = ['A', 'B', 'C', 'D', 'E'];
+        const batches = [];
+
+        for (let v = 0; v < totalCopies; v++) {
+            let itemsForCopy;
+            if (v === 0 && Array.isArray(baseItems) && baseItems.length > 0) {
+                itemsForCopy = baseItems.slice(0, needCount);
+            } else if (typeof makeVariationFn === 'function') {
+                itemsForCopy = makeVariationFn(needCount, v);
+            } else if (Array.isArray(baseItems) && baseItems.length > 0) {
+                itemsForCopy = shuffleAndDecluster(baseItems, (it) => JSON.stringify(it)).slice(0, needCount);
+            } else {
+                itemsForCopy = [];
+            }
+            batches.push({
+                copyIndex: v,
+                copyLabel: totalCopies > 1 ? `Turma · Mod. ${letters[v] || (v + 1)}` : '',
+                items: itemsForCopy
+            });
+        }
+        return { numPages, numSheets: numPages / 2, batches };
+    }
+
+    // GERAÇÃO DE PDF MULTIPÁGINA (SUPORTA KIT TURMA & GABARITO)
+    async function generatePDF(elementId = 'a4-sheet', subjectTitle, levelTitle, totalPages = 2, allItems, level, linesPerPage, pdfOptions = {}) {
         if (isGeneratingPDF) return;
         isGeneratingPDF = true;
 
@@ -783,9 +905,8 @@ const KumonGen = (function() {
             zoomContainer.style.transformOrigin = 'top center';
         }
 
-        // Garante que é par
-        const numPages = Math.max(2, Math.ceil(totalPages / 2) * 2);
-        const numSheets = numPages / 2;
+        const variationsCount = pdfOptions.variationsCount || pedagogicalConfig.classVariations || 1;
+        const { numPages, numSheets, batches } = _buildVariationBatches(allItems, totalPages, linesPerPage, variationsCount, pdfOptions.makeVariationFn);
 
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({
@@ -802,128 +923,76 @@ const KumonGen = (function() {
         loader.innerHTML = `
             <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
             <div class="font-bold text-lg">Gerando PDF do Caderno...</div>
-            <div class="text-xs text-slate-400 mt-2" id="pdf-progress">Página 1 de ${numSheets}</div>
+            <div class="text-xs text-slate-400 mt-2" id="pdf-progress">Página 1 de ${numSheets * batches.length}</div>
         `;
         document.body.appendChild(loader);
 
         try {
             const pageLeftEl = document.getElementById('pageLeft');
             const pageRightEl = document.getElementById('pageRight');
+            let addedFirstPage = false;
 
-            for (let sheetIdx = 0; sheetIdx < numSheets; sheetIdx++) {
-                document.getElementById('pdf-progress').innerText = `Processando folha ${sheetIdx + 1} de ${numSheets}...`;
+            for (let bIdx = 0; bIdx < batches.length; bIdx++) {
+                const batch = batches[bIdx];
+                for (let sheetIdx = 0; sheetIdx < numSheets; sheetIdx++) {
+                    document.getElementById('pdf-progress').innerText = `${batch.copyLabel ? batch.copyLabel + ' · ' : ''}Processando folha ${sheetIdx + 1} de ${numSheets}...`;
 
-                const pageNumLeft = sheetIdx * 2 + 1;
-                const pageNumRight = sheetIdx * 2 + 2;
+                    const pageNumLeft = sheetIdx * 2 + 1;
+                    const pageNumRight = sheetIdx * 2 + 2;
 
-                const leftItems = allItems.slice(sheetIdx * 2 * linesPerPage, (sheetIdx * 2 + 1) * linesPerPage);
-                const rightItems = allItems.slice((sheetIdx * 2 + 1) * linesPerPage, (sheetIdx * 2 + 2) * linesPerPage);
+                    const leftItems = batch.items.slice(sheetIdx * 2 * linesPerPage, (sheetIdx * 2 + 1) * linesPerPage);
+                    const rightItems = batch.items.slice((sheetIdx * 2 + 1) * linesPerPage, (sheetIdx * 2 + 2) * linesPerPage);
 
-                // Renderiza no DOM temporariamente para tirar a foto
-                buildPage(pageLeftEl, level, pageNumLeft, leftItems);
-                buildPage(pageRightEl, level, pageNumRight, rightItems);
+                    buildPage(pageLeftEl, level, pageNumLeft, leftItems, { copyLabel: batch.copyLabel });
+                    buildPage(pageRightEl, level, pageNumRight, rightItems, { copyLabel: batch.copyLabel });
 
-                // Pequena pausa para garantir renderização do DOM
-                await new Promise(resolve => setTimeout(resolve, 200));
+                    await new Promise(resolve => setTimeout(resolve, 200));
 
-                const pdfScale = window.innerWidth <= 768 ? 2 : 3; // scale 2 no mobile (menos memória), 3 no desktop (máxima nitidez)
-                const canvas = await html2canvas(element, {
-                    scale: pdfScale,
-                    backgroundColor: '#ffffff',
-                    logging: false,
-                    allowTaint: false,
-                    useCORS: true,
-                    windowWidth: 1123,
-                    windowHeight: 794,
-                    onclone: (clonedDoc) => {
-                        const sheet = clonedDoc.getElementById(elementId);
-                        if (sheet) sheet.style.boxShadow = 'none';
-                    }
-                });
-
-                const imgData = canvas.toDataURL('image/png');
-                if (sheetIdx > 0) {
-                    pdf.addPage();
-                }
-                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
-            }
-
-            // Se o gabarito estiver ativado, anexa folha de respostas ao final do PDF
-            if (pedagogicalConfig.answerKey) {
-                document.getElementById('pdf-progress').innerText = 'Gerando folha de gabarito para os pais...';
-
-                const akSheet = document.createElement('div');
-                akSheet.id = 'temp-answer-key-sheet';
-                akSheet.className = 'answer-key-sheet';
-                akSheet.style.position = 'fixed';
-                akSheet.style.left = '-9999px';
-                akSheet.style.top = '0';
-                akSheet.style.width = '1123px';
-                akSheet.style.height = '794px';
-                akSheet.style.background = '#ffffff';
-                akSheet.style.boxSizing = 'border-box';
-                akSheet.style.padding = '32px';
-
-                let cardsHtml = '';
-                const cols = Math.min(4, Math.max(2, numPages));
-                for (let p = 0; p < numPages; p++) {
-                    const pageItems = allItems.slice(p * linesPerPage, (p + 1) * linesPerPage);
-                    let itemsListHtml = '';
-                    pageItems.forEach((it, idx) => {
-                        const ans = solveItem(it);
-                        itemsListHtml += `
-                            <div style="display:flex; justify-content:space-between; border-bottom:1px dotted #e2e8f0; padding:2px 0; font-size:11px;">
-                                <span style="font-weight:bold; color:#64748b;">${idx + 1}.</span>
-                                <span style="font-weight:900; color:#0f172a;">${sanitizeText(ans)}</span>
-                            </div>
-                        `;
+                    const pdfScale = window.innerWidth <= 768 ? 2 : 3;
+                    const canvas = await html2canvas(element, {
+                        scale: pdfScale,
+                        backgroundColor: '#ffffff',
+                        logging: false,
+                        allowTaint: false,
+                        useCORS: true,
+                        windowWidth: 1123,
+                        windowHeight: 794,
+                        onclone: (clonedDoc) => {
+                            const sheet = clonedDoc.getElementById(elementId);
+                            if (sheet) sheet.style.boxShadow = 'none';
+                        }
                     });
-                    cardsHtml += `
-                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; display:flex; flex-direction:column;">
-                            <div style="font-weight:900; font-size:12px; color:#2563eb; border-bottom:1px solid #cbd5e1; padding-bottom:4px; margin-bottom:6px;">
-                                PÁGINA ${p + 1}
-                            </div>
-                            <div style="display:flex; flex-direction:column; gap:2px;">${itemsListHtml}</div>
-                        </div>
-                    `;
+
+                    const imgData = canvas.toDataURL('image/png');
+                    if (addedFirstPage) pdf.addPage();
+                    addedFirstPage = true;
+                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
                 }
 
-                akSheet.innerHTML = `
-                    <div style="border-bottom:2px solid #0f172a; padding-bottom:8px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <h2 style="font-size:18px; font-weight:900; text-transform:uppercase; color:#0f172a; margin:0;">
-                                GABARITO DE RESPOSTAS · ${sanitizeText(subjectTitle.toUpperCase())}
-                            </h2>
-                            <p style="font-size:11px; color:#64748b; margin:2px 0 0 0; font-weight:600;">
-                                Nível: ${sanitizeText(levelTitle)} · Conferência rápida para os pais (1 minuto)
-                            </p>
-                        </div>
-                        <div style="text-align:right; font-size:11px; color:#64748b;">
-                            <strong>${numPages} PÁGINAS</strong> | DATA: ___/___/___
-                        </div>
-                    </div>
-                    <div style="display:grid; grid-template-columns:repeat(${cols}, 1fr); gap:14px; flex:1;">
-                        ${cardsHtml}
-                    </div>
-                `;
+                // Anexa gabarito se ativado
+                if (pedagogicalConfig.answerKey) {
+                    document.getElementById('pdf-progress').innerText = `Gerando gabarito ${batch.copyLabel || ''}...`;
+                    const akSheet = buildAnswerKeyDom(subjectTitle, levelTitle, numPages, batch.items, linesPerPage, batch.copyLabel);
+                    akSheet.style.position = 'fixed';
+                    akSheet.style.left = '-9999px';
+                    akSheet.style.top = '0';
+                    document.body.appendChild(akSheet);
+                    await new Promise(res => setTimeout(res, 200));
 
-                document.body.appendChild(akSheet);
-                await new Promise(res => setTimeout(res, 200));
+                    const pdfScale = window.innerWidth <= 768 ? 2 : 3;
+                    const akCanvas = await html2canvas(akSheet, {
+                        scale: pdfScale,
+                        backgroundColor: '#ffffff',
+                        logging: false,
+                        useCORS: true,
+                        windowWidth: 1123,
+                        windowHeight: 794
+                    });
 
-                const pdfScale = window.innerWidth <= 768 ? 2 : 3;
-                const akCanvas = await html2canvas(akSheet, {
-                    scale: pdfScale,
-                    backgroundColor: '#ffffff',
-                    logging: false,
-                    useCORS: true,
-                    windowWidth: 1123,
-                    windowHeight: 794
-                });
-
-                pdf.addPage();
-                const akImgData = akCanvas.toDataURL('image/png');
-                pdf.addImage(akImgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
-                document.body.removeChild(akSheet);
+                    pdf.addPage();
+                    pdf.addImage(akCanvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
+                    document.body.removeChild(akSheet);
+                }
             }
 
             pdf.save(`kumon_${subjectTitle.toLowerCase()}_${new Date().toISOString().slice(0,10)}.pdf`);
@@ -1174,12 +1243,63 @@ const KumonGen = (function() {
         }
     }
 
-    // IMPRESSÃO DIRETA NATIVA (WINDOW.PRINT COM SUPORTE A4 PAISAGEM)
-    function printSheet(subjectTitle = 'Kumon', levelTitle = '') {
+    // IMPRESSÃO DIRETA NATIVA (MULTIPÁGINA A4 PAISAGEM + KIT TURMA + GABARITO)
+    function printSheet(subjectTitle = 'Kumon', levelTitle = '', printMeta = {}) {
+        const meta = (printMeta && typeof printMeta === 'object') ? printMeta : {};
+        const totalPages = Math.max(2, Math.ceil((meta.totalPages || 2) / 2) * 2);
+        const linesPerPage = Math.max(4, parseInt(meta.linesPerPage, 10) || 8);
+        const variationsCount = meta.variationsCount || pedagogicalConfig.classVariations || 1;
+        const level = meta.level || null;
+        const allItems = Array.isArray(meta.allItems) ? meta.allItems : null;
+
         try {
-            saveHistory(subjectTitle, levelTitle || 'Caderno Impresso', 2);
+            saveHistory(subjectTitle, levelTitle || 'Caderno Impresso', totalPages * variationsCount);
         } catch (e) {
             console.warn('Erro ao salvar histórico de impressão:', e);
+        }
+
+        const oldSpool = document.getElementById('kumon-print-spool');
+        if (oldSpool) oldSpool.remove();
+
+        const spool = document.createElement('div');
+        spool.id = 'kumon-print-spool';
+
+        if (level && allItems && allItems.length > 0) {
+            const { numPages, numSheets, batches } = _buildVariationBatches(allItems, totalPages, linesPerPage, variationsCount, meta.makeVariationFn);
+            batches.forEach((batch) => {
+                for (let sIdx = 0; sIdx < numSheets; sIdx++) {
+                    const sheetEl = document.createElement('div');
+                    sheetEl.className = 'kumon-print-sheet';
+
+                    const centerLine = document.createElement('div');
+                    centerLine.className = 'dashed-center-line';
+                    sheetEl.appendChild(centerLine);
+
+                    const pLeft = document.createElement('div');
+                    pLeft.className = 'page page-left';
+                    const pRight = document.createElement('div');
+                    pRight.className = 'page';
+
+                    const pageNumLeft = sIdx * 2 + 1;
+                    const pageNumRight = sIdx * 2 + 2;
+                    const leftItems = batch.items.slice(sIdx * 2 * linesPerPage, (sIdx * 2 + 1) * linesPerPage);
+                    const rightItems = batch.items.slice((sIdx * 2 + 1) * linesPerPage, (sIdx * 2 + 2) * linesPerPage);
+
+                    buildPage(pLeft, level, pageNumLeft, leftItems, { copyLabel: batch.copyLabel });
+                    buildPage(pRight, level, pageNumRight, rightItems, { copyLabel: batch.copyLabel });
+
+                    sheetEl.appendChild(pLeft);
+                    sheetEl.appendChild(pRight);
+                    spool.appendChild(sheetEl);
+                }
+
+                if (pedagogicalConfig.answerKey) {
+                    const akEl = buildAnswerKeyDom(subjectTitle, levelTitle || level.title, numPages, batch.items, linesPerPage, batch.copyLabel);
+                    spool.appendChild(akEl);
+                }
+            });
+            document.body.appendChild(spool);
+            document.body.classList.add('kumon-multiprint-active');
         }
 
         const originalTransform = zoomContainer ? zoomContainer.style.transform : '';
@@ -1187,18 +1307,52 @@ const KumonGen = (function() {
             zoomContainer.style.transform = 'none';
         }
 
-        showPrintTip(2);
+        showPrintTip(totalPages);
 
-        window.print();
-
-        setTimeout(() => {
+        let cleanedUp = false;
+        let sawPrintMedia = false;
+        let mql = null;
+        const onMediaChange = (ev) => {
+            if (ev && ev.matches) {
+                sawPrintMedia = true;
+            } else if (sawPrintMedia) {
+                cleanupPrint();
+            }
+        };
+        const cleanupPrint = () => {
+            if (cleanedUp) return;
+            cleanedUp = true;
+            document.body.classList.remove('kumon-multiprint-active');
+            const sp = document.getElementById('kumon-print-spool');
+            if (sp && sp.parentNode) sp.parentNode.removeChild(sp);
             if (zoomContainer && originalTransform) {
                 zoomContainer.style.transform = originalTransform;
             }
             if (window.refreshPreview) {
                 window.refreshPreview();
             }
-        }, 500);
+            window.removeEventListener('afterprint', cleanupPrint);
+            window.removeEventListener('focus', onWindowFocusAfterPrint);
+            if (mql) {
+                if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', onMediaChange);
+                else if (typeof mql.removeListener === 'function') mql.removeListener(onMediaChange);
+            }
+        };
+        const onWindowFocusAfterPrint = () => {
+            setTimeout(cleanupPrint, 300);
+        };
+
+        window.addEventListener('afterprint', cleanupPrint);
+        if (typeof window.matchMedia === 'function') {
+            try {
+                mql = window.matchMedia('print');
+                if (mql && typeof mql.addEventListener === 'function') mql.addEventListener('change', onMediaChange);
+                else if (mql && typeof mql.addListener === 'function') mql.addListener(onMediaChange);
+            } catch (mqErr) {}
+        }
+
+        window.print();
+        window.addEventListener('focus', onWindowFocusAfterPrint, { once: true });
     }
 
     // ---------- SISTEMA DE LOCAL STORAGE, SCOREBOARD E HISTÓRICO ----------
@@ -1337,36 +1491,57 @@ const KumonGen = (function() {
 
         const mascotInfo = window.StudentProfileEngine.MASCOTS[active.mascot] || window.StudentProfileEngine.MASCOTS.jaguar;
         const ageInfo = window.StudentProfileEngine.AGE_TIERS[active.ageTier] || window.StudentProfileEngine.AGE_TIERS.age_6_7;
+        const avatarHtml = (window.AvatarWardrobe && typeof window.AvatarWardrobe.renderAvatarHtml === 'function')
+            ? window.AvatarWardrobe.renderAvatarHtml(active, 'w-full h-full rounded-full object-cover')
+            : `<img src="${mascotInfo.avatar}" alt="${mascotInfo.name}" class="w-full h-full rounded-full object-cover">`;
+
+        const score = getScore();
+        const leagueInfo = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getActiveLeagueInfo === 'function')
+            ? window.StudentProfileEngine.getActiveLeagueInfo(active)
+            : { current: { icon: '🌱', short: 'Semente' }, xp: 0 };
+        const rankingInfo = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getActiveRanking === 'function')
+            ? window.StudentProfileEngine.getActiveRanking(active)
+            : { activeRank: 1 };
 
         container.innerHTML = `
             <div class="flex items-center gap-1.5 mb-2">
                 <button type="button" onclick="window.StudentProfileEngine.showProfileModal({ onSelect: () => window.KumonGen.onStudentSelected() })" class="flex-1 min-w-0 flex items-center justify-between bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl p-2 text-slate-800 transition-all font-bold text-xs shadow-sm hover:shadow group cursor-pointer" title="Trocar ou selecionar perfil de aluno">
                     <div class="flex items-center gap-2 min-w-0">
-                        <div class="w-7 h-7 rounded-full p-0.5 bg-gradient-to-tr ${mascotInfo.ring} shadow flex-shrink-0">
-                            <img src="${mascotInfo.avatar}" alt="${mascotInfo.name}" class="w-full h-full rounded-full object-cover">
+                        <div class="w-8 h-8 rounded-full p-0.5 bg-gradient-to-tr ${mascotInfo.ring} shadow flex-shrink-0">
+                            ${avatarHtml}
                         </div>
                         <div class="text-left min-w-0">
-                            <div class="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">Aluno Ativo</div>
-                            <div class="font-black text-xs text-slate-900 truncate leading-tight">${sanitizeText(active.name)} <span class="text-[10px] font-normal text-slate-500">(${ageInfo.label})</span></div>
+                            <div class="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-0.5">${ageInfo.label} · ${leagueInfo.current.icon} #${rankingInfo.activeRank}</div>
+                            <div class="font-black text-xs text-slate-900 truncate leading-tight">${sanitizeText(active.name)}</div>
                         </div>
                     </div>
                     <div class="text-slate-400 group-hover:text-slate-600 flex items-center gap-1 text-[10px] font-bold flex-shrink-0 ml-1">
-                        <span>Trocar</span>
+                        <span>Perfis</span>
                         <i class="fas fa-chevron-right text-[8px]"></i>
                     </div>
                 </button>
-                <button type="button" onclick="window.StudentProfileEngine.showProfileModal({ initialView: 'form', onSelect: () => window.KumonGen.onStudentSelected() })" class="px-2.5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-black text-xs shadow-sm hover:shadow flex items-center gap-1 cursor-pointer flex-shrink-0 transition-all active:scale-95" title="Cadastrar nova criança / outro perfil">
+                <button type="button" onclick="window.StudentProfileEngine.showProfileModal({ initialView: 'form', onSelect: () => window.KumonGen.onStudentSelected() })" class="w-9 h-9 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-black text-xs shadow-sm hover:shadow flex items-center justify-center cursor-pointer flex-shrink-0 transition-all active:scale-95" title="Cadastrar nova criança / outro perfil" aria-label="Cadastrar nova criança">
                     <i class="fas fa-user-plus text-xs"></i>
-                    <span class="hidden xl:inline text-[11px]">+ Novo</span>
                 </button>
             </div>
-            <button type="button" onclick="if(window.StudentProfileEngine) window.StudentProfileEngine.showEvolutionModal();" class="w-full py-1.5 px-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl font-bold text-[11px] flex items-center justify-between transition-colors shadow-sm cursor-pointer group" title="Ver Gráfico de Evolução, Ritmo SCT e Histórico">
-                <span class="flex items-center gap-1.5">
-                    <i class="fas fa-chart-line text-blue-600 text-xs"></i>
-                    <span>Boletim de Evolução & Gráficos</span>
-                </span>
-                <i class="fas fa-arrow-right text-[9px] text-blue-400 group-hover:translate-x-0.5 transition-transform"></i>
-            </button>
+            <div class="grid grid-cols-2 gap-1.5">
+                <button type="button" onclick="if(window.StudentProfileEngine) window.StudentProfileEngine.showEvolutionModal();" class="py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl font-bold text-[10px] flex items-center justify-center gap-1 transition-colors shadow-sm cursor-pointer" title="Ver Gráfico de Evolução, Ritmo SCT e Histórico">
+                    <i class="fas fa-chart-line text-blue-600 text-[11px]"></i>
+                    <span>Boletim</span>
+                </button>
+                <button type="button" onclick="if(window.StudentProfileEngine) window.StudentProfileEngine.showEvolutionModal(null, { initialEvolutionTab: 'ranking' });" class="py-1.5 px-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl font-bold text-[10px] flex items-center justify-center gap-1 transition-colors shadow-sm cursor-pointer" title="Ver Ranking Pessoal & Ligas (${leagueInfo.xp} XP)">
+                    <i class="fas fa-trophy text-amber-500 text-[11px]"></i>
+                    <span>Rank #${rankingInfo.activeRank}</span>
+                </button>
+                <button type="button" onclick="if(window.AvatarWardrobe) window.AvatarWardrobe.openModal();" class="py-1.5 px-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl font-bold text-[10px] flex items-center justify-center gap-1 transition-colors shadow-sm cursor-pointer" title="Abrir Camarim do Mascote (${score.stars} ★)">
+                    <i class="fas fa-hat-wizard text-amber-500 text-[11px]"></i>
+                    <span>Camarim</span>
+                </button>
+                <button type="button" id="pcOpenParentWeaknessesBtn" onclick="if(window.StudentProfileEngine && window.StudentProfileEngine.openParentDashboard) window.StudentProfileEngine.openParentDashboard();" class="py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-black text-[10px] flex items-center justify-center gap-1 transition-colors shadow-sm cursor-pointer" title="Área Protegida dos Pais · Fraquezas e Limites">
+                    <i class="fas fa-lock text-rose-500 text-[10px]"></i>
+                    <span>Pais</span>
+                </button>
+            </div>
         `;
     }
 
@@ -1375,14 +1550,22 @@ const KumonGen = (function() {
         if (!container) return;
 
         const score = getScore();
+        const active = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getActive === 'function')
+            ? window.StudentProfileEngine.getActive()
+            : null;
+        const leagueInfo = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getActiveLeagueInfo === 'function')
+            ? window.StudentProfileEngine.getActiveLeagueInfo(active)
+            : { current: { icon: '🌱', name: 'Semente' }, xp: 0 };
 
         container.innerHTML = `
-            <button onclick="KumonGen_showParentalControlModal()" class="w-full flex items-center justify-between bg-gradient-to-r from-yellow-50 to-orange-50 hover:from-yellow-100 hover:to-orange-100 border border-yellow-200 rounded-xl p-2.5 text-slate-700 transition-all font-bold text-xs shadow-sm hover:shadow">
+            <button onclick="KumonGen_showParentalControlModal()" class="w-full flex items-center justify-between bg-gradient-to-r from-yellow-50 to-orange-50 hover:from-yellow-100 hover:to-orange-100 border border-yellow-200 rounded-xl p-2.5 text-slate-700 transition-all font-bold text-xs shadow-sm hover:shadow cursor-pointer">
                 <span class="flex items-center gap-1.5 text-amber-800">
                     <i class="fas fa-chart-line text-[10px]"></i> Controle dos Pais / Progresso
                 </span>
-                <span class="text-[9px] bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full flex items-center gap-0.5">
-                    <i class="fas fa-star text-[8px]"></i> ${sanitizeText(score.stars)}
+                <span class="text-[9px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full flex items-center gap-1 font-black">
+                    <span>${leagueInfo.current.icon} ${leagueInfo.xp} XP</span>
+                    <span>·</span>
+                    <span>${sanitizeText(score.stars)}★</span>
                 </span>
             </button>
         `;
@@ -1472,7 +1655,7 @@ const KumonGen = (function() {
                         <i class="fas fa-chart-pie text-amber-600 text-xl"></i>
                         <h2 class="text-sm font-black text-slate-900 uppercase tracking-wider">Controle dos Pais & Progresso</h2>
                     </div>
-                    <button onclick="document.getElementById('parental-modal').remove()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <button data-parental-close="true" onclick="document.getElementById('parental-modal').remove()" class="text-slate-400 hover:text-slate-600 transition-colors">
                         <i class="fas fa-times text-lg"></i>
                     </button>
                 </div>
@@ -1527,7 +1710,7 @@ const KumonGen = (function() {
                             <i class="fas fa-user-plus text-emerald-500"></i> + Novo Aluno
                         </button>
                     </div>
-                    <button onclick="document.getElementById('parental-modal').remove()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-5 rounded-xl transition-all text-xs cursor-pointer">
+                    <button data-parental-close="true" onclick="document.getElementById('parental-modal').remove()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-5 rounded-xl transition-all text-xs cursor-pointer">
                         Fechar Painel
                     </button>
                 </div>
@@ -1539,12 +1722,16 @@ const KumonGen = (function() {
         const escHandler = (e) => { if (e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', escHandler); } };
         document.addEventListener('keydown', escHandler);
 
-        // Cleanup do ESC handler nos botões de fechar existentes
+        // Cleanup do ESC handler sem sobrescrever botões de navegação (Perfis, Boletim, + Novo Aluno)
         modal.querySelectorAll('button').forEach(btn => {
-            const originalOnclick = btn.getAttribute('onclick');
-            if (originalOnclick && originalOnclick.includes('remove')) {
+            if (btn.getAttribute('data-parental-close') === 'true') {
                 btn.removeAttribute('onclick');
                 btn.addEventListener('click', () => { modal.remove(); document.removeEventListener('keydown', escHandler); });
+            } else {
+                const orig = btn.getAttribute('onclick') || '';
+                if (orig.includes('parental-modal')) {
+                    btn.addEventListener('click', () => document.removeEventListener('keydown', escHandler));
+                }
             }
         });
 
@@ -1708,6 +1895,8 @@ const KumonGen = (function() {
         document.getElementById('toggle-answer-key')?.addEventListener('change', (e) => {
             pedagogicalConfig.answerKey = e.target.checked;
             savePedagogicalConfig();
+            const assAk = document.getElementById('assemblerAnswerKeyCheck');
+            if (assAk) assAk.checked = !!e.target.checked;
         });
     }
 
@@ -1723,6 +1912,260 @@ const KumonGen = (function() {
     window.addEventListener('kumongen:student_changed', () => {
         onStudentSelected();
     });
+
+    // Sincronizador unificado do Slider de Dificuldade PC com KumonProgression & Tablet
+    function syncTabletPracticeLink(btnId, subjectKey, levelId, stageIndex) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        const stg = Math.max(1, parseInt(stageIndex, 10) || 1);
+        btn.href = `tablet.html?subject=${encodeURIComponent(subjectKey)}&level=${encodeURIComponent(levelId)}&stage=${stg}&autostart=true`;
+    }
+
+    function renderPcDifficultySlider({ containerId, subjectKey, levelId, tabletBtnId, accentColor = '#2563eb', onStageApplied }) {
+        const container = document.getElementById(containerId);
+        if (!container || typeof window === 'undefined' || !window.KumonProgression) return 1;
+
+        const stages = window.KumonProgression.getStagesForLevel(subjectKey, levelId);
+        const maxStage = stages.length;
+        const parentUnlocked = (window.StudentProfileEngine && typeof window.StudentProfileEngine.isParentUnlocked === 'function')
+            ? window.StudentProfileEngine.isParentUnlocked()
+            : false;
+        const limits = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getTrackLimits === 'function')
+            ? window.StudentProfileEngine.getTrackLimits(subjectKey, levelId)
+            : { minStage: 1, maxStage: maxStage };
+        const hasCustomLimit = (limits.minStage > 1 || limits.maxStage < maxStage);
+        const effMin = (!parentUnlocked && hasCustomLimit) ? limits.minStage : 1;
+        const effMax = (!parentUnlocked && hasCustomLimit) ? limits.maxStage : maxStage;
+        const rawStage = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getLevelStage === 'function')
+            ? window.StudentProfileEngine.getLevelStage(subjectKey, levelId)
+            : 1;
+        const currentStage = Math.max(effMin, Math.min(effMax, rawStage));
+        const spec = window.KumonProgression.getStageSpec(subjectKey, levelId, currentStage);
+
+        syncTabletPracticeLink(tabletBtnId, subjectKey, levelId, spec.stage);
+
+        container.innerHTML = `
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
+                <div class="flex items-center justify-between gap-1.5">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1 whitespace-nowrap">
+                        <i class="fas fa-sliders-h" style="color:${accentColor}"></i> Dificuldade
+                    </span>
+                    <span id="pcStageBadge" class="text-[10px] font-black px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-800 shadow-sm whitespace-nowrap flex-shrink-0">
+                        Degrau ${spec.stage}/${maxStage} · ${sanitizeText(spec.shortLabel)}
+                    </span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="pcDifficultyDecBtn" class="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-black text-sm flex items-center justify-center cursor-pointer flex-shrink-0" title="Reduzir dificuldade" aria-label="Diminuir degrau">−</button>
+                    <input type="range" id="pcDifficultySlider" class="kumon-difficulty-slider flex-1" min="${effMin}" max="${effMax}" step="1" value="${spec.stage}" aria-label="Slider de dificuldade">
+                    <button type="button" id="pcDifficultyIncBtn" class="w-7 h-7 rounded-lg text-white font-black text-sm flex items-center justify-center cursor-pointer flex-shrink-0 shadow-sm" style="background:${accentColor};" title="Aumentar dificuldade" aria-label="Aumentar degrau">+</button>
+                </div>
+                <div class="flex items-center justify-between text-[10px] text-slate-600 font-semibold">
+                    <span id="pcStageFullLabel" class="truncate">${sanitizeText(spec.label)}${hasCustomLimit ? ` · 🔒 ${limits.minStage}–${limits.maxStage}` : ''}</span>
+                    <span id="pcStageMultBadge" class="font-black text-amber-600 flex-shrink-0 ml-1">⚡ ${spec.xpMultiplier}x XP</span>
+                </div>
+            </div>
+        `;
+
+        const slider = document.getElementById('pcDifficultySlider');
+        const decBtn = document.getElementById('pcDifficultyDecBtn');
+        const incBtn = document.getElementById('pcDifficultyIncBtn');
+        const badgeEl = document.getElementById('pcStageBadge');
+        const fullLblEl = document.getElementById('pcStageFullLabel');
+        const multEl = document.getElementById('pcStageMultBadge');
+
+        const applyStage = (rawVal) => {
+            const clampedBase = window.KumonProgression.clampStage(subjectKey, levelId, rawVal);
+            const nextVal = Math.max(effMin, Math.min(effMax, clampedBase));
+            if (slider) slider.value = String(nextVal);
+            if (window.StudentProfileEngine && typeof window.StudentProfileEngine.setLevelStage === 'function') {
+                window.StudentProfileEngine.setLevelStage(subjectKey, levelId, nextVal);
+            }
+            const nextSpec = window.KumonProgression.getStageSpec(subjectKey, levelId, nextVal);
+            if (badgeEl) badgeEl.textContent = `Degrau ${nextSpec.stage}/${maxStage} · ${nextSpec.shortLabel}`;
+            if (fullLblEl) fullLblEl.textContent = `${nextSpec.label}${hasCustomLimit ? ` · 🔒 ${limits.minStage}–${limits.maxStage}` : ''}`;
+            if (multEl) multEl.textContent = `⚡ ${nextSpec.xpMultiplier}x XP`;
+            syncTabletPracticeLink(tabletBtnId, subjectKey, levelId, nextSpec.stage);
+            if (typeof onStageApplied === 'function') {
+                onStageApplied(nextSpec.stage, nextSpec);
+            }
+        };
+
+        if (slider) {
+            slider.addEventListener('input', (e) => applyStage(e.target.value));
+        }
+        if (decBtn) {
+            decBtn.addEventListener('click', () => applyStage((parseInt(slider ? slider.value : currentStage, 10) || 1) - 1));
+        }
+        if (incBtn) {
+            incBtn.addEventListener('click', () => applyStage((parseInt(slider ? slider.value : currentStage, 10) || 1) + 1));
+        }
+
+        return spec.stage;
+    }
+
+    // Compõe itens de caderno A4 combinando fila Leitner real de erros/hesitações com degrau selecionado
+    function composeWorksheetItems({ subjectKey, level, totalCount, generatorFn, genOpts }) {
+        const mode = pedagogicalConfig.sheetSourceMode || 'stage';
+        if (typeof generatorFn !== 'function' || !level) return [];
+
+        const cleanOpts = (genOpts && typeof genOpts === 'object') ? { ...genOpts } : {};
+        if (mode === 'stage' || !window.StudentProfileEngine || !window.KumonProgression || typeof window.KumonProgression.buildAdaptiveSessionItems !== 'function') {
+            return generatorFn(level, totalCount, cleanOpts);
+        }
+
+        const reviewItems = (typeof window.StudentProfileEngine.getReviewNotebookItems === 'function')
+            ? window.StudentProfileEngine.getReviewNotebookItems()
+            : [];
+        const pack = window.KumonProgression.buildAdaptiveSessionItems({
+            subjectKey: subjectKey || 'matematica',
+            level,
+            stage: cleanOpts.stage || 1,
+            totalCount,
+            generatorFn,
+            generatorOptions: cleanOpts,
+            reviewItems,
+            mixRatio: mode === 'weakness_only' ? 0.8 : 0.3,
+            forceWeaknessMode: mode === 'weakness_only'
+        });
+        return (pack && Array.isArray(pack.items) && pack.items.length > 0)
+            ? pack.items
+            : generatorFn(level, totalCount, cleanOpts);
+    }
+
+    // Painel de Montagem de Folhas A4 (Impressão Direta, Reforço de Erros & Kit Turma)
+    function renderPaperAssembler({ containerId, subjectKey, totalPages = 2, sheetIdx = 0, onSheetChange, refreshFn }) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const weakSummary = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getWeaknessSummary === 'function')
+            ? window.StudentProfileEngine.getWeaknessSummary(null, 3)
+            : { pendingItems: [], patterns: [], totalPending: 0 };
+        const subjectPendingCount = (weakSummary.pendingItems || []).filter(it => (it.subjectKey || 'matematica') === subjectKey).length;
+        const mode = pedagogicalConfig.sheetSourceMode || 'stage';
+        const totalSheets = Math.max(1, Math.ceil((totalPages || 2) / 2));
+        const safeSheet = Math.max(0, Math.min(totalSheets - 1, sheetIdx || 0));
+
+        const pillBtn = (idVal, label, active) => `
+            <button type="button" data-sheet-mode="${idVal}" class="pc-sheet-mode-btn py-1.5 px-2 rounded-lg text-[10px] font-black border transition-all cursor-pointer ${active ? 'bg-blue-600 text-white border-blue-600 shadow-xs' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}">
+                ${label}
+            </button>
+        `;
+
+        container.innerHTML = `
+            <div class="space-y-2.5 text-xs">
+                <div>
+                    <div class="flex items-center justify-between text-[10px] font-black uppercase text-slate-500 mb-1.5">
+                        <span>Origem das Questões</span>
+                        <span class="${subjectPendingCount > 0 ? 'text-rose-600' : 'text-slate-400'}">${subjectPendingCount} erro(s) pendente(s)</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-1">
+                        ${pillBtn('stage', 'Trilha Normal', mode === 'stage')}
+                        ${pillBtn('smart_mix', 'Mix c/ Erros', mode === 'smart_mix')}
+                        ${pillBtn('weakness_only', 'Só Fraquezas', mode === 'weakness_only')}
+                    </div>
+                </div>
+
+                ${totalSheets > 1 ? `
+                    <div id="pcPreviewPager" class="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-blue-900">
+                        <button type="button" id="pcPagerPrevBtn" class="w-6 h-6 rounded-lg bg-white border border-blue-200 flex items-center justify-center cursor-pointer ${safeSheet === 0 ? 'opacity-40' : ''}" ${safeSheet === 0 ? 'disabled' : ''} aria-label="Folha anterior">◀</button>
+                        <span>Folha ${safeSheet + 1}/${totalSheets} (Pág ${safeSheet * 2 + 1}–${safeSheet * 2 + 2})</span>
+                        <button type="button" id="pcPagerNextBtn" class="w-6 h-6 rounded-lg bg-white border border-blue-200 flex items-center justify-center cursor-pointer ${safeSheet >= totalSheets - 1 ? 'opacity-40' : ''}" ${safeSheet >= totalSheets - 1 ? 'disabled' : ''} aria-label="Próxima folha">▶</button>
+                    </div>
+                ` : ''}
+
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 space-y-2">
+                    <label class="flex items-center justify-between gap-2 cursor-pointer text-[11px] font-bold text-slate-700">
+                        <span><i class="fas fa-user-friends text-indigo-500 mr-1"></i> Nome em branco (Turma)</span>
+                        <input type="checkbox" id="assemblerBlankNameCheck" ${pedagogicalConfig.blankNameForClass ? 'checked' : ''} class="w-4 h-4 accent-indigo-600 cursor-pointer">
+                    </label>
+                    <label class="flex items-center justify-between gap-2 cursor-pointer text-[11px] font-bold text-slate-700">
+                        <span><i class="fas fa-key text-emerald-500 mr-1"></i> Incluir Gabarito (Impressão/PDF)</span>
+                        <input type="checkbox" id="assemblerAnswerKeyCheck" ${pedagogicalConfig.answerKey ? 'checked' : ''} class="w-4 h-4 accent-emerald-600 cursor-pointer">
+                    </label>
+                    <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-200">
+                        <span class="text-[11px] font-bold text-slate-700">Cópias variadas (Turma):</span>
+                        <select id="assemblerVariationsSelect" class="border border-slate-300 rounded-lg px-2 py-1 text-[11px] font-bold bg-white text-slate-800">
+                            <option value="1" ${(pedagogicalConfig.classVariations || 1) === 1 ? 'selected' : ''}>1 Cópia Padrão</option>
+                            <option value="3" ${pedagogicalConfig.classVariations === 3 ? 'selected' : ''}>3 Modelos (A–C)</option>
+                            <option value="5" ${pedagogicalConfig.classVariations === 5 ? 'selected' : ''}>5 Modelos (A–E)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        container.querySelectorAll('.pc-sheet-mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const nextMode = btn.getAttribute('data-sheet-mode') || 'stage';
+                setPedagogicalConfig({ sheetSourceMode: nextMode });
+                renderPaperAssembler({ containerId, subjectKey, totalPages, sheetIdx: 0, onSheetChange, refreshFn });
+                if (typeof refreshFn === 'function') refreshFn();
+            });
+        });
+
+        const prevPagerBtn = document.getElementById('pcPagerPrevBtn');
+        const nextPagerBtn = document.getElementById('pcPagerNextBtn');
+        if (prevPagerBtn && typeof onSheetChange === 'function') {
+            prevPagerBtn.addEventListener('click', () => onSheetChange(Math.max(0, safeSheet - 1)));
+        }
+        if (nextPagerBtn && typeof onSheetChange === 'function') {
+            nextPagerBtn.addEventListener('click', () => onSheetChange(Math.min(totalSheets - 1, safeSheet + 1)));
+        }
+
+        const blankChk = document.getElementById('assemblerBlankNameCheck');
+        if (blankChk) {
+            blankChk.addEventListener('change', (e) => {
+                setPedagogicalConfig({ blankNameForClass: !!e.target.checked });
+                if (typeof refreshFn === 'function') refreshFn();
+            });
+        }
+
+        const akChk = document.getElementById('assemblerAnswerKeyCheck');
+        if (akChk) {
+            akChk.addEventListener('change', (e) => {
+                setPedagogicalConfig({ answerKey: !!e.target.checked });
+                const pedAk = document.getElementById('toggle-answer-key');
+                if (pedAk) pedAk.checked = !!e.target.checked;
+            });
+        }
+
+        const varSel = document.getElementById('assemblerVariationsSelect');
+        if (varSel) {
+            varSel.addEventListener('change', (e) => {
+                setPedagogicalConfig({ classVariations: parseInt(e.target.value, 10) || 1 });
+            });
+        }
+    }
+
+    function getTotalPagesRequested() {
+        const el = document.getElementById('pagesPerBook');
+        const val = el ? parseInt(el.value, 10) : 2;
+        return Math.max(2, Math.ceil((Number.isFinite(val) ? val : 2) / 2) * 2);
+    }
+
+    function renderPreviewPagerSlice({ subjectKey, level, allItems, pageLeft, pageRight, linesPerPage, sheetIdx = 0, onSheetChange, refreshFn }) {
+        if (!pageLeft || !pageRight || !level) return 0;
+        const totalPages = getTotalPagesRequested();
+        const totalSheets = Math.max(1, Math.ceil(totalPages / 2));
+        const safeSheet = Math.max(0, Math.min(totalSheets - 1, sheetIdx || 0));
+        const leftStart = safeSheet * 2 * linesPerPage;
+        const rightStart = (safeSheet * 2 + 1) * linesPerPage;
+        const leftItems = (allItems || []).slice(leftStart, leftStart + linesPerPage);
+        const rightItems = (allItems || []).slice(rightStart, rightStart + linesPerPage);
+
+        buildPage(pageLeft, level, safeSheet * 2 + 1, leftItems);
+        buildPage(pageRight, level, safeSheet * 2 + 2, rightItems);
+
+        renderPaperAssembler({
+            containerId: 'paperAssemblerContainer',
+            subjectKey,
+            totalPages,
+            sheetIdx: safeSheet,
+            onSheetChange,
+            refreshFn
+        });
+        return safeSheet;
+    }
 
     return {
         initRefs,
@@ -1745,6 +2188,13 @@ const KumonGen = (function() {
         solveItem,
         promptInlineEdit,
         renderPedagogicalPanel,
+        renderPcDifficultySlider,
+        syncTabletPracticeLink,
+        composeWorksheetItems,
+        renderPaperAssembler,
+        getTotalPagesRequested,
+        renderPreviewPagerSlice,
+        setPedagogicalConfig,
         getPedagogicalConfig: () => ({ ...pedagogicalConfig }),
         scheduleRefresh: function() {
             clearTimeout(refreshTimer);

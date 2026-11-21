@@ -50,153 +50,171 @@
         <!-- Seletor de Aluno Ativo -->
         <div id="studentSelectorWidget"></div>
 
-        <!-- Scoreboard Widget -->
-        <div id="scoreboardWidget"></div>
+        <!-- Gaveta 1 (Aberta): Foco, Nível & Slider de Dificuldade -->
+        <details class="kumon-accordion" open>
+            <summary>
+                <span><i class="fas fa-sliders-h text-emerald-600 mr-1.5"></i> Foco & Dificuldade Progressiva</span>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </summary>
+            <div class="kumon-accordion-body space-y-3">
+                <!-- Slider Dinâmico Sincronizado com Tablet -->
+                <div id="pcDifficultySliderContainer"></div>
 
-        <!-- Tabs KumonGen 3.0 -->
-        <div class="kumon-tabs">
-            <button id="tab-btn-wizard" class="kumon-tab-btn active" onclick="switchPorTab('wizard')">
-                <i class="fas fa-magic"></i> Wizard
-            </button>
-            <button id="tab-btn-personalizar" class="kumon-tab-btn" onclick="switchPorTab('personalizar')">
-                <i class="fas fa-sliders-h"></i> Personalizar
-            </button>
-            <button id="tab-btn-pedagogia" class="kumon-tab-btn" onclick="switchPorTab('pedagogia')">
-                <i class="fas fa-graduation-cap"></i> Kumon
-            </button>
-        </div>
-
-        <!-- ABA 1: WIZARD RÁPIDO PARA PAIS -->
-        <div id="panel-wizard" class="space-y-4">
-            <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase block mb-1.5">1. Idade / Ano Escolar</label>
-                <div class="grid grid-cols-2 gap-1.5">
-                    <button type="button" class="wizard-age-btn active p-2 rounded-xl border border-emerald-600 bg-emerald-50 hover:border-emerald-700 text-left transition flex items-center gap-2" onclick="selectPorWizardAge('age_4_5', this)">
-                        <span class="text-base">👶</span>
-                        <div class="min-w-0">
-                            <div class="text-[11px] font-bold text-slate-800 leading-tight">4-5 anos</div>
-                            <div class="text-[9px] text-slate-500 leading-tight">Ed. Infantil</div>
-                        </div>
+                <!-- Tabs KumonGen 3.0 -->
+                <div class="kumon-tabs">
+                    <button id="tab-btn-wizard" class="kumon-tab-btn active" onclick="switchPorTab('wizard')">
+                        <i class="fas fa-magic"></i> Wizard
                     </button>
-                    <button type="button" class="wizard-age-btn p-2 rounded-xl border border-slate-200 bg-white hover:border-slate-300 text-left transition flex items-center gap-2" onclick="selectPorWizardAge('age_6_7', this)">
-                        <span class="text-base">🎒</span>
-                        <div class="min-w-0">
-                            <div class="text-[11px] font-bold text-slate-800 leading-tight">6-7 anos</div>
-                            <div class="text-[9px] text-slate-500 leading-tight">1º Fundamental</div>
-                        </div>
+                    <button id="tab-btn-personalizar" class="kumon-tab-btn" onclick="switchPorTab('personalizar')">
+                        <i class="fas fa-sliders-h"></i> Níveis
                     </button>
-                    <button type="button" class="wizard-age-btn p-2 rounded-xl border border-slate-200 bg-white hover:border-slate-300 text-left transition flex items-center gap-2" onclick="selectPorWizardAge('age_8_9', this)">
-                        <span class="text-base">📘</span>
-                        <div class="min-w-0">
-                            <div class="text-[11px] font-bold text-slate-800 leading-tight">8-9 anos</div>
-                            <div class="text-[9px] text-slate-500 leading-tight">2º / 3º Ano</div>
-                        </div>
-                    </button>
-                    <button type="button" class="wizard-age-btn p-2 rounded-xl border border-slate-200 bg-white hover:border-slate-300 text-left transition flex items-center gap-2" onclick="selectPorWizardAge('age_10_plus', this)">
-                        <span class="text-base">🚀</span>
-                        <div class="min-w-0">
-                            <div class="text-[11px] font-bold text-slate-800 leading-tight">10+ anos</div>
-                            <div class="text-[9px] text-slate-500 leading-tight">Avançado</div>
-                        </div>
+                    <button id="tab-btn-pedagogia" class="kumon-tab-btn" onclick="switchPorTab('pedagogia')">
+                        <i class="fas fa-graduation-cap"></i> Kumon
                     </button>
                 </div>
-            </div>
 
-            <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase block mb-1.5">2. Foco de Alfabetização</label>
-                <div class="space-y-1.5">
-                    <div class="kumon-wizard-card active" onclick="selectPorWizardGoal('p1', this)">
-                        <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                            <i class="fas fa-pen-nib"></i>
-                        </div>
-                        <div>
-                            <div class="font-bold text-xs text-slate-800">Traçado do Alfabeto</div>
-                            <div class="text-[10px] text-slate-500">Coordenação motora e decalque de letras.</div>
+                <!-- ABA 1: WIZARD RÁPIDO PARA PAIS -->
+                <div id="panel-wizard" class="space-y-3">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase block mb-1.5">1. Idade / Ano Escolar</label>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <button type="button" class="wizard-age-btn active p-2 rounded-xl border border-emerald-600 bg-emerald-50 hover:border-emerald-700 text-left transition flex items-center gap-2" onclick="selectPorWizardAge('age_4_5', this)">
+                                <span class="text-base">👶</span>
+                                <div class="min-w-0">
+                                    <div class="text-[11px] font-bold text-slate-800 leading-tight">4-5 anos</div>
+                                    <div class="text-[9px] text-slate-500 leading-tight">Ed. Infantil</div>
+                                </div>
+                            </button>
+                            <button type="button" class="wizard-age-btn p-2 rounded-xl border border-slate-200 bg-white hover:border-slate-300 text-left transition flex items-center gap-2" onclick="selectPorWizardAge('age_6_7', this)">
+                                <span class="text-base">🎒</span>
+                                <div class="min-w-0">
+                                    <div class="text-[11px] font-bold text-slate-800 leading-tight">6-7 anos</div>
+                                    <div class="text-[9px] text-slate-500 leading-tight">1º Fundamental</div>
+                                </div>
+                            </button>
+                            <button type="button" class="wizard-age-btn p-2 rounded-xl border border-slate-200 bg-white hover:border-slate-300 text-left transition flex items-center gap-2" onclick="selectPorWizardAge('age_8_9', this)">
+                                <span class="text-base">📘</span>
+                                <div class="min-w-0">
+                                    <div class="text-[11px] font-bold text-slate-800 leading-tight">8-9 anos</div>
+                                    <div class="text-[9px] text-slate-500 leading-tight">2º / 3º Ano</div>
+                                </div>
+                            </button>
+                            <button type="button" class="wizard-age-btn p-2 rounded-xl border border-slate-200 bg-white hover:border-slate-300 text-left transition flex items-center gap-2" onclick="selectPorWizardAge('age_10_plus', this)">
+                                <span class="text-base">🚀</span>
+                                <div class="min-w-0">
+                                    <div class="text-[11px] font-bold text-slate-800 leading-tight">10+ anos</div>
+                                    <div class="text-[9px] text-slate-500 leading-tight">Avançado</div>
+                                </div>
+                            </button>
                         </div>
                     </div>
 
-                    <div class="kumon-wizard-card" onclick="selectPorWizardGoal('p2', this)">
-                        <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                            <i class="fas fa-comments"></i>
-                        </div>
-                        <div>
-                            <div class="font-bold text-xs text-slate-800">Sílabas Simples</div>
-                            <div class="text-[10px] text-slate-500">Famílias silábicas canônicas (BA, CA, DA...).</div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase block mb-1.5">2. Foco de Alfabetização</label>
+                        <div class="space-y-1.5">
+                            <div class="kumon-wizard-card active" onclick="selectPorWizardGoal('p1', this)">
+                                <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                    <i class="fas fa-pen-nib"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-xs text-slate-800">Traçado do Alfabeto</div>
+                                    <div class="text-[10px] text-slate-500">Coordenação motora e decalque de letras.</div>
+                                </div>
+                            </div>
+
+                            <div class="kumon-wizard-card" onclick="selectPorWizardGoal('p2', this)">
+                                <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                    <i class="fas fa-comments"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-xs text-slate-800">Sílabas Simples</div>
+                                    <div class="text-[10px] text-slate-500">Famílias silábicas canônicas (BA, CA, DA...).</div>
+                                </div>
+                            </div>
+
+                            <div class="kumon-wizard-card" onclick="selectPorWizardGoal('p3', this)">
+                                <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                    <i class="fas fa-puzzle-piece"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-xs text-slate-800">Palavras Curtas (2 Sílabas)</div>
+                                    <div class="text-[10px] text-slate-500">Junte sílabas para formar palavras (BO+LA).</div>
+                                </div>
+                            </div>
+
+                            <div class="kumon-wizard-card" onclick="selectPorWizardGoal('p4', this)">
+                                <div class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                    <i class="fas fa-book-reader"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-xs text-slate-800">Palavras Médias (3-4 Sílabas)</div>
+                                    <div class="text-[10px] text-slate-500">Ampliação de vocabulário e leitura fluida.</div>
+                                </div>
+                            </div>
+
+                            <div class="kumon-wizard-card" onclick="selectPorWizardGoal('p5', this)">
+                                <div class="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                    <i class="fas fa-layer-group"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-xs text-slate-800">Sílabas Complexas</div>
+                                    <div class="text-[10px] text-slate-500">Encontros consonantais (BRA, CRA, PLA...).</div>
+                                </div>
+                            </div>
+
+                            <div class="kumon-wizard-card" onclick="selectPorWizardGoal('p6', this)">
+                                <div class="w-7 h-7 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                    <i class="fas fa-link"></i>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-xs text-slate-800">Dígrafos</div>
+                                    <div class="text-[10px] text-slate-500">Treino intensivo de CH, LH, NH, RR e SS.</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="kumon-wizard-card" onclick="selectPorWizardGoal('p3', this)">
-                        <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                            <i class="fas fa-puzzle-piece"></i>
-                        </div>
-                        <div>
-                            <div class="font-bold text-xs text-slate-800">Palavras Curtas (2 Sílabas)</div>
-                            <div class="text-[10px] text-slate-500">Junte sílabas para formar palavras (BO+LA).</div>
-                        </div>
-                    </div>
-
-                    <div class="kumon-wizard-card" onclick="selectPorWizardGoal('p4', this)">
-                        <div class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                            <i class="fas fa-book-reader"></i>
-                        </div>
-                        <div>
-                            <div class="font-bold text-xs text-slate-800">Palavras Médias (3-4 Sílabas)</div>
-                            <div class="text-[10px] text-slate-500">Ampliação de vocabulário e leitura fluida.</div>
-                        </div>
-                    </div>
-
-                    <div class="kumon-wizard-card" onclick="selectPorWizardGoal('p5', this)">
-                        <div class="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                            <i class="fas fa-layer-group"></i>
-                        </div>
-                        <div>
-                            <div class="font-bold text-xs text-slate-800">Sílabas Complexas</div>
-                            <div class="text-[10px] text-slate-500">Encontros consonantais (BRA, CRA, PLA...).</div>
-                        </div>
-                    </div>
-
-                    <div class="kumon-wizard-card" onclick="selectPorWizardGoal('p6', this)">
-                        <div class="w-7 h-7 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                            <i class="fas fa-link"></i>
-                        </div>
-                        <div>
-                            <div class="font-bold text-xs text-slate-800">Dígrafos</div>
-                            <div class="text-[10px] text-slate-500">Treino intensivo de CH, LH, NH, RR e SS.</div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase block mb-1.5">3. Ritmo da Rotina Diária</label>
+                        <div class="grid grid-cols-3 gap-1.5 text-center">
+                            <button type="button" class="wizard-pace-btn active p-2 rounded-xl border border-emerald-600 bg-emerald-50 text-emerald-800 text-[10px] font-bold" onclick="selectPorWizardPace(2, 8, this)">
+                                <span class="block text-xs font-black">1 Folha</span>
+                                10 min (Kumon)
+                            </button>
+                            <button type="button" class="wizard-pace-btn p-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-[10px] font-bold" onclick="selectPorWizardPace(4, 8, this)">
+                                <span class="block text-xs font-black">2 Folhas</span>
+                                Treino duplo
+                            </button>
+                            <button type="button" class="wizard-pace-btn p-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-[10px] font-bold" onclick="selectPorWizardPace(8, 8, this)">
+                                <span class="block text-xs font-black">4 Folhas</span>
+                                Semanal
+                            </button>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase block mb-1.5">3. Ritmo da Rotina Diária</label>
-                <div class="grid grid-cols-3 gap-1.5 text-center">
-                    <button type="button" class="wizard-pace-btn active p-2 rounded-xl border border-emerald-600 bg-emerald-50 text-emerald-800 text-[10px] font-bold" onclick="selectPorWizardPace(2, 8, this)">
-                        <span class="block text-xs font-black">1 Folha</span>
-                        10 min (Kumon)
-                    </button>
-                    <button type="button" class="wizard-pace-btn p-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-[10px] font-bold" onclick="selectPorWizardPace(4, 8, this)">
-                        <span class="block text-xs font-black">2 Folhas</span>
-                        Treino duplo
-                    </button>
-                    <button type="button" class="wizard-pace-btn p-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-[10px] font-bold" onclick="selectPorWizardPace(8, 8, this)">
-                        <span class="block text-xs font-black">4 Folhas</span>
-                        Semanal
-                    </button>
+                <!-- ABA 2: PERSONALIZAÇÃO -->
+                <div id="panel-personalizar" class="space-y-3 hidden">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase block mb-2">nível (P1–P8)</label>
+                        <div id="levelList" class="space-y-2 max-h-52 overflow-y-auto pr-1"></div>
+                    </div>
+                </div>
+
+                <!-- ABA 3: PEDAGOGIA KUMON -->
+                <div id="panel-pedagogia" class="space-y-3 hidden">
+                    <div id="pedagogicalPanelContainer"></div>
                 </div>
             </div>
-        </div>
+        </details>
 
-        <!-- ABA 2: PERSONALIZAÇÃO AVANÇADA -->
-        <div id="panel-personalizar" class="space-y-4 hidden">
-            <!-- Níveis -->
-            <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase block mb-2">nível</label>
-                <div id="levelList" class="space-y-2 max-h-56 overflow-y-auto pr-1"></div>
-            </div>
-
-            <!-- Visual / repetição -->
-            <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase block mb-2">visual</label>
+        <!-- Gaveta 2 (Recolhida): Folha, Zoom & Parâmetros Avançados -->
+        <details class="kumon-accordion">
+            <summary>
+                <span><i class="fas fa-cog text-slate-500 mr-1.5"></i> Layout A4, Fonte Bastão & Avançado</span>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </summary>
+            <div class="kumon-accordion-body space-y-3">
                 <div class="bg-slate-50 p-3 rounded-xl space-y-2.5">
                     <div class="flex items-center justify-between">
                         <label for="linesPerPage" class="text-xs">linhas/página</label>
@@ -231,19 +249,34 @@
                         <input type="checkbox" id="fontBastaoCheckbox" onchange="toggleFontBastaoSheet(this.checked)" class="w-4 h-4 text-emerald-600 rounded border-gray-300 cursor-pointer focus:ring-emerald-500">
                     </div>
                 </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase block mb-1.5">parâmetros avançados</label>
+                    <div id="paramPanel" class="bg-slate-50 p-3 rounded-xl min-h-[80px] text-xs"></div>
+                </div>
             </div>
+        </details>
 
-            <!-- Parâmetros dinâmicos -->
-            <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase block mb-2">parâmetros avançados</label>
-                <div id="paramPanel" class="bg-slate-50 p-3 rounded-xl min-h-[100px] text-xs"></div>
+        <!-- Gaveta 2b (Recolhida): Montagem de Papel, Reforço & Turma -->
+        <details id="paperAssemblerAccordion" class="kumon-accordion">
+            <summary>
+                <span><i class="fas fa-print text-indigo-500 mr-1.5"></i> Montagem de Papel, Erros & Turma</span>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </summary>
+            <div class="kumon-accordion-body">
+                <div id="paperAssemblerContainer"></div>
             </div>
-        </div>
+        </details>
 
-        <!-- ABA 3: PEDAGOGIA KUMON -->
-        <div id="panel-pedagogia" class="space-y-4 hidden">
-            <div id="pedagogicalPanelContainer"></div>
-        </div>
+        <!-- Gaveta 3 (Recolhida): Controle dos Pais & Progresso -->
+        <details class="kumon-accordion">
+            <summary>
+                <span><i class="fas fa-user-shield text-amber-500 mr-1.5"></i> Controle dos Pais & Histórico</span>
+                <i class="fas fa-chevron-down accordion-chevron"></i>
+            </summary>
+            <div class="kumon-accordion-body">
+                <div id="scoreboardWidget"></div>
+            </div>
+        </details>
 
         <!-- Ações -->
         <div class="border-t border-slate-100 pt-4 space-y-2">
@@ -261,7 +294,7 @@
             <button onclick="generateWeeklyPackagePDF()" class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-900 p-3.5 rounded-xl shadow font-black text-xs transition-transform transform active:scale-95">
                 <i class="fas fa-calendar-week text-slate-900"></i> PACOTE SEMANAL (5 DIAS EM 1 PDF)
             </button>
-            <a href="tablet.html?subject=portugues" class="w-full flex items-center justify-center gap-2 bg-emerald-50 border-2 border-emerald-200 text-emerald-700 p-3 rounded-xl hover:bg-emerald-100 font-bold text-xs shadow-sm transition-colors">
+            <a id="porPracticeTabletBtn" href="tablet.html?subject=portugues" class="w-full flex items-center justify-center gap-2 bg-emerald-50 border-2 border-emerald-200 text-emerald-700 p-3 rounded-xl hover:bg-emerald-100 font-bold text-xs shadow-sm transition-colors">
                 <i class="fas fa-tablet-alt text-emerald-500"></i> Praticar este nível no Tablet
             </a>
         </div>
@@ -290,7 +323,9 @@
 </main>
 
 <!-- Scripts -->
+<script src="progression-engine.js?v=4.0.0"></script>
 <script src="student-profiles.js?v=3.9.0"></script>
+<script src="avatar-wardrobe.js?v=3.9.0"></script>
 <script src="parent-guide.js?v=4.3.0"></script>
 <script src="gerador.js?v=3.9.0"></script>
 <script src="portugues.js?v=3.9.0"></script>

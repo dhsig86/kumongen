@@ -17,7 +17,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="KumonGen">
+    <script src="progression-engine.js?v=4.0.0"></script>
     <script src="student-profiles.js?v=3.9.0"></script>
+    <script src="avatar-wardrobe.js?v=3.9.0"></script>
     <script src="parent-guide.js?v=4.3.0"></script>
     <script src="pwa-manager.js?v=4.2.0"></script>
     <meta name="description" content="KumonGen — Cadernos diários de exercícios de Matemática, Português e Inglês inspirados no Método Kumon. Imprima folhas A4 ou treine no tablet.">
@@ -89,23 +91,29 @@
         </p>
 
         <!-- BARRA DO ALUNO ATIVO / MULTI-PERFIS -->
-        <div id="homeStudentCard" class="max-w-xl mx-auto mb-8 bg-slate-800/90 backdrop-blur-md border border-slate-700 hover:border-amber-500/50 rounded-2xl p-3.5 flex items-center justify-between shadow-xl transition-all">
-            <div class="flex items-center gap-3 text-left min-w-0">
-                <div class="w-12 h-12 rounded-full p-0.5 bg-gradient-to-tr from-amber-400 to-yellow-500 shadow-sm flex-shrink-0 overflow-hidden">
+        <div id="homeStudentCard" class="max-w-xl mx-auto mb-8 bg-slate-800/90 backdrop-blur-md border border-slate-700 hover:border-amber-500/50 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-2.5 shadow-xl transition-all">
+            <div class="flex items-center gap-3 text-left flex-1" style="min-width: 170px;">
+                <button type="button" onclick="if(window.AvatarWardrobe)window.AvatarWardrobe.openModal(null,{onClose:updateHomeProfile})" id="homeStudentAvatarWrap" class="w-12 h-12 rounded-full p-0.5 bg-gradient-to-tr from-amber-400 to-yellow-500 shadow-sm flex-shrink-0 cursor-pointer transition-transform hover:scale-105" title="Abrir Camarim do Mascote">
                     <img id="homeStudentAvatar" src="assets/mascotes/jaguar_avatar.png" alt="Mascote" class="w-full h-full rounded-full object-cover">
-                </div>
-                <div class="min-w-0">
+                </button>
+                <div class="min-w-0 flex-1">
                     <span class="text-[9px] text-amber-400 font-bold uppercase tracking-wider block">Aluno Ativo</span>
                     <div id="homeStudentName" class="text-sm font-bold text-white truncate leading-tight">Aluno</div>
-                    <span id="homeStudentTier" class="text-[10px] text-slate-400 block mt-0.5">6-7 anos · 0 ★</span>
+                    <span id="homeStudentTier" class="text-[10px] text-slate-400 block mt-0.5 whitespace-nowrap">6-7 anos · 0 ★</span>
                 </div>
             </div>
-            <div class="flex items-center gap-2 flex-shrink-0">
-                <button type="button" onclick="openStudentProfiles('cards')" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer active:scale-95">
+            <div class="flex items-center gap-1.5 flex-shrink-0 ml-auto">
+                <button type="button" id="homeParentAreaBtn" onclick="if(window.StudentProfileEngine && window.StudentProfileEngine.openParentDashboard) window.StudentProfileEngine.openParentDashboard();" class="px-2.5 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/50 text-rose-200 font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1 cursor-pointer active:scale-95" title="Área Protegida dos Pais · Fraquezas e Controles">
+                    <i class="fas fa-lock text-rose-300"></i> <span class="hidden sm:inline">Pais</span>
+                </button>
+                <button type="button" id="homeWardrobeBtn" onclick="if(window.AvatarWardrobe)window.AvatarWardrobe.openModal(null,{onClose:updateHomeProfile})" class="px-2.5 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-amber-300 font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer active:scale-95" title="Vestir mascote com estrelas">
+                    <i class="fas fa-hat-wizard text-amber-400"></i> Camarim
+                </button>
+                <button type="button" onclick="openStudentProfiles('cards')" class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer active:scale-95">
                     <i class="fas fa-users text-amber-400"></i> Trocar
                 </button>
-                <button type="button" onclick="openStudentProfiles('form')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1 cursor-pointer active:scale-95" title="Criar outro perfil">
-                    <i class="fas fa-user-plus"></i> Novo Perfil
+                <button type="button" onclick="openStudentProfiles('form')" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1 cursor-pointer active:scale-95" title="Criar outro perfil">
+                    <i class="fas fa-user-plus"></i> <span class="hidden sm:inline">Novo</span>
                 </button>
             </div>
         </div>
@@ -272,17 +280,28 @@ function updateHomeProfile() {
         const student = window.StudentProfileEngine.getActive();
         if (!student) return;
         const nameEl = document.getElementById('homeStudentName');
+        const avatarWrapEl = document.getElementById('homeStudentAvatarWrap');
         const avatarEl = document.getElementById('homeStudentAvatar');
         const tierEl = document.getElementById('homeStudentTier');
         if (nameEl) nameEl.innerText = student.name || 'Super Aluno';
-        if (avatarEl) {
-            const m = window.StudentProfileEngine.MASCOTS[student.mascot] || window.StudentProfileEngine.MASCOTS.jaguar;
+        const m = window.StudentProfileEngine.MASCOTS[student.mascot] || window.StudentProfileEngine.MASCOTS.jaguar;
+        if (avatarWrapEl && window.AvatarWardrobe && typeof window.AvatarWardrobe.renderAvatarHtml === 'function') {
+            avatarWrapEl.innerHTML = window.AvatarWardrobe.renderAvatarHtml(student, 'w-full h-full rounded-full object-cover');
+            const innerImg = avatarWrapEl.querySelector('img');
+            if (innerImg) innerImg.id = 'homeStudentAvatar';
+        } else if (avatarEl) {
             avatarEl.src = m.avatar;
         }
         if (tierEl) {
             const age = window.StudentProfileEngine.AGE_TIERS[student.ageTier] || window.StudentProfileEngine.AGE_TIERS.age_6_7;
             const stars = (student.gamification && student.gamification.stars) || 0;
-            tierEl.innerText = `${(age && age.label) || '6-7 anos'} · ${stars} ★`;
+            const league = (typeof window.StudentProfileEngine.getActiveLeagueInfo === 'function')
+                ? window.StudentProfileEngine.getActiveLeagueInfo(student)
+                : { current: { icon: '🌱', short: 'Semente' }, xp: 0 };
+            const rank = (typeof window.StudentProfileEngine.getActiveRanking === 'function')
+                ? window.StudentProfileEngine.getActiveRanking(student)
+                : { activeRank: 1 };
+            tierEl.innerText = `${(age && age.label) || '6-7 anos'} · ${league.current.icon} ${league.current.short} (#${rank.activeRank}) · ${stars} ★`;
         }
         // Nota: A index preserva identidade escura de Hub central e não recebe classes de tema de mascote.
     } catch (e) {
@@ -292,6 +311,7 @@ function updateHomeProfile() {
 updateHomeProfile();
 window.addEventListener('DOMContentLoaded', updateHomeProfile);
 window.addEventListener('kumongen:student_changed', updateHomeProfile);
+window.addEventListener('kumongen:wardrobe_changed', updateHomeProfile);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

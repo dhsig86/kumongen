@@ -247,8 +247,8 @@ function initializeSandbox() {
 
     const context = vm.createContext(sandbox);
 
-    // Carrega módulos curriculares na ordem canônica
-    const scripts = ['gerador.js', 'matematica.js', 'portugues.js', 'ingles.js', 'student-profiles.js'];
+    // Carrega módulos curriculares na ordem canônica (incluindo progression-engine.js)
+    const scripts = ['progression-engine.js', 'gerador.js', 'matematica.js', 'portugues.js', 'ingles.js', 'student-profiles.js'];
     for (const scriptName of scripts) {
         const scriptPath = path.join(CONFIG.projectRoot, scriptName);
         if (fs.existsSync(scriptPath)) {
@@ -261,15 +261,15 @@ function initializeSandbox() {
         throw new Error('Falha crítica: window.KumonSubjects não foi inicializado no sandbox.');
     }
 
-    // Harmoniza suporte a levelId string ou objeto no KumonSubjects
+    // Harmoniza suporte a levelId string ou objeto e preserva 3º argumento options (stage, handicap, etc.)
     for (const sub of Object.values(sandbox.KumonSubjects)) {
         const origGen = sub.generate;
-        sub.generate = function(levelOrId, count) {
+        sub.generate = function(levelOrId, count, options) {
             let lvl = levelOrId;
             if (typeof levelOrId === 'string') {
                 lvl = (sub.levels && sub.levels.find(l => l.id.toLowerCase() === levelOrId.toLowerCase())) || levelOrId;
             }
-            return origGen.call(sub, lvl, count);
+            return origGen.call(sub, lvl, count, options);
         };
     }
 
@@ -836,7 +836,64 @@ function runContentQualityAudit() {
     const passedLevels = levelsResult.filter(l => l.passed).length;
     const failedLevels = totalLevels - passedLevels;
     const avgScore = Number((levelsResult.reduce((sum, l) => sum + l.scores.weighted, 0) / totalLevels).toFixed(1));
-    const isOverallPass = failedLevels === 0;
+
+    // Auditoria complementar real dos 119 degraus progressivos (KumonProgression)
+    const stageFailures = [];
+    let totalStagesAudited = 0;
+    if (sandbox.KumonProgression) {
+        for (const subKey of subjects) {
+            const sub = sandbox.KumonSubjects[subKey];
+            for (const lvl of sub.levels) {
+                const stages = sandbox.KumonProgression.getStagesForLevel(subKey, lvl.id);
+                for (const st of stages) {
+                    totalStagesAudited++;
+                    const batch = sub.generate(lvl, 16, { stage: st.stage });
+                    if (!Array.isArray(batch) || batch.length < 16) {
+                        stageFailures.push(`${subKey}:${lvl.id}:s${st.stage} gerou apenas ${batch ? batch.length : 0}/16 itens`);
+                        continue;
+                    }
+                    const uniqKeys = new Set(batch.map(it => getItemKey(it))).size;
+                    if (uniqKeys < 3) {
+                        stageFailures.push(`${subKey}:${lvl.id}:s${st.stage} baixa variedade (${uniqKeys} únicos)`);
+                    }
+                    // Verificações de fidelidade rótulo × geração (Sprint 5.1)
+                    if (subKey === 'matematica' && lvl.id === 'm2' && st.stage === 12) {
+                        const bad = batch.filter(it => (it.operand1 + it.operand2) < 11);
+                        if (bad.length > 0) stageFailures.push(`m2:s12 (+ até 20) gerou ${bad.length} soma(s) <= 10`);
+                    }
+                    if (subKey === 'matematica' && lvl.id === 'm4' && st.stage === 3) {
+                        const tensSet = new Set(batch.map(it => Math.floor(it.number / 10)));
+                        const outRange = batch.some(it => it.number < 20 || it.number > 49);
+                        if (outRange || tensSet.size < 2) stageFailures.push(`m4:s3 (20-49) fora de faixa ou preso a 1 dezena`);
+                    }
+                    if (subKey === 'matematica' && lvl.id === 'm4' && st.stage === 4) {
+                        const tensSet = new Set(batch.map(it => Math.floor(it.number / 10)));
+                        const outRange = batch.some(it => it.number < 50 || it.number > 99);
+                        if (outRange || tensSet.size < 2) stageFailures.push(`m4:s4 (50-99) fora de faixa ou preso a 1 dezena`);
+                    }
+                    if (subKey === 'matematica' && lvl.id === 'm3' && st.stage === 4) {
+                        const hasNegNum = batch.some(it => Array.isArray(it.sequence) && it.sequence.some(v => typeof v === 'number' && v < 0));
+                        const hasReverse = batch.some(it => {
+                            const nums = (it.sequence || []).filter(v => typeof v === 'number');
+                            return nums.length >= 2 && nums[1] < nums[0];
+                        });
+                        if (hasNegNum || !hasReverse) stageFailures.push(`m3:s4 (+3/Inversa) sem sequência inversa válida`);
+                    }
+                }
+            }
+        }
+        // Valida resolução de lacuna na posição 0 em sequências com passo != 1 e decrescentes
+        if (sandbox.KumonGen && typeof sandbox.KumonGen.solveItem === 'function') {
+            const ansAsc = sandbox.KumonGen.solveItem({ type: 'sequence', sequence: ['__', 10, 12, 14, 16] });
+            const ansDesc = sandbox.KumonGen.solveItem({ type: 'sequence', sequence: ['__', 18, 16, 14, 12] });
+            if (ansAsc !== '8') stageFailures.push(`solveItem sequence asc pos 0 esperava '8', recebeu '${ansAsc}'`);
+            if (ansDesc !== '20') stageFailures.push(`solveItem sequence desc pos 0 esperava '20', recebeu '${ansDesc}'`);
+        }
+    } else {
+        stageFailures.push('KumonProgression não carregado no sandbox de auditoria');
+    }
+
+    const isOverallPass = failedLevels === 0 && stageFailures.length === 0;
 
     // Médias por disciplina
     const subjectSummaries = {};
@@ -865,8 +922,14 @@ function runContentQualityAudit() {
             passedLevels,
             failedLevels,
             averageScore: avgScore,
+            totalStagesAudited,
+            stageFailuresCount: stageFailures.length,
             overallStatus: isOverallPass ? 'PASS' : 'FAIL',
             durationMs: Date.now() - startTime
+        },
+        stageAudit: {
+            totalStagesAudited,
+            failures: stageFailures
         },
         subjectSummaries,
         levels: levelsResult
@@ -874,6 +937,10 @@ function runContentQualityAudit() {
 
     // 1. Exibe tabela ANSI no terminal
     renderAnsiTable(fullReport);
+    console.log(`${c.cyan}▶ Auditoria dos Degraus Progressivos:${c.reset} ${c.bold}${totalStagesAudited} degraus${c.reset} verificados | Falhas: ${stageFailures.length === 0 ? c.green : c.red}${c.bold}${stageFailures.length}${c.reset}`);
+    if (stageFailures.length > 0) {
+        stageFailures.forEach(f => console.error(`  ${c.red}✖ ${f}${c.reset}`));
+    }
 
     // 2. Persiste relatório JSON estruturado
     fs.writeFileSync(CONFIG.outputJsonPath, JSON.stringify(fullReport, null, 2), 'utf8');
@@ -881,10 +948,10 @@ function runContentQualityAudit() {
 
     // 3. Regra de saída contratual
     if (isOverallPass) {
-        console.log(`${c.bold}${c.green}★ SUCESSO: Todos os 25 níveis curriculares atingiram nota >= ${CONFIG.passScoreThreshold}/100.${c.reset}\n`);
+        console.log(`${c.bold}${c.green}★ SUCESSO: Todos os 25 níveis curriculares (>= ${CONFIG.passScoreThreshold}/100) e ${totalStagesAudited} degraus progressivos aprovados.${c.reset}\n`);
         process.exit(0);
     } else {
-        console.error(`${c.bold}${c.red}✖ FALHA: ${failedLevels} nível(is) não atingiram a nota mínima de ${CONFIG.passScoreThreshold}/100.${c.reset}\n`);
+        console.error(`${c.bold}${c.red}✖ FALHA: ${failedLevels} nível(is) e ${stageFailures.length} falha(s) em degraus progressivos.${c.reset}\n`);
         process.exit(1);
     }
 }
