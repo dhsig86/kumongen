@@ -1,14 +1,14 @@
 {
   "metadata": {
     "title": "KumonGen UX/UI Audit Results",
-    "generatedAt": "2026-11-21T03:13:01.245Z",
+    "generatedAt": "2026-11-22T23:23:22.012Z",
     "viewportsTested": 6,
     "pagesTested": 5,
     "scenariosTested": 11
   },
   "summary": {
-    "total": 110,
-    "passed": 110,
+    "total": 113,
+    "passed": 113,
     "failed": 0,
     "warnings": 0,
     "passRate": "100.0%"
@@ -455,6 +455,18 @@
     {
       "status": "PASS",
       "message": "[index.html][Mobile 390px] Card do aluno com botão Área dos Pais cabe sem estouro"
+    },
+    {
+      "status": "PASS",
+      "message": "[ingles.html][Desktop 1280×800] Editor Vertical de Vocabulário na sidebar 320px com ZERO scroll horizontal"
+    },
+    {
+      "status": "PASS",
+      "message": "[ingles.html][Desktop 1280×800] Modal Ampliado de Vocabulário (#kumonVocabModal) renderiza 4 degraus sem estouro"
+    },
+    {
+      "status": "PASS",
+      "message": "[portugues.html][Mobile 390px] Editor Vertical de Vocabulário sem overflow horizontal na página nem na sidebar"
     }
   ]
 }

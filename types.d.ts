@@ -368,6 +368,24 @@ declare global {
             open: () => void;
             close: () => void;
         };
+        KumonVocabulary?: {
+            THEMES: any[];
+            CATALOG: Record<string, any>;
+            autoSplitParts: (word: string, subjectKey?: string, levelId?: string) => string[];
+            getCatalogForLevel: (subjectKey: string, levelId: string) => any[];
+            getStageItems: (subjectKey: string, levelId: string, stage?: number, theme?: string) => any[];
+            getCustomItems: (subjectKey: string, levelId: string, studentId?: string | null) => any[];
+            addCustomItem: (subjectKey: string, levelId: string, rawItem: any, scope?: string) => any;
+            addBatchItems: (subjectKey: string, levelId: string, rawText: string, theme?: string, scope?: string) => any;
+            removeCustomItem: (itemId: string, scope?: string) => boolean;
+            exportAllCustomVocab: (studentIds?: string[]) => any;
+            importAllCustomVocab: (payload: any, idRemap?: Record<string, string>) => boolean;
+            migrateLegacyCustomWords: (subjectKey: string, legacyWordList: any[], currentLevelId?: string) => number;
+            composeGraduatedPool: (options: any) => any[];
+            renderSidebarManager: (config: any) => void;
+            openExpandedModal: (config: any) => void;
+            [key: string]: any;
+        };
         toggleFontBastaoSheet?: (enabled: boolean) => void;
         jspdf?: any;
         KumonGen?: any;

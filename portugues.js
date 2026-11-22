@@ -57,6 +57,7 @@
     // ---------- ESTADO LOCAL ----------
     let currentLevelId = 'p1';
     let currentStage = 1;
+    let selectedTheme = 'all';
     let itemsPerPage = 8;
     let previewSheetIdx = 0;
     let lastGeneratedItems = [];
@@ -161,7 +162,7 @@
         const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
         if (!storage) return;
         const savedLevelId = storage.getItem('kumongen_por_level');
-        if (savedLevelId) {
+        if (savedLevelId && LevelLibrary.portugues.some(l => l.id === savedLevelId)) {
             currentLevelId = savedLevelId;
         }
 
@@ -169,7 +170,17 @@
         if (savedParams) {
             try {
                 const parsed = JSON.parse(savedParams);
-                customParams = { ...customParams, ...parsed };
+                if (window.KumonVocabulary && typeof window.KumonVocabulary.migrateLegacyCustomWords === 'function' && Array.isArray(parsed.wordList)) {
+                    window.KumonVocabulary.migrateLegacyCustomWords('portugues', parsed.wordList, currentLevelId);
+                }
+                if (Array.isArray(parsed.traceSelected)) customParams.traceSelected = parsed.traceSelected;
+                if (parsed.traceRepeat) customParams.traceRepeat = parseInt(parsed.traceRepeat, 10) || 2;
+                if (parsed.syllableFamilies && typeof parsed.syllableFamilies === 'object') customParams.syllableFamilies = Object.assign({}, customParams.syllableFamilies, parsed.syllableFamilies);
+                if (parsed.syllableComplexFamilies && typeof parsed.syllableComplexFamilies === 'object') customParams.syllableComplexFamilies = Object.assign({}, customParams.syllableComplexFamilies, parsed.syllableComplexFamilies);
+                if (parsed.syllableDigraphFamilies && typeof parsed.syllableDigraphFamilies === 'object') customParams.syllableDigraphFamilies = Object.assign({}, customParams.syllableDigraphFamilies, parsed.syllableDigraphFamilies);
+                if (parsed.syllableRepeat) customParams.syllableRepeat = parseInt(parsed.syllableRepeat, 10) || 2;
+                if (parsed.wordRepeat) customParams.wordRepeat = parseInt(parsed.wordRepeat, 10) || 2;
+                if (typeof parsed.selectedTheme === 'string') selectedTheme = parsed.selectedTheme;
             } catch (e) {
                 console.error("Erro ao ler parametros salvos de portugues", e);
             }
@@ -181,7 +192,16 @@
         if (!storage) return;
         try {
             storage.setItem('kumongen_por_level', currentLevelId);
-            storage.setItem('kumongen_por_params', JSON.stringify(customParams));
+            storage.setItem('kumongen_por_params', JSON.stringify({
+                traceSelected: customParams.traceSelected,
+                traceRepeat: customParams.traceRepeat,
+                syllableFamilies: customParams.syllableFamilies,
+                syllableComplexFamilies: customParams.syllableComplexFamilies,
+                syllableDigraphFamilies: customParams.syllableDigraphFamilies,
+                syllableRepeat: customParams.syllableRepeat,
+                wordRepeat: customParams.wordRepeat,
+                selectedTheme
+            }));
         } catch (e) {}
     }
 
@@ -392,8 +412,26 @@
                 if (lvlId === 'p5') sylMap = customParams.syllableComplexFamilies;
                 if (lvlId === 'p6') sylMap = customParams.syllableDigraphFamilies;
                 const allSel = Object.keys(sylMap).filter(s => sylMap[s]);
-                const sliceLen = poolRatio < 1 ? Math.max(4, Math.ceil(allSel.length * poolRatio)) : allSel.length;
-                const selectedSyllables = allSel.slice(0, sliceLen);
+                const hasExplicitStage = (effOpts.vocabStage !== undefined || effOpts.stage !== undefined);
+
+                let selectedSyllables = allSel;
+                if (hasExplicitStage && allSel.length >= 8) {
+                    const stg = Math.max(1, Math.min(4, parseInt(effOpts.vocabStage || effOpts.stage, 10) || 1));
+                    const chunk = Math.ceil(allSel.length / 4);
+                    const start = (stg - 1) * chunk;
+                    const curBand = allSel.slice(start, Math.min(allSel.length, start + chunk));
+                    const prevBand = stg > 1 ? allSel.slice(Math.max(0, start - chunk), start) : [];
+                    if (stg === 4 && lvlId === 'p5') {
+                        selectedSyllables = allSel;
+                    } else if (curBand.length > 0) {
+                        const revCount = prevBand.length > 0 ? Math.max(1, Math.round(curBand.length * 0.25)) : 0;
+                        selectedSyllables = [...curBand, ...prevBand.slice(0, revCount)];
+                    }
+                } else if (poolRatio < 1) {
+                    const sliceLen = Math.max(4, Math.ceil(allSel.length * poolRatio));
+                    selectedSyllables = allSel.slice(0, sliceLen);
+                }
+
                 selectedSyllables.forEach(syllable => {
                     for (let i = 0; i < (customParams.syllableRepeat || 2); i++) {
                         baseItems.push({ type: 'syllable', syllable: syllable });
@@ -404,16 +442,26 @@
 
             case 'wordbuilding': {
                 const lvlId = (level && level.id) || currentLevelId;
-                let wordsToUse = customParams.wordList;
-                if (lvlId === 'p4') {
-                    wordsToUse = (currentLevelId === 'p4' && customParams.wordList && customParams.wordList.length > 0)
-                        ? customParams.wordList
-                        : DEFAULT_WORDS_P4;
-                } else if (lvlId === 'p3') {
-                    wordsToUse = (currentLevelId === 'p3' && customParams.wordList && customParams.wordList.length > 0)
-                        ? customParams.wordList
-                        : DEFAULT_WORDS_P3;
+                const hasExplicitStage = (effOpts.vocabStage !== undefined || effOpts.stage !== undefined);
+                if (typeof window !== 'undefined' && window.KumonVocabulary && typeof window.KumonVocabulary.composeGraduatedPool === 'function') {
+                    if (hasExplicitStage) {
+                        return window.KumonVocabulary.composeGraduatedPool({
+                            subjectKey: 'portugues',
+                            levelId: lvlId,
+                            stage: effOpts.vocabStage || effOpts.stage || 1,
+                            count: target,
+                            theme: effOpts.theme || (lvlId === currentLevelId ? selectedTheme : 'all'),
+                            studentId: effOpts.studentId || null
+                        });
+                    }
+                    const fullCat = window.KumonVocabulary.getCatalogForLevel('portugues', lvlId);
+                    const extras = window.KumonVocabulary.getCustomItems('portugues', lvlId, effOpts.studentId || null);
+                    [...extras, ...fullCat].forEach(wordObj => {
+                        baseItems.push({ type: 'word', word: wordObj.word, parts: [...wordObj.parts], theme: wordObj.theme });
+                    });
+                    break;
                 }
+                const wordsToUse = (lvlId === 'p4') ? DEFAULT_WORDS_P4 : DEFAULT_WORDS_P3;
                 const sliceLen = poolRatio < 1 ? Math.max(8, Math.ceil(wordsToUse.length * poolRatio)) : wordsToUse.length;
                 wordsToUse.slice(0, sliceLen).forEach(wordObj => {
                     for (let i = 0; i < (customParams.wordRepeat || 1); i++) {
@@ -424,6 +472,25 @@
             }
 
             case 'rhyme': {
+                const hasExplicitStage = (effOpts.vocabStage !== undefined || effOpts.stage !== undefined);
+                if (typeof window !== 'undefined' && window.KumonVocabulary && typeof window.KumonVocabulary.composeGraduatedPool === 'function') {
+                    if (hasExplicitStage) {
+                        return window.KumonVocabulary.composeGraduatedPool({
+                            subjectKey: 'portugues',
+                            levelId: 'p7',
+                            stage: effOpts.vocabStage || effOpts.stage || 1,
+                            count: target,
+                            theme: effOpts.theme || (currentLevelId === 'p7' ? selectedTheme : 'all'),
+                            studentId: effOpts.studentId || null
+                        });
+                    }
+                    const fullCat = window.KumonVocabulary.getCatalogForLevel('portugues', 'p7');
+                    const extras = window.KumonVocabulary.getCustomItems('portugues', 'p7', effOpts.studentId || null);
+                    [...extras, ...fullCat].forEach(rh => {
+                        baseItems.push({ type: 'rhyme', word: rh.word, target: rh.target, options: [...rh.options], rhymeEnding: rh.rhymeEnding, theme: rh.theme });
+                    });
+                    break;
+                }
                 const sliceLen = poolRatio < 1 ? Math.max(6, Math.ceil(DEFAULT_RHYMES_P7.length * poolRatio)) : DEFAULT_RHYMES_P7.length;
                 const pool = [...DEFAULT_RHYMES_P7.slice(0, sliceLen)].sort(() => Math.random() - 0.5);
                 while (baseItems.length < target) {
@@ -442,6 +509,25 @@
             }
 
             case 'sentence': {
+                const hasExplicitStage = (effOpts.vocabStage !== undefined || effOpts.stage !== undefined);
+                if (typeof window !== 'undefined' && window.KumonVocabulary && typeof window.KumonVocabulary.composeGraduatedPool === 'function') {
+                    if (hasExplicitStage) {
+                        return window.KumonVocabulary.composeGraduatedPool({
+                            subjectKey: 'portugues',
+                            levelId: 'p8',
+                            stage: effOpts.vocabStage || effOpts.stage || 1,
+                            count: target,
+                            theme: effOpts.theme || (currentLevelId === 'p8' ? selectedTheme : 'all'),
+                            studentId: effOpts.studentId || null
+                        });
+                    }
+                    const fullCat = window.KumonVocabulary.getCatalogForLevel('portugues', 'p8');
+                    const extras = window.KumonVocabulary.getCustomItems('portugues', 'p8', effOpts.studentId || null);
+                    [...extras, ...fullCat].forEach(st => {
+                        baseItems.push({ type: 'sentence', sentence: st.sentence, parts: [...st.parts], theme: st.theme });
+                    });
+                    break;
+                }
                 const sliceLen = poolRatio < 1 ? Math.max(6, Math.ceil(DEFAULT_SENTENCES_P8.length * poolRatio)) : DEFAULT_SENTENCES_P8.length;
                 const pool = [...DEFAULT_SENTENCES_P8.slice(0, sliceLen)].sort(() => Math.random() - 0.5);
                 while (baseItems.length < target) {
@@ -485,6 +571,34 @@
     function updateParamPanel() {
         const level = LevelLibrary.portugues.find(l => l.id === currentLevelId);
         if (!level || !paramPanel) return;
+
+        if ((level.type === 'wordbuilding' || level.type === 'rhyme' || level.type === 'sentence') && window.KumonVocabulary && typeof window.KumonVocabulary.renderSidebarManager === 'function') {
+            window.KumonVocabulary.renderSidebarManager({
+                container: paramPanel,
+                subjectKey: 'portugues',
+                levelId: currentLevelId,
+                stage: currentStage,
+                selectedTheme,
+                accentHex: '#059669',
+                repeatVal: customParams.wordRepeat || 2,
+                onThemeChange: (nextTheme) => {
+                    selectedTheme = nextTheme || 'all';
+                    saveState();
+                    syncTabletLinkTheme();
+                    updateParamPanel();
+                    refreshPreview();
+                },
+                onVocabMutated: () => {
+                    refreshPreview();
+                },
+                onRepeatChange: (val) => {
+                    customParams.wordRepeat = val;
+                    saveState();
+                    refreshPreview();
+                }
+            });
+            return;
+        }
 
         let html = '';
 
@@ -793,6 +907,13 @@
         levelListDiv.innerHTML = html;
     }
 
+    function syncTabletLinkTheme() {
+        const btn = document.getElementById('porPracticeTabletBtn');
+        if (!btn) return;
+        const baseHref = `tablet.html?subject=portugues&level=${encodeURIComponent(currentLevelId)}&stage=${Math.max(1, parseInt(currentStage, 10) || 1)}&autostart=true`;
+        btn.href = (selectedTheme && selectedTheme !== 'all') ? `${baseHref}&theme=${encodeURIComponent(selectedTheme)}` : baseHref;
+    }
+
     function refreshDifficultySlider() {
         if (window.KumonGen && typeof window.KumonGen.renderPcDifficultySlider === 'function') {
             currentStage = window.KumonGen.renderPcDifficultySlider({
@@ -803,68 +924,22 @@
                 accentColor: '#059669',
                 onStageApplied: (nextStage) => {
                     currentStage = nextStage;
+                    previewSheetIdx = 0;
+                    syncTabletLinkTheme();
+                    updateParamPanel();
                     refreshPreview();
                 }
             });
+            syncTabletLinkTheme();
         }
     }
 
-    window.selectLevel = function(id) {
-        const previousLevel = currentLevelId;
+    function switchToLevel(id) {
+        if (!LevelLibrary.portugues.some(l => l.id === id)) return;
         currentLevelId = id;
+        previewSheetIdx = 0;
         if (id === 'p1' && customParams.traceSelected.length === 0) {
             customParams.traceSelected = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-        }
-
-        // Abastecimento automático de palavras sugeridas por nível (só ao trocar de nível, preservando customizações)
-        if (id === 'p3' && previousLevel !== 'p3') {
-            customParams.wordList = [
-                { word: 'BOLA', parts: ['BO','LA'] },
-                { word: 'CASA', parts: ['CA','SA'] },
-                { word: 'DADO', parts: ['DA','DO'] },
-                { word: 'FOCA', parts: ['FO','CA'] },
-                { word: 'GATO', parts: ['GA','TO'] },
-                { word: 'JACA', parts: ['JA','CA'] },
-                { word: 'LIMA', parts: ['LI','MA'] },
-                { word: 'MALA', parts: ['MA','LA'] },
-                { word: 'NOVE', parts: ['NO','VE'] },
-                { word: 'PATO', parts: ['PA','TO'] },
-                { word: 'RATO', parts: ['RA','TO'] },
-                { word: 'SAPO', parts: ['SA','PO'] },
-                { word: 'TATU', parts: ['TA','TU'] },
-                { word: 'VACA', parts: ['VA','CA'] },
-                { word: 'BOLO', parts: ['BO','LO'] },
-                { word: 'COPO', parts: ['CO','PO'] },
-                { word: 'DOCE', parts: ['DO','CE'] },
-                { word: 'LOBO', parts: ['LO','BO'] },
-                { word: 'SUCO', parts: ['SU','CO'] },
-                { word: 'VOTO', parts: ['VO','TO'] },
-                { word: 'FOGO', parts: ['FO','GO'] },
-                { word: 'LIXO', parts: ['LI','XO'] },
-                { word: 'TETO', parts: ['TE','TO'] },
-                { word: 'GELO', parts: ['GE','LO'] },
-                { word: 'MURO', parts: ['MU','RO'] },
-                { word: 'LAGO', parts: ['LA','GO'] },
-                { word: 'SINO', parts: ['SI','NO'] },
-                { word: 'RODA', parts: ['RO','DA'] },
-                { word: 'PENA', parts: ['PE','NA'] },
-                { word: 'LUVA', parts: ['LU','VA'] },
-                { word: 'DEDO', parts: ['DE','DO'] },
-                { word: 'NABO', parts: ['NA','BO'] },
-                { word: 'FADA', parts: ['FA','DA'] },
-                { word: 'JIPE', parts: ['JI','PE'] },
-                { word: 'TUBO', parts: ['TU','BO'] },
-                { word: 'REDE', parts: ['RE','DE'] },
-                { word: 'MEDO', parts: ['ME','DO'] },
-                { word: 'PIPA', parts: ['PI','PA'] },
-                { word: 'SOPA', parts: ['SO','PA'] },
-                { word: 'VIDA', parts: ['VI','DA'] }
-            ];
-        } else if (id === 'p4' && previousLevel !== 'p4') {
-            customParams.wordList = DEFAULT_WORDS_P4.map(item => ({
-                word: item.word,
-                parts: [...item.parts]
-            }));
         }
 
         saveState();
@@ -872,6 +947,10 @@
         refreshDifficultySlider();
         updateParamPanel();
         refreshPreview();
+    }
+
+    window.selectLevel = function(id) {
+        switchToLevel(id);
     };
 
     function renderCurrentSheetOnly() {
@@ -899,7 +978,7 @@
         if (!level) return;
 
         const totalPages = KumonGen.getTotalPagesRequested ? KumonGen.getTotalPagesRequested() : 2;
-        const genOpts = { stage: currentStage };
+        const genOpts = { stage: currentStage, theme: selectedTheme };
         lastGeneratedItems = (typeof KumonGen.composeWorksheetItems === 'function')
             ? KumonGen.composeWorksheetItems({ subjectKey: 'portugues', level, totalCount: totalPages * itemsPerPage, generatorFn: generateItemsForLevel, genOpts })
             : generateItemsForLevel(level, totalPages * itemsPerPage, genOpts);
@@ -963,15 +1042,9 @@
     }
 
     function selectPorWizardGoal(levelId, el) {
-        currentLevelId = levelId;
         document.querySelectorAll('#panel-wizard .kumon-wizard-card').forEach(card => card.classList.remove('active'));
         if (el) el.classList.add('active');
-
-        saveState();
-        renderLevelList();
-        refreshDifficultySlider();
-        updateParamPanel();
-        refreshPreview();
+        switchToLevel(levelId);
     }
 
     function selectPorWizardPace(pages, lines, btn) {
@@ -1043,11 +1116,13 @@
 
         window.addEventListener('kumongen:student_changed', () => {
             refreshDifficultySlider();
+            updateParamPanel();
             refreshPreview();
         });
         window.addEventListener('kumongen:stage_changed', (e) => {
             if (e && e.detail && e.detail.subjectKey === 'portugues') {
                 refreshDifficultySlider();
+                updateParamPanel();
                 refreshPreview();
             }
         });
@@ -1097,7 +1172,7 @@
     window.printSheet = () => {
         const level = LevelLibrary.portugues.find(l => l.id === currentLevelId);
         const totalPages = KumonGen.getTotalPagesRequested ? KumonGen.getTotalPagesRequested() : 2;
-        const genOpts = { stage: currentStage };
+        const genOpts = { stage: currentStage, theme: selectedTheme };
         const makeBatch = (cnt) => (typeof KumonGen.composeWorksheetItems === 'function')
             ? KumonGen.composeWorksheetItems({ subjectKey: 'portugues', level, totalCount: cnt, generatorFn: generateItemsForLevel, genOpts })
             : generateItemsForLevel(level, cnt, genOpts);
@@ -1119,7 +1194,7 @@
 
         const pagesEl = document.getElementById('pagesPerBook');
         const totalPages = pagesEl ? parseInt(pagesEl.value) : 2;
-        const genOpts = { stage: currentStage };
+        const genOpts = { stage: currentStage, theme: selectedTheme };
         const makeBatch = (cnt) => (typeof KumonGen.composeWorksheetItems === 'function')
             ? KumonGen.composeWorksheetItems({ subjectKey: 'portugues', level, totalCount: cnt, generatorFn: generateItemsForLevel, genOpts })
             : generateItemsForLevel(level, cnt, genOpts);
@@ -1135,7 +1210,7 @@
         if (!level) return;
 
         const totalPages = 10; // 5 dias x 2 páginas por dia
-        const genOpts = { stage: currentStage };
+        const genOpts = { stage: currentStage, theme: selectedTheme };
         const allItems = (typeof KumonGen.composeWorksheetItems === 'function')
             ? KumonGen.composeWorksheetItems({ subjectKey: 'portugues', level, totalCount: totalPages * itemsPerPage, generatorFn: generateItemsForLevel, genOpts })
             : generateItemsForLevel(level, totalPages * itemsPerPage, genOpts);

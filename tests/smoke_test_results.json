@@ -1,6 +1,6 @@
 {
-  "total": 35,
-  "passed": 35,
+  "total": 38,
+  "passed": 38,
   "failed": 0,
   "assertions": [
     {
@@ -145,6 +145,21 @@
     },
     {
       "status": "PASS",
+      "message": "Inglês Sprint 6: Wizard sem vazamento, slider 4 degraus, auto-split, lote, modal, isolamento por perfil e backup",
+      "details": "{\"ok\":true,\"i4NoLeak\":true,\"i5NoLeak\":true,\"sliderEvolves\":true,\"autoSplitOk\":true,\"sheetHasCustom\":true,\"customInI3\":true,\"persistedInI4\":true,\"batchAddedOk\":true,\"modalOk\":true,\"peerIsolated\":true,\"sharedVisibleOrig\":true,\"sharedVisiblePeer\":true,\"restoreVocabOk\":true}"
+    },
+    {
+      "status": "PASS",
+      "message": "Sync Papel↔Tablet: palavra extra personalizada aparece com prioridade no Tablet Player sem vazamento I2",
+      "details": "{\"ok\":true,\"count\":10,\"words\":[\"CLOUDY\",\"CAN\",\"SHE\",\"PLANET\",\"IT\",\"YOU\"]}"
+    },
+    {
+      "status": "PASS",
+      "message": "Português Sprint 6: Wizard P4 sem vazamento de P3, slider 4 degraus e auto-split BORBOLETA -> BOR BO LE TA",
+      "details": "{\"ok\":true,\"p4Evolves\":true,\"ptAutoSplit\":true,\"partsGot\":\"BOR BO LE TA\"}"
+    },
+    {
+      "status": "PASS",
       "message": "manifest.json acessível com HTTP 200",
       "details": ""
     },
@@ -182,10 +197,10 @@
   "consoleErrors": [],
   "networkErrors": [],
   "pageTimings": {
-    "index.html": 153,
-    "matematica.html": 156,
-    "portugues.html": 41,
-    "ingles.html": 39,
-    "tablet.html": 120
+    "index.html": 182,
+    "matematica.html": 93,
+    "portugues.html": 54,
+    "ingles.html": 49,
+    "tablet.html": 174
   }
 }

@@ -837,7 +837,7 @@ async function runSmokeTests() {
             pe.importBackup(cloneExport);
             const sbRestored = pe.getById(sibling.id);
             const nbRestored = pe.getReviewNotebookItems(sibling.id);
-            const backupOk = exported.version === '4.5.0' &&
+            const backupOk = exported.version === '4.6.0' &&
                 sbRestored && sbRestored.wardrobe && sbRestored.wardrobe.unlocked.includes('glasses_star') && sbRestored.wardrobe.starsSpent === 15 &&
                 nbRestored.length === 1 && nbRestored[0].id === 'nb_test_1' &&
                 sbRestored.parentAuth && sbRestored.parentAuth.mode === 'reversed_name';
@@ -857,6 +857,174 @@ async function runSmokeTests() {
             };
         });
         assert(hardening51Test.ok, 'Suíte Adversarial Sprint 5.1 (Hardening Real: P0-2, P0-4, P0-5, P1-1..P1-7) validada 100%', JSON.stringify(hardening51Test));
+
+        // -------------------------------------------------------------
+        // TESTE 14 (Sprint 6 — Vocabulário Graduado EN/PT, Auto-Split, Isolamento & Sync Papel↔Tablet)
+        // -------------------------------------------------------------
+        console.log('\n[TESTE 14] Sprint 6: Vocabulário Graduado EN/PT, Editor Vertical, Isolamento e Sync Papel↔Tablet');
+
+        await page.goto(`${baseUrl}/ingles.html`, { waitUntil: 'networkidle' });
+        await page.waitForTimeout(350);
+
+        const engVocabFlow = await page.evaluate(() => {
+            const kv = window.KumonVocabulary;
+            const pe = window.StudentProfileEngine;
+            if (!kv || !pe) return { ok: false, reason: 'missing_engines' };
+
+            const origStudent = pe.getActive();
+            kv.clearCustomItemsForLevel('ingles', 'i2');
+            kv.clearCustomItemsForLevel('ingles', 'i3');
+            kv.clearCustomItemsForLevel('ingles', 'i4');
+
+            // 1. Wizard I4 e I5 NUNCA vazam CAT/DOG do I2
+            if (typeof window.selectEngWizardGoal === 'function') window.selectEngWizardGoal('i4');
+            const listI4 = (document.getElementById('wordListContainer')?.textContent || '').toUpperCase();
+            const sheetI4 = (document.getElementById('a4-sheet')?.textContent || '').toUpperCase().replace(/\+/g, '');
+            const i4NoLeak = !listI4.includes('CAT') && !listI4.includes('DOG') && !sheetI4.includes('CAT') && !sheetI4.includes('DOG') && (listI4.includes('THE') || listI4.includes('THIS') || listI4.includes('AND'));
+
+            if (typeof window.selectEngWizardGoal === 'function') window.selectEngWizardGoal('i5');
+            const listI5 = (document.getElementById('wordListContainer')?.textContent || '').toUpperCase();
+            const i5NoLeak = !listI5.includes('CAT') && !listI5.includes('DOG') && (listI5.includes('CAKE') || listI5.includes('MAKE') || listI5.includes('BIKE') || listI5.includes('HOME'));
+
+            // 2. Slider em I2 evolui em tempo real nos 4 degraus
+            if (typeof window.selectEngWizardGoal === 'function') window.selectEngWizardGoal('i2');
+            const slider = document.getElementById('pcDifficultySlider');
+            const setStage = (n) => {
+                if (!slider) return;
+                slider.value = String(n);
+                slider.dispatchEvent(new Event('input', { bubbles: true }));
+                slider.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+            setStage(1);
+            const st1Text = (document.getElementById('wordListContainer')?.textContent || '').toUpperCase();
+            setStage(2);
+            const st2Text = (document.getElementById('wordListContainer')?.textContent || '').toUpperCase();
+            setStage(3);
+            const st3Text = (document.getElementById('wordListContainer')?.textContent || '').toUpperCase();
+            setStage(4);
+            const st4Text = (document.getElementById('wordListContainer')?.textContent || '').toUpperCase();
+            const sliderEvolves = st1Text !== st2Text && st2Text !== st3Text && st3Text !== st4Text &&
+                st1Text.includes('CAT') && !st2Text.includes('CAT') && (st2Text.includes('PIG') || st2Text.includes('BED')) &&
+                (st3Text.includes('SUN') || st3Text.includes('CUP')) && (st4Text.includes('CAB') || st4Text.includes('WEB'));
+
+            // 3. Auto-split ao vivo + adição manual isolada no módulo I4 + modo lista em lote + modal ampliado
+            if (typeof window.selectEngWizardGoal === 'function') window.selectEngWizardGoal('i4');
+            setStage(1);
+            const acc = document.getElementById('advancedAccordion');
+            if (acc) acc.open = true;
+
+            const inpWord = document.getElementById('newWord');
+            const inpParts = document.getElementById('newParts');
+            if (inpWord) {
+                inpWord.value = 'THIS';
+                inpWord.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            const autoSplitOk = (inpParts?.value || '').trim() === 'TH I S';
+
+            // Adiciona palavra extra exclusiva do aluno em I4
+            if (inpWord && inpParts) {
+                inpWord.value = 'ZEBRA';
+                inpParts.value = 'ZE BRA';
+                document.getElementById('addWordBtn')?.click();
+            }
+            const customTabAfterSingle = (document.getElementById('wordListContainer')?.textContent || '').toUpperCase();
+            const sheetAfterCustom = (document.getElementById('a4-sheet')?.textContent || '').toUpperCase().replace(/\+|\s+/g, '');
+            const sheetHasCustom = sheetAfterCustom.includes('ZEBRA');
+
+            // Testa isolamento entre módulos (I3 não herda ZEBRA de I4)
+            if (typeof window.selectEngWizardGoal === 'function') window.selectEngWizardGoal('i3');
+            const customInI3 = kv.getCustomItems('ingles', 'i3').length === 0;
+            if (typeof window.selectEngWizardGoal === 'function') window.selectEngWizardGoal('i4');
+            const persistedInI4 = kv.getCustomItems('ingles', 'i4').some(x => x.word === 'ZEBRA');
+
+            // Modo Lote (Lista)
+            document.getElementById('vocabAddModeBatch')?.click();
+            const batchTa = document.getElementById('vocabBatchInput');
+            if (batchTa) batchTa.value = 'CLOUDY, PLANET';
+            document.getElementById('addWordBtn')?.click();
+            const batchAddedOk = kv.getCustomItems('ingles', 'i4').length >= 3;
+
+            // Modal Ampliado (#kumonVocabModal)
+            document.getElementById('vocabExpandModalBtn')?.click();
+            const modalEl = document.getElementById('kumonVocabModal');
+            const modalStagesCount = modalEl ? modalEl.querySelectorAll('.vocab-modal-stage-card').length : 0;
+            document.getElementById('closeVocabModalBtn')?.click();
+            const modalOk = modalStagesCount === 4 && !document.getElementById('kumonVocabModal');
+
+            // 4. Isolamento entre perfis + escopo Compartilhado ("Toda Turma") + Backup/Restore
+            const peer = pe.create({ name: 'Bia', ageTier: 'age_6_7', mascot: 'capivara' });
+            pe.setActive(peer.id);
+            const peerIsolated = !kv.getCustomItems('ingles', 'i4', peer.id).some(x => x.word === 'ZEBRA');
+            kv.addCustomItem('ingles', 'i4', { word: 'ROBOT', parts: ['RO', 'BOT'], theme: 'escola' }, 'shared');
+            const sharedVisibleOrig = kv.getCustomItems('ingles', 'i4', origStudent.id).some(x => x.word === 'ROBOT');
+            const sharedVisiblePeer = kv.getCustomItems('ingles', 'i4', peer.id).some(x => x.word === 'ROBOT');
+
+            // Backup & Restore preserva customVocab
+            pe.setActive(origStudent.id);
+            const bkp = pe.exportBackup();
+            kv.clearCustomItemsForLevel('ingles', 'i4');
+            pe.importBackup(bkp);
+            const restoreVocabOk = kv.getCustomItems('ingles', 'i4', origStudent.id).some(x => x.word === 'ZEBRA') &&
+                kv.getCustomItems('ingles', 'i4', origStudent.id).some(x => x.word === 'ROBOT');
+
+            pe.deleteStudent(peer.id);
+            pe.setActive(origStudent.id);
+
+            return {
+                ok: i4NoLeak && i5NoLeak && sliderEvolves && autoSplitOk && customTabAfterSingle.includes('ZEBRA') &&
+                    sheetHasCustom && customInI3 && persistedInI4 && batchAddedOk && modalOk &&
+                    peerIsolated && sharedVisibleOrig && sharedVisiblePeer && restoreVocabOk,
+                i4NoLeak, i5NoLeak, sliderEvolves, autoSplitOk, sheetHasCustom, customInI3, persistedInI4,
+                batchAddedOk, modalOk, peerIsolated, sharedVisibleOrig, sharedVisiblePeer, restoreVocabOk
+            };
+        });
+        assert(engVocabFlow.ok, 'Inglês Sprint 6: Wizard sem vazamento, slider 4 degraus, auto-split, lote, modal, isolamento por perfil e backup', JSON.stringify(engVocabFlow));
+
+        // Sincronização Papel -> Tablet Player (extra ZEBRA/ROBOT aparece no Tablet em I4 Degrau 1)
+        await page.goto(`${baseUrl}/tablet.html?subject=ingles&level=i4&stage=1&theme=all&autostart=true`, { waitUntil: 'networkidle' });
+        await page.waitForTimeout(350);
+        const tabletVocabSync = await page.evaluate(() => {
+            const items = (window.TabletPlayer && window.TabletPlayer.Session && window.TabletPlayer.Session.items) || [];
+            const words = items.map(it => String(it.word || '').toUpperCase());
+            const hasCustom = words.includes('ZEBRA') || words.includes('ROBOT') || words.includes('CLOUDY');
+            const noI2Leak = !words.includes('CAT') && !words.includes('DOG');
+            // Limpa extras de teste
+            if (window.KumonVocabulary) window.KumonVocabulary.clearCustomItemsForLevel('ingles', 'i4');
+            return { ok: items.length >= 10 && hasCustom && noI2Leak, count: items.length, words: words.slice(0, 6) };
+        });
+        assert(tabletVocabSync.ok, 'Sync Papel↔Tablet: palavra extra personalizada aparece com prioridade no Tablet Player sem vazamento I2', JSON.stringify(tabletVocabSync));
+
+        // Português: Wizard P3 -> P4, slider 1 -> 4 e auto-split silábico (BORBOLETA -> BOR BO LE TA)
+        await page.goto(`${baseUrl}/portugues.html`, { waitUntil: 'networkidle' });
+        await page.waitForTimeout(350);
+        const porVocabFlow = await page.evaluate(() => {
+            if (typeof window.selectPorWizardGoal === 'function') window.selectPorWizardGoal('p4');
+            const slider = document.getElementById('pcDifficultySlider');
+            if (slider) {
+                slider.value = '1';
+                slider.dispatchEvent(new Event('input', { bubbles: true }));
+                slider.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            const s1 = (document.getElementById('wordListContainer')?.textContent || '').toUpperCase();
+            if (slider) {
+                slider.value = '4';
+                slider.dispatchEvent(new Event('input', { bubbles: true }));
+                slider.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            const s4 = (document.getElementById('wordListContainer')?.textContent || '').toUpperCase();
+            const acc = document.getElementById('advancedAccordion');
+            if (acc) acc.open = true;
+            const inpWord = document.getElementById('newWord');
+            const inpParts = document.getElementById('newParts');
+            if (inpWord) {
+                inpWord.value = 'BORBOLETA';
+                inpWord.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            const ptAutoSplit = (inpParts?.value || '').trim() === 'BOR BO LE TA';
+            const p4Evolves = s1 !== s4 && !s1.includes('BOLA') && (s1.includes('BANANA') || s1.includes('BONECA') || s1.includes('MACACO'));
+            return { ok: p4Evolves && ptAutoSplit, p4Evolves, ptAutoSplit, partsGot: inpParts?.value || '' };
+        });
+        assert(porVocabFlow.ok, 'Português Sprint 6: Wizard P4 sem vazamento de P3, slider 4 degraus e auto-split BORBOLETA -> BOR BO LE TA', JSON.stringify(porVocabFlow));
 
         // -------------------------------------------------------------
         // CENÁRIO 6: PWA, MANIFEST E RESILIÊNCIA DE STORAGE

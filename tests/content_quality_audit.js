@@ -247,8 +247,8 @@ function initializeSandbox() {
 
     const context = vm.createContext(sandbox);
 
-    // Carrega módulos curriculares na ordem canônica (incluindo progression-engine.js)
-    const scripts = ['progression-engine.js', 'gerador.js', 'matematica.js', 'portugues.js', 'ingles.js', 'student-profiles.js'];
+    // Carrega módulos curriculares na ordem canônica (incluindo progression-engine.js e vocabulary-engine.js)
+    const scripts = ['progression-engine.js', 'vocabulary-engine.js', 'gerador.js', 'matematica.js', 'portugues.js', 'ingles.js', 'student-profiles.js'];
     for (const scriptName of scripts) {
         const scriptPath = path.join(CONFIG.projectRoot, scriptName);
         if (fs.existsSync(scriptPath)) {
@@ -888,6 +888,75 @@ function runContentQualityAudit() {
             const ansDesc = sandbox.KumonGen.solveItem({ type: 'sequence', sequence: ['__', 18, 16, 14, 12] });
             if (ansAsc !== '8') stageFailures.push(`solveItem sequence asc pos 0 esperava '8', recebeu '${ansAsc}'`);
             if (ansDesc !== '20') stageFailures.push(`solveItem sequence desc pos 0 esperava '20', recebeu '${ansDesc}'`);
+        }
+
+        // Auditoria Sprint 6 — Evolução Real do Vocabulário Graduado (4 degraus × módulos EN/PT)
+        if (totalStagesAudited !== 132) {
+            stageFailures.push(`Esperados 132 degraus curriculares pós-Sprint 6, encontrados ${totalStagesAudited}`);
+        }
+        if (!sandbox.KumonVocabulary) {
+            stageFailures.push('KumonVocabulary não carregado no sandbox de auditoria');
+        } else {
+            const kv = sandbox.KumonVocabulary;
+            const vocabChecks = [
+                { sub: 'ingles', levels: ['i2', 'i3', 'i4', 'i5', 'i6', 'i7'] },
+                { sub: 'portugues', levels: ['p3', 'p4', 'p7', 'p8'] }
+            ];
+            for (const vc of vocabChecks) {
+                const subMod = sandbox.KumonSubjects[vc.sub];
+                for (const lvlId of vc.levels) {
+                    const lvlObj = subMod.levels.find(l => l.id === lvlId);
+                    for (let stg = 2; stg <= 4; stg++) {
+                        const primarySet = new Set(kv.getStageItems(vc.sub, lvlId, stg, 'all').map(it => getItemKey(it)));
+                        const batch = subMod.generate(lvlObj, 16, { stage: stg, vocabStage: stg });
+                        const fromPrimary = batch.filter(it => primarySet.has(getItemKey(it))).length;
+                        if (fromPrimary < 8) {
+                            stageFailures.push(`${vc.sub}:${lvlId}:s${stg} entregou apenas ${fromPrimary}/16 itens do degrau primário`);
+                        }
+                    }
+                    // Anti-regressão de vazamento I2 (CAT/DOG/SUN) em I3/I4/I5
+                    if (vc.sub === 'ingles' && ['i3', 'i4', 'i5'].includes(lvlId)) {
+                        const bCheck = subMod.generate(lvlObj, 20, { stage: 1, vocabStage: 1 });
+                        const leaked = bCheck.filter(it => ['CAT', 'DOG', 'SUN'].includes(String(it.word || '').toUpperCase()));
+                        if (leaked.length > 0) {
+                            stageFailures.push(`Vazamento de vocabulário I2 em ${lvlId}: ${leaked.map(x => x.word).join(',')}`);
+                        }
+                    }
+                }
+            }
+
+            // Filtro temático (animais / comida / escola)
+            const themeChecks = [
+                { sub: 'ingles', lvl: 'i2', theme: 'animais' },
+                { sub: 'ingles', lvl: 'i3', theme: 'natureza' },
+                { sub: 'portugues', lvl: 'p3', theme: 'animais' },
+                { sub: 'portugues', lvl: 'p4', theme: 'comida' }
+            ];
+            for (const tc of themeChecks) {
+                const subMod = sandbox.KumonSubjects[tc.sub];
+                const lvlObj = subMod.levels.find(l => l.id === tc.lvl);
+                const batch = subMod.generate(lvlObj, 10, { stage: 1, vocabStage: 1, theme: tc.theme });
+                const matching = batch.filter(it => it.theme === tc.theme).length;
+                if (matching < 8) {
+                    stageFailures.push(`Filtro temático ${tc.sub}:${tc.lvl}:${tc.theme} retornou apenas ${matching}/10 itens do tema`);
+                }
+            }
+
+            // Validação do separador fonético/silábico automático (autoSplitParts)
+            const splitCases = [
+                ['THIS', 'ingles', 'i3', 'TH I S'],
+                ['FISH', 'ingles', 'i3', 'F I SH'],
+                ['CAKE', 'ingles', 'i5', 'C A KE'],
+                ['BANANA', 'portugues', 'p4', 'BA NA NA'],
+                ['BORBOLETA', 'portugues', 'p4', 'BOR BO LE TA'],
+                ['GALINHA', 'portugues', 'p4', 'GA LI NHA']
+            ];
+            for (const [w, sKey, lId, expected] of splitCases) {
+                const got = kv.autoSplitParts(w, sKey, lId).join(' ');
+                if (got !== expected) {
+                    stageFailures.push(`autoSplitParts(${w}) esperava "${expected}", retornou "${got}"`);
+                }
+            }
         }
     } else {
         stageFailures.push('KumonProgression não carregado no sandbox de auditoria');

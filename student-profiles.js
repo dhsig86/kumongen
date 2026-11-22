@@ -584,13 +584,17 @@
                     }
                 }
             });
+            const customVocab = (typeof window !== 'undefined' && window.KumonVocabulary && typeof window.KumonVocabulary.exportAllCustomVocab === 'function')
+                ? window.KumonVocabulary.exportAllCustomVocab(students.map(s => s && s.id).filter(Boolean))
+                : { byStudent: {}, shared: [] };
             const data = {
                 app: 'KumonGen',
-                version: '4.5.0',
+                version: '4.6.0',
                 exportedAt: new Date().toISOString(),
                 activeStudentId: active ? active.id : SafeStorage.getItem(STORAGE_ACTIVE_ID),
                 students,
-                reviewNotebooks
+                reviewNotebooks,
+                customVocab
             };
 
             const jsonStr = JSON.stringify(data, null, 2);
@@ -708,6 +712,11 @@
                             SafeStorage.setItem('kumongen_review_notebook_' + targetSid, JSON.stringify(safeNb));
                         }
                     });
+                }
+
+                // Restaura Vocabulário Extra Personalizado por aluno e compartilhado (KumonGen 4.6+)
+                if (data.customVocab && typeof window !== 'undefined' && window.KumonVocabulary && typeof window.KumonVocabulary.importAllCustomVocab === 'function') {
+                    window.KumonVocabulary.importAllCustomVocab(data.customVocab, idRemap);
                 }
 
                 if (data.activeStudentId && validatedStudents.some(s => s.id === data.activeStudentId)) {

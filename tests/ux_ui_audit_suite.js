@@ -994,6 +994,83 @@ async function testKumonGen3Polish(page, baseUrl) {
     });
     assert(homeCardCheck, '[index.html][Mobile 390px] Card do aluno com botão Área dos Pais cabe sem estouro');
     await screenshot(page, 'home_mobile_retrato');
+
+    // 6. Sprint 6: Editor Vertical de Vocabulário (Zero Scroll Horizontal na Sidebar 320px & Mobile 390px + Modal Ampliado)
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`${baseUrl}/ingles.html`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(350);
+    const engSidebarCheck = await page.evaluate(() => {
+        if (typeof window.selectEngWizardGoal === 'function') window.selectEngWizardGoal('i4');
+        const acc = document.getElementById('advancedAccordion');
+        if (acc) acc.open = true;
+        const aside = document.querySelector('aside');
+        const root = document.getElementById('vocabManagerRoot');
+        const newWord = document.getElementById('newWord');
+        const newParts = document.getElementById('newParts');
+        const addBtn = document.getElementById('addWordBtn');
+        const chips = document.getElementById('vocabThemeChips');
+        if (!acc || !acc.open || !aside || !root || !newWord || !newParts || !addBtn || !chips) return { ok: false, reason: 'missing_or_closed' };
+        root.scrollIntoView({ block: 'center' });
+        const aRect = aside.getBoundingClientRect();
+        const fits = (el) => {
+            const r = el.getBoundingClientRect();
+            return el.offsetParent !== null && r.width > 0 && r.left >= aRect.left - 1 && r.right <= aRect.right + 2;
+        };
+        const noHorizScroll = aside.scrollWidth <= aside.clientWidth + 2;
+        return {
+            ok: noHorizScroll && fits(newWord) && fits(newParts) && fits(addBtn) && fits(chips),
+            scrollWidth: aside.scrollWidth,
+            clientWidth: aside.clientWidth
+        };
+    });
+    assert(engSidebarCheck.ok,
+        '[ingles.html][Desktop 1280×800] Editor Vertical de Vocabulário na sidebar 320px com ZERO scroll horizontal',
+        `scrollWidth=${engSidebarCheck.scrollWidth}, clientWidth=${engSidebarCheck.clientWidth}`
+    );
+    await page.waitForTimeout(200);
+    await screenshot(page, 'gen_ingles_vocab_sidebar_desktop');
+
+    await page.evaluate(() => {
+        document.getElementById('vocabExpandModalBtn')?.click();
+    });
+    await page.waitForTimeout(300);
+    const engModalCheck = await page.evaluate(() => {
+        const card = document.querySelector('#kumonVocabModal .kumon-vocab-modal-card');
+        if (!card) return { ok: false };
+        const r = card.getBoundingClientRect();
+        return {
+            ok: r.width <= 1280 && card.scrollWidth <= card.clientWidth + 2 && card.querySelectorAll('.vocab-modal-stage-card').length === 4,
+            width: Math.round(r.width)
+        };
+    });
+    assert(engModalCheck.ok, '[ingles.html][Desktop 1280×800] Modal Ampliado de Vocabulário (#kumonVocabModal) renderiza 4 degraus sem estouro');
+    await screenshot(page, 'gen_ingles_vocab_modal_desktop');
+    await page.evaluate(() => { document.getElementById('closeVocabModalBtn')?.click(); });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${baseUrl}/portugues.html`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(350);
+    const porMobileVocabCheck = await page.evaluate(() => {
+        if (typeof window.selectPorWizardGoal === 'function') window.selectPorWizardGoal('p4');
+        const acc = document.getElementById('advancedAccordion');
+        if (acc) acc.open = true;
+        const aside = document.querySelector('aside');
+        const root = document.getElementById('vocabManagerRoot');
+        const newWord = document.getElementById('newWord');
+        const addBtn = document.getElementById('addWordBtn');
+        if (!acc || !acc.open || !aside || !root || !newWord || !addBtn) return { ok: false };
+        root.scrollIntoView({ block: 'start' });
+        const docNoOverflow = document.documentElement.scrollWidth <= window.innerWidth + 2;
+        const asideNoOverflow = aside.scrollWidth <= aside.clientWidth + 2;
+        const btnFits = addBtn.offsetParent !== null && addBtn.getBoundingClientRect().right <= 390 + 2;
+        return { ok: docNoOverflow && asideNoOverflow && btnFits, docScroll: document.documentElement.scrollWidth, asideScroll: aside.scrollWidth };
+    });
+    assert(porMobileVocabCheck.ok,
+        '[portugues.html][Mobile 390px] Editor Vertical de Vocabulário sem overflow horizontal na página nem na sidebar',
+        `docScroll=${porMobileVocabCheck.docScroll}, asideScroll=${porMobileVocabCheck.asideScroll}`
+    );
+    await page.waitForTimeout(200);
+    await screenshot(page, 'gen_portugues_vocab_sidebar_mobile');
 }
 
 // ═══════════════════════════════════════════════════════════════

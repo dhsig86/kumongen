@@ -149,18 +149,18 @@
         ];
     }
 
-    function _buildPoolSliceTrack(labels, skillTag = null, baseExpected = 9) {
-        const fractions = [0.35, 0.7, 1.0];
-        const mults = [1.0, 1.3, 1.65];
+    function _buildVocabStageTrack(labels, skillTag = null, baseExpected = 9) {
+        const mults = [1.0, 1.25, 1.55, 1.85];
+        const badges = ['Base', 'Progresso', 'Avançado', 'Maestria'];
         return labels.map((lbl, idx) => ({
             stage: idx + 1,
+            vocabStage: idx + 1,
             shortLabel: lbl.short,
             label: lbl.full,
-            badge: idx === 0 ? 'Iniciante' : (idx === 1 ? 'Intermediário' : 'Completo'),
-            xpMultiplier: mults[idx] || 1.5,
-            expectedSec: baseExpected + idx * 2,
-            skillTag: skillTag || lbl.skillTag || null,
-            poolRatio: fractions[idx] || 1.0
+            badge: badges[idx] || 'Maestria',
+            xpMultiplier: mults[idx] || 1.6,
+            expectedSec: Math.round(baseExpected + idx * 1.5),
+            skillTag: skillTag || lbl.skillTag || null
         }));
     }
 
@@ -209,74 +209,87 @@
         },
         portugues: {
             p1: _buildAlphaTraceTrack('por:p1'),
-            p2: _buildPoolSliceTrack([
+            p2: _buildVocabStageTrack([
                 { short: 'Famílias B–F', full: 'Sílabas iniciais (BA a FU)' },
-                { short: 'Famílias B–P', full: 'Sílabas intermediárias (B a P)' },
-                { short: 'Todas A–Z', full: 'Todas as famílias silábicas simples' }
-            ], 'por:p2', 9),
-            p3: _buildPoolSliceTrack([
-                { short: '15 Dissílabas', full: 'Palavras cotidianas iniciais' },
-                { short: '35 Palavras', full: 'Vocabulário expandido (2 sílabas)' },
-                { short: 'Catálogo Todo', full: 'Todas as palavras dissílabas' }
-            ], 'por:p3', 10),
-            p4: _buildPoolSliceTrack([
-                { short: '3 Sílabas Base', full: 'Trissílabas comuns (BANANA, PIPOCA...)' },
-                { short: '30 Palavras', full: 'Trissílabas e acentuadas' },
-                { short: '3 e 4 Sílabas', full: 'Catálogo completo polissílabas' }
-            ], 'por:p4', 12),
-            p5: _buildPoolSliceTrack([
+                { short: 'Famílias G–L', full: 'Sílabas intermediárias (GA a LU)' },
+                { short: 'Famílias M–R', full: 'Sílabas médias (MA a RU)' },
+                { short: 'S–Z & Completo', full: 'Famílias S–Z e revisão geral' }
+            ], 'por:p2', 8),
+            p3: _buildVocabStageTrack([
+                { short: 'CV com A / O', full: 'Dissílabas puras com A e O (BOLA, CASA, GATO...)' },
+                { short: 'CV com E / I / U', full: 'Dissílabas com E, I e U (LIMA, DOCE, FOGO...)' },
+                { short: 'Cotidiano +', full: 'Vocabulário ampliado (MESA, PIPA, SOPA, MAPA...)' },
+                { short: 'Ditongos/Acentos', full: 'Ditongos, acentos e travadas (LEÃO, CAFÉ, NUVEM...)' }
+            ], 'por:p3', 9),
+            p4: _buildVocabStageTrack([
+                { short: 'Trissíl. Base', full: 'Trissílabas regulares CV (BANANA, PIPOCA, SAPATO...)' },
+                { short: 'Acentos & Sons', full: 'Trissílabas variadas (JACARÉ, PICOLÉ, GIRAFA...)' },
+                { short: 'Dígrafos/Encontr.', full: 'Palavras com NH, LH, CH e encontros (GALINHA, ESCOLA...)' },
+                { short: 'Polissílabas 4–5', full: 'Palavras longas (BICICLETA, BORBOLETA, DINOSSAURO...)' }
+            ], 'por:p4', 11),
+            p5: _buildVocabStageTrack([
                 { short: 'BR / CR / DR', full: 'Encontros iniciais (BRA a DRU)' },
-                { short: 'FR / GR / PR / TR', full: 'Encontros intermediários com R' },
-                { short: 'BL..PL Completo', full: 'Todos os encontros com R e L' }
-            ], 'por:p5', 11),
-            p6: _buildPoolSliceTrack([
-                { short: 'CH + LH', full: 'Dígrafos CH e LH' },
-                { short: 'CH + LH + NH', full: 'Dígrafos CH, LH e NH' },
-                { short: 'Todos + QU/GU', full: 'Todos os dígrafos completos' }
-            ], 'por:p6', 11),
-            p7: _buildPoolSliceTrack([
-                { short: 'Rimas Fáceis', full: 'Rimas visuais de 1-2 sílabas' },
-                { short: 'Rimas Médias', full: 'Rimas variadas de vocabulário' },
-                { short: 'Desafio Rimas', full: 'Catálogo completo de rimas' }
-            ], 'por:p7', 10),
-            p8: _buildPoolSliceTrack([
-                { short: 'Frases Curtas', full: 'Frases de 3 blocos simples' },
-                { short: 'Frases Médias', full: 'Construção intermediária de frases' },
-                { short: 'Todas Frases', full: 'Catálogo completo de frases' }
-            ], 'por:p8', 14)
+                { short: 'FR / GR / PR / TR', full: 'Encontros com R (FRA a TRU)' },
+                { short: 'BL / CL / FL / GL / PL', full: 'Encontros com L (BLA a PLU)' },
+                { short: 'Todos Mistos', full: 'Revisão completa de sílabas complexas' }
+            ], 'por:p5', 10),
+            p6: _buildVocabStageTrack([
+                { short: 'Dígrafo CH', full: 'Família silábica CH (CHA a CHU)' },
+                { short: 'Dígrafo LH', full: 'Família silábica LH (LHA a LHU)' },
+                { short: 'Dígrafo NH', full: 'Família silábica NH (NHA a NHU)' },
+                { short: 'QU / GU & Tudo', full: 'QU, GU e revisão completa dos dígrafos' }
+            ], 'por:p6', 10),
+            p7: _buildVocabStageTrack([
+                { short: 'Rimas Diretas', full: 'Terminações -ATO, -OLA, -ÃO, -ASA' },
+                { short: 'Rimas Cotidianas', full: 'Terminações -ELA, -UVA, -OR, -ECA' },
+                { short: 'Rimas Trissíl.', full: 'Rimas médias (-ADO, -ENTE, -IM, -OCA)' },
+                { short: 'Rimas Complexas', full: 'Terminações -ELHO, -EIXE, -ENTO, -OURA' }
+            ], 'por:p7', 9),
+            p8: _buildVocabStageTrack([
+                { short: '3 Blocos Base', full: 'Frases curtas diretas (O GATO BEBE LEITE...)' },
+                { short: 'Animais & Ações', full: 'Frases de ações cotidianas e animais' },
+                { short: 'Natureza/Escola', full: 'Frases de escola, natureza e clima' },
+                { short: 'Frases Completas', full: 'Frases descritivas com adjetivos e rotina' }
+            ], 'por:p8', 13)
         },
         ingles: {
             i1: _buildAlphaTraceTrack('eng:i1'),
-            i2: _buildPoolSliceTrack([
-                { short: '15 CVC Base', full: 'CAT, DOG, SUN, BED, PIG...' },
-                { short: '35 CVC Words', full: 'Vocabulário CVC intermediário' },
-                { short: 'All CVC Words', full: 'Todas as palavras CVC (55)' }
-            ], 'eng:i2', 10),
-            i3: _buildPoolSliceTrack([
-                { short: 'Easy 4 Letters', full: 'BIRD, FISH, TREE, BOOK, FROG...' },
-                { short: '30 Words', full: 'Encontros SH / CH / TH / OO' },
-                { short: 'All 4–5 Letters', full: 'Vocabulário completo 4–5 letras' }
-            ], 'eng:i3', 11),
-            i4: _buildPoolSliceTrack([
-                { short: 'Core Sight 15', full: 'THE, AND, IS, IN, YOU, CAN...' },
-                { short: 'Top 35 Words', full: 'Pronomes, verbos e preposições' },
-                { short: 'All 50 Snap', full: 'Todas as 50 Snap Words' }
+            i2: _buildVocabStageTrack([
+                { short: 'Vogais A / O', full: 'Short A & O CVC (CAT, HAT, MAP, DOG, BOX...)' },
+                { short: 'Vogais I / E', full: 'Short I & E CVC (PIG, KID, BED, PEN, HEN...)' },
+                { short: 'Vogal U & Misto', full: 'Short U & mixed CVC (SUN, BUS, CUP, FOX, RUN...)' },
+                { short: 'Desafio CVC', full: 'Expanded CVC mastery (CAB, WEB, PET, CUB, JUG...)' }
+            ], 'eng:i2', 9),
+            i3: _buildVocabStageTrack([
+                { short: 'Blends L / R / S', full: 'Initial blends (FROG, CRAB, TREE, STAR, SWIM...)' },
+                { short: 'Dígrafos SH/CH/TH', full: 'Digraphs SH, CH, TH, WH (FISH, SHIP, MATH, CHAT...)' },
+                { short: 'Finais CK/NG/LL', full: 'Endings CK, NG, LL, ND, MP (DUCK, KING, BELL, JUMP...)' },
+                { short: 'Vogais Longas 5L', full: '5-letter & vowel teams (SNAIL, CLOUD, TRAIN, CHAIR...)' }
+            ], 'eng:i3', 10),
+            i4: _buildVocabStageTrack([
+                { short: 'Core Pre-Primer', full: 'Essential base words (THE, AND, IS, YOU, CAN, SEE...)' },
+                { short: 'Primer Essenciais', full: 'High-frequency verbs & helpers (ARE, WAS, LIKE, PLAY...)' },
+                { short: 'TH / WH & Links', full: 'Question & TH words (THIS, THAT, THEY, WHEN, WHAT...)' },
+                { short: 'Fluência 1º–2º', full: 'Grade 1-2 Snap Words (AFTER, COULD, EVERY, WATER...)' }
             ], 'eng:i4', 9),
-            i5: _buildPoolSliceTrack([
-                { short: 'Magic E Base', full: 'CAKE, BIKE, HOME, KITE...' },
-                { short: '30 CVCe Words', full: 'Vogal longa com E mudo' },
-                { short: 'All Magic E', full: 'Catálogo completo CVCe' }
-            ], 'eng:i5', 11),
-            i6: _buildPoolSliceTrack([
-                { short: '3-Part Simple', full: 'I SEE A CAT / THE DOG IS BIG' },
-                { short: 'Mid Sentences', full: 'Frases de ações e animais' },
-                { short: 'All Sentences', full: 'Todas as frases em inglês' }
-            ], 'eng:i6', 14),
-            i7: _buildPoolSliceTrack([
-                { short: 'Core Opposites', full: 'BIG/SMALL, HOT/COLD, UP/DOWN' },
-                { short: '16 Opposites', full: 'Antônimos cotidianos' },
-                { short: 'All 24 Pairs', full: 'Todos os 24 opostos' }
-            ], 'eng:i7', 10)
+            i5: _buildVocabStageTrack([
+                { short: 'Magic E · A_E', full: 'Long A with silent E (CAKE, GATE, LAKE, NAME...)' },
+                { short: 'Magic E · I_E', full: 'Long I with silent E (BIKE, KITE, FIVE, TIME...)' },
+                { short: 'Magic E · O_E/U_E', full: 'Long O & U with silent E (HOME, BONE, CUTE, TUBE...)' },
+                { short: 'Blends + Magic E', full: '5-letter Magic E blends (GLOBE, SNAKE, PLANE, WHALE...)' }
+            ], 'eng:i5', 10),
+            i6: _buildVocabStageTrack([
+                { short: '3 Blocos Base', full: 'Starter sentences (I SEE A CAT, THE DOG IS BIG...)' },
+                { short: 'Ações com CAN', full: 'Action verbs & CAN (THE BIRD CAN FLY, HE CAN RUN...)' },
+                { short: 'Escola & Natureza', full: 'School & nature sentences (SHE READS A GOOD BOOK...)' },
+                { short: 'Rotina & Detalhes', full: 'Full descriptive sentences (WE STUDY MATH EVERY MORNING...)' }
+            ], 'eng:i6', 13),
+            i7: _buildVocabStageTrack([
+                { short: 'Básicos Visuais', full: 'Core opposites (BIG/SMALL, HOT/COLD, UP/DOWN...)' },
+                { short: 'Sensoriais', full: 'Physical & sensory pairs (HARD/SOFT, WET/DRY, SWEET/SOUR...)' },
+                { short: 'Tempo & Espaço', full: 'Time & direction pairs (NEAR/FAR, EARLY/LATE, LEFT/RIGHT...)' },
+                { short: 'Qualidades/Ações', full: 'Abstract & action pairs (STRONG/WEAK, EASY/DIFFICULT, PUSH/PULL...)' }
+            ], 'eng:i7', 9)
         }
     };
 
@@ -331,6 +344,7 @@
         if (spec.neighborCenters) opts.neighborCenters = spec.neighborCenters;
         if (spec.fractionSlice) opts.fractionSlice = spec.fractionSlice;
         if (spec.traceSubset) opts.traceSubset = spec.traceSubset;
+        if (spec.vocabStage !== undefined) opts.vocabStage = spec.vocabStage;
         if (spec.poolRatio !== undefined) opts.poolRatio = spec.poolRatio;
         return opts;
     }

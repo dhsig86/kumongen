@@ -49,6 +49,7 @@
 
     let currentLevelId = 'i1';
     let currentStage = 1;
+    let selectedTheme = 'all';
     let itemsPerPage = 8;
     let previewSheetIdx = 0;
     let lastGeneratedItems = [];
@@ -61,7 +62,7 @@
         const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
         if (!storage) return;
         const savedLevelId = storage.getItem('kumongen_eng_level');
-        if (savedLevelId) {
+        if (savedLevelId && LevelLibrary.ingles.some(l => l.id === savedLevelId)) {
             currentLevelId = savedLevelId;
         }
 
@@ -69,7 +70,14 @@
         if (savedParams) {
             try {
                 const parsed = JSON.parse(savedParams);
-                customParams = { ...customParams, ...parsed };
+                // Migra apenas palavras extras genuinamente criadas pelo usuário e limpa antigo vazamento I2->I4
+                if (window.KumonVocabulary && typeof window.KumonVocabulary.migrateLegacyCustomWords === 'function' && Array.isArray(parsed.wordList)) {
+                    window.KumonVocabulary.migrateLegacyCustomWords('ingles', parsed.wordList, currentLevelId);
+                }
+                if (Array.isArray(parsed.traceSelected)) customParams.traceSelected = parsed.traceSelected;
+                if (parsed.traceRepeat) customParams.traceRepeat = parseInt(parsed.traceRepeat, 10) || 2;
+                if (parsed.wordRepeat) customParams.wordRepeat = parseInt(parsed.wordRepeat, 10) || 2;
+                if (typeof parsed.selectedTheme === 'string') selectedTheme = parsed.selectedTheme;
             } catch (e) {
                 console.error("Erro ao ler parametros salvos de ingles", e);
             }
@@ -81,7 +89,12 @@
         if (!storage) return;
         try {
             storage.setItem('kumongen_eng_level', currentLevelId);
-            storage.setItem('kumongen_eng_params', JSON.stringify(customParams));
+            storage.setItem('kumongen_eng_params', JSON.stringify({
+                traceSelected: customParams.traceSelected,
+                traceRepeat: customParams.traceRepeat,
+                wordRepeat: customParams.wordRepeat,
+                selectedTheme
+            }));
         } catch (e) {}
     }
 
@@ -387,24 +400,30 @@
 
             case 'wordbuilding': {
                 const lvlId = (level && level.id) || currentLevelId;
-                let wordsToUse = customParams.wordList;
-                if (lvlId === 'i2') {
-                    wordsToUse = (currentLevelId === 'i2' && customParams.wordList && customParams.wordList.length > 0)
-                        ? customParams.wordList
-                        : DEFAULT_WORDS_I2;
-                } else if (lvlId === 'i3') {
-                    wordsToUse = (currentLevelId === 'i3' && customParams.wordList && customParams.wordList.length > 0)
-                        ? customParams.wordList
-                        : DEFAULT_WORDS_I3;
-                } else if (lvlId === 'i4') {
-                    wordsToUse = (currentLevelId === 'i4' && customParams.wordList && customParams.wordList.length > 0)
-                        ? customParams.wordList
-                        : DEFAULT_WORDS_I4;
-                } else if (lvlId === 'i5') {
-                    wordsToUse = (currentLevelId === 'i5' && customParams.wordList && customParams.wordList.length > 0)
-                        ? customParams.wordList
-                        : DEFAULT_WORDS_I5;
+                const hasExplicitStage = (effOpts.vocabStage !== undefined || effOpts.stage !== undefined);
+                if (typeof window !== 'undefined' && window.KumonVocabulary && typeof window.KumonVocabulary.composeGraduatedPool === 'function') {
+                    if (hasExplicitStage) {
+                        const effStage = effOpts.vocabStage || effOpts.stage || 1;
+                        return window.KumonVocabulary.composeGraduatedPool({
+                            subjectKey: 'ingles',
+                            levelId: lvlId,
+                            stage: effStage,
+                            count: target,
+                            theme: effOpts.theme || (lvlId === currentLevelId ? selectedTheme : 'all'),
+                            studentId: effOpts.studentId || null
+                        });
+                    }
+                    // Sem stage explícito (ex.: auditoria completa do módulo): amostra todo o catálogo do nível + extras
+                    const fullCat = window.KumonVocabulary.getCatalogForLevel('ingles', lvlId);
+                    const extras = window.KumonVocabulary.getCustomItems('ingles', lvlId, effOpts.studentId || null);
+                    const combined = [...extras, ...fullCat];
+                    combined.forEach(wordObj => {
+                        baseItems.push({ type: 'word', word: wordObj.word, parts: [...wordObj.parts], theme: wordObj.theme });
+                    });
+                    break;
                 }
+                const fallbackMap = { i2: DEFAULT_WORDS_I2, i3: DEFAULT_WORDS_I3, i4: DEFAULT_WORDS_I4, i5: DEFAULT_WORDS_I5 };
+                const wordsToUse = fallbackMap[lvlId] || DEFAULT_WORDS_I2;
                 const sliceLen = poolRatio < 1 ? Math.max(8, Math.ceil(wordsToUse.length * poolRatio)) : wordsToUse.length;
                 wordsToUse.slice(0, sliceLen).forEach(wordObj => {
                     for (let i = 0; i < (customParams.wordRepeat || 1); i++) {
@@ -415,6 +434,25 @@
             }
 
             case 'sentence': {
+                const hasExplicitStage = (effOpts.vocabStage !== undefined || effOpts.stage !== undefined);
+                if (typeof window !== 'undefined' && window.KumonVocabulary && typeof window.KumonVocabulary.composeGraduatedPool === 'function') {
+                    if (hasExplicitStage) {
+                        return window.KumonVocabulary.composeGraduatedPool({
+                            subjectKey: 'ingles',
+                            levelId: 'i6',
+                            stage: effOpts.vocabStage || effOpts.stage || 1,
+                            count: target,
+                            theme: effOpts.theme || (currentLevelId === 'i6' ? selectedTheme : 'all'),
+                            studentId: effOpts.studentId || null
+                        });
+                    }
+                    const fullCat = window.KumonVocabulary.getCatalogForLevel('ingles', 'i6');
+                    const extras = window.KumonVocabulary.getCustomItems('ingles', 'i6', effOpts.studentId || null);
+                    [...extras, ...fullCat].forEach(st => {
+                        baseItems.push({ type: 'sentence', sentence: st.sentence, parts: [...st.parts], theme: st.theme });
+                    });
+                    break;
+                }
                 const sliceLen = poolRatio < 1 ? Math.max(6, Math.ceil(DEFAULT_SENTENCES_I6.length * poolRatio)) : DEFAULT_SENTENCES_I6.length;
                 const pool = [...DEFAULT_SENTENCES_I6.slice(0, sliceLen)].sort(() => Math.random() - 0.5);
                 while (baseItems.length < target) {
@@ -431,6 +469,25 @@
             }
 
             case 'opposite': {
+                const hasExplicitStage = (effOpts.vocabStage !== undefined || effOpts.stage !== undefined);
+                if (typeof window !== 'undefined' && window.KumonVocabulary && typeof window.KumonVocabulary.composeGraduatedPool === 'function') {
+                    if (hasExplicitStage) {
+                        return window.KumonVocabulary.composeGraduatedPool({
+                            subjectKey: 'ingles',
+                            levelId: 'i7',
+                            stage: effOpts.vocabStage || effOpts.stage || 1,
+                            count: target,
+                            theme: effOpts.theme || (currentLevelId === 'i7' ? selectedTheme : 'all'),
+                            studentId: effOpts.studentId || null
+                        });
+                    }
+                    const fullCat = window.KumonVocabulary.getCatalogForLevel('ingles', 'i7');
+                    const extras = window.KumonVocabulary.getCustomItems('ingles', 'i7', effOpts.studentId || null);
+                    [...extras, ...fullCat].forEach(op => {
+                        baseItems.push({ type: 'opposite', word: op.word, target: op.target, options: [...op.options], icon: op.icon, theme: op.theme });
+                    });
+                    break;
+                }
                 const sliceLen = poolRatio < 1 ? Math.max(6, Math.ceil(DEFAULT_OPPOSITES_I7.length * poolRatio)) : DEFAULT_OPPOSITES_I7.length;
                 const pool = [...DEFAULT_OPPOSITES_I7.slice(0, sliceLen)].sort(() => Math.random() - 0.5);
                 while (baseItems.length < target) {
@@ -474,6 +531,34 @@
     function updateParamPanel() {
         const level = LevelLibrary.ingles.find(l => l.id === currentLevelId);
         if (!level || !paramPanel) return;
+
+        if ((level.type === 'wordbuilding' || level.type === 'sentence' || level.type === 'opposite') && window.KumonVocabulary && typeof window.KumonVocabulary.renderSidebarManager === 'function') {
+            window.KumonVocabulary.renderSidebarManager({
+                container: paramPanel,
+                subjectKey: 'ingles',
+                levelId: currentLevelId,
+                stage: currentStage,
+                selectedTheme,
+                accentHex: '#dc2626',
+                repeatVal: customParams.wordRepeat || 2,
+                onThemeChange: (nextTheme) => {
+                    selectedTheme = nextTheme || 'all';
+                    saveState();
+                    syncTabletLinkTheme();
+                    updateParamPanel();
+                    refreshPreview();
+                },
+                onVocabMutated: () => {
+                    refreshPreview();
+                },
+                onRepeatChange: (val) => {
+                    customParams.wordRepeat = val;
+                    saveState();
+                    refreshPreview();
+                }
+            });
+            return;
+        }
 
         let html = '';
 
@@ -684,6 +769,13 @@
         levelListDiv.innerHTML = html;
     }
 
+    function syncTabletLinkTheme() {
+        const btn = document.getElementById('engPracticeTabletBtn');
+        if (!btn) return;
+        const baseHref = `tablet.html?subject=ingles&level=${encodeURIComponent(currentLevelId)}&stage=${Math.max(1, parseInt(currentStage, 10) || 1)}&autostart=true`;
+        btn.href = (selectedTheme && selectedTheme !== 'all') ? `${baseHref}&theme=${encodeURIComponent(selectedTheme)}` : baseHref;
+    }
+
     function refreshDifficultySlider() {
         if (window.KumonGen && typeof window.KumonGen.renderPcDifficultySlider === 'function') {
             currentStage = window.KumonGen.renderPcDifficultySlider({
@@ -694,152 +786,22 @@
                 accentColor: '#dc2626',
                 onStageApplied: (nextStage) => {
                     currentStage = nextStage;
+                    previewSheetIdx = 0;
+                    syncTabletLinkTheme();
+                    updateParamPanel();
                     refreshPreview();
                 }
             });
+            syncTabletLinkTheme();
         }
     }
 
-    window.selectLevel = function(id) {
-        const previousLevel = currentLevelId;
+    function switchToLevel(id) {
+        if (!LevelLibrary.ingles.some(l => l.id === id)) return;
         currentLevelId = id;
+        previewSheetIdx = 0;
         if (id === 'i1' && customParams.traceSelected.length === 0) {
             customParams.traceSelected = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-        }
-
-        // Abastecimento automático de palavras em inglês (só ao trocar de nível, preservando customizações)
-        if (id === 'i2' && previousLevel !== 'i2') {
-            customParams.wordList = [
-                { word: 'CAT', parts: ['C','A','T'] },
-                { word: 'DOG', parts: ['D','O','G'] },
-                { word: 'SUN', parts: ['S','U','N'] },
-                { word: 'CAR', parts: ['C','A','R'] },
-                { word: 'BED', parts: ['B','E','D'] },
-                { word: 'HAT', parts: ['H','A','T'] },
-                { word: 'FOG', parts: ['F','O','G'] },
-                { word: 'LEG', parts: ['L','E','G'] },
-                { word: 'PIG', parts: ['P','I','G'] },
-                { word: 'BUS', parts: ['B','U','S'] },
-                { word: 'MAP', parts: ['M','A','P'] },
-                { word: 'PEN', parts: ['P','E','N'] },
-                { word: 'FOX', parts: ['F','O','X'] },
-                { word: 'BAT', parts: ['B','A','T'] },
-                { word: 'CUP', parts: ['C','U','P'] },
-                { word: 'MUG', parts: ['M','U','G'] },
-                { word: 'BOX', parts: ['B','O','X'] },
-                { word: 'RUG', parts: ['R','U','G'] },
-                { word: 'JAM', parts: ['J','A','M'] },
-                { word: 'HEN', parts: ['H','E','N'] },
-                { word: 'WET', parts: ['W','E','T'] },
-                { word: 'DIG', parts: ['D','I','G'] },
-                { word: 'HOP', parts: ['H','O','P'] },
-                { word: 'RUN', parts: ['R','U','N'] },
-                { word: 'NET', parts: ['N','E','T'] },
-                { word: 'JOG', parts: ['J','O','G'] },
-                { word: 'FAN', parts: ['F','A','N'] },
-                { word: 'BIG', parts: ['B','I','G'] },
-                { word: 'TOP', parts: ['T','O','P'] },
-                { word: 'GUM', parts: ['G','U','M'] },
-                { word: 'TIN', parts: ['T','I','N'] },
-                { word: 'POT', parts: ['P','O','T'] },
-                { word: 'BUG', parts: ['B','U','G'] },
-                { word: 'VAN', parts: ['V','A','N'] },
-                { word: 'ZIP', parts: ['Z','I','P'] }
-            ];
-        } else if (id === 'i3' && previousLevel !== 'i3') {
-            customParams.wordList = [
-                { word: 'BIRD', parts: ['B','IR','D'] },
-                { word: 'FISH', parts: ['F','I','SH'] },
-                { word: 'TREE', parts: ['T','R','EE'] },
-                { word: 'BOOK', parts: ['B','OO','K'] },
-                { word: 'FROG', parts: ['F','R','O','G'] },
-                { word: 'DUCK', parts: ['D','U','CK'] },
-                { word: 'STAR', parts: ['S','T','A','R'] },
-                { word: 'BOAT', parts: ['B','OA','T'] },
-                { word: 'MILK', parts: ['M','I','L','K'] },
-                { word: 'HAND', parts: ['H','A','N','D'] },
-                { word: 'JUMP', parts: ['J','U','M','P'] },
-                { word: 'LAMP', parts: ['L','A','M','P'] },
-                { word: 'DRUM', parts: ['D','R','U','M'] },
-                { word: 'RING', parts: ['R','I','NG'] },
-                { word: 'KING', parts: ['K','I','NG'] },
-                { word: 'SWIM', parts: ['S','W','I','M'] },
-                { word: 'SHIP', parts: ['SH','I','P'] },
-                { word: 'CHIN', parts: ['CH','I','N'] },
-                { word: 'THIN', parts: ['TH','I','N'] },
-                { word: 'SOCK', parts: ['S','O','CK'] },
-                { word: 'BELL', parts: ['B','E','LL'] },
-                { word: 'HILL', parts: ['H','I','LL'] },
-                { word: 'WOLF', parts: ['W','O','L','F'] },
-                { word: 'NEST', parts: ['N','E','S','T'] },
-                { word: 'GIFT', parts: ['G','I','F','T'] },
-                { word: 'POND', parts: ['P','O','N','D'] },
-                { word: 'CRAB', parts: ['C','R','A','B'] },
-                { word: 'SNAIL', parts: ['S','N','AI','L'] },
-                { word: 'PLANT', parts: ['P','L','A','N','T'] },
-                { word: 'CLOUD', parts: ['C','L','OU','D'] }
-            ];
-        } else if (id === 'i4' && previousLevel !== 'i4') {
-            customParams.wordList = [
-                { word: 'THE', parts: ['TH','E'] },
-                { word: 'AND', parts: ['A','N','D'] },
-                { word: 'IS', parts: ['I','S'] },
-                { word: 'IN', parts: ['I','N'] },
-                { word: 'IT', parts: ['I','T'] },
-                { word: 'TO', parts: ['T','O'] },
-                { word: 'HE', parts: ['H','E'] },
-                { word: 'SHE', parts: ['SH','E'] },
-                { word: 'WE', parts: ['W','E'] },
-                { word: 'YOU', parts: ['Y','OU'] },
-                { word: 'ARE', parts: ['A','RE'] },
-                { word: 'WAS', parts: ['W','A','S'] },
-                { word: 'FOR', parts: ['F','OR'] },
-                { word: 'ON', parts: ['O','N'] },
-                { word: 'CAN', parts: ['C','A','N'] },
-                { word: 'HAD', parts: ['H','A','D'] },
-                { word: 'HAS', parts: ['H','A','S'] },
-                { word: 'HIS', parts: ['H','I','S'] },
-                { word: 'HER', parts: ['H','ER'] },
-                { word: 'NOT', parts: ['N','O','T'] },
-                { word: 'BUT', parts: ['B','U','T'] },
-                { word: 'ALL', parts: ['A','LL'] },
-                { word: 'MY', parts: ['M','Y'] },
-                { word: 'GO', parts: ['G','O'] },
-                { word: 'SEE', parts: ['S','EE'] },
-                { word: 'LIKE', parts: ['L','I','KE'] },
-                { word: 'COME', parts: ['C','O','ME'] },
-                { word: 'LOOK', parts: ['L','OO','K'] },
-                { word: 'SAID', parts: ['S','AI','D'] },
-                { word: 'PLAY', parts: ['P','L','AY'] }
-            ];
-        } else if (id === 'i5' && previousLevel !== 'i5') {
-            customParams.wordList = [
-                { word: 'CAKE', parts: ['C','A','KE'] },
-                { word: 'BIKE', parts: ['B','I','KE'] },
-                { word: 'HOME', parts: ['H','O','ME'] },
-                { word: 'TUBE', parts: ['T','U','BE'] },
-                { word: 'GATE', parts: ['G','A','TE'] },
-                { word: 'KITE', parts: ['K','I','TE'] },
-                { word: 'BONE', parts: ['B','O','NE'] },
-                { word: 'CUTE', parts: ['C','U','TE'] },
-                { word: 'LAKE', parts: ['L','A','KE'] },
-                { word: 'PINE', parts: ['P','I','NE'] },
-                { word: 'NOSE', parts: ['N','O','SE'] },
-                { word: 'MULE', parts: ['M','U','LE'] },
-                { word: 'WAVE', parts: ['W','A','VE'] },
-                { word: 'LINE', parts: ['L','I','NE'] },
-                { word: 'ROPE', parts: ['R','O','PE'] },
-                { word: 'TUNE', parts: ['T','U','NE'] },
-                { word: 'RACE', parts: ['R','A','CE'] },
-                { word: 'MICE', parts: ['M','I','CE'] },
-                { word: 'POLE', parts: ['P','O','LE'] },
-                { word: 'HUGE', parts: ['H','U','GE'] },
-                { word: 'FACE', parts: ['F','A','CE'] },
-                { word: 'FIRE', parts: ['F','I','RE'] },
-                { word: 'NOTE', parts: ['N','O','TE'] },
-                { word: 'CUBE', parts: ['C','U','BE'] },
-                { word: 'MADE', parts: ['M','A','DE'] }
-            ];
         }
 
         saveState();
@@ -847,6 +809,10 @@
         refreshDifficultySlider();
         updateParamPanel();
         refreshPreview();
+    }
+
+    window.selectLevel = function(id) {
+        switchToLevel(id);
     };
 
     function renderCurrentSheetOnly() {
@@ -874,7 +840,7 @@
         if (!level) return;
 
         const totalPages = KumonGen.getTotalPagesRequested ? KumonGen.getTotalPagesRequested() : 2;
-        const genOpts = { stage: currentStage };
+        const genOpts = { stage: currentStage, theme: selectedTheme };
         lastGeneratedItems = (typeof KumonGen.composeWorksheetItems === 'function')
             ? KumonGen.composeWorksheetItems({ subjectKey: 'ingles', level, totalCount: totalPages * itemsPerPage, generatorFn: generateItemsForLevel, genOpts })
             : generateItemsForLevel(level, totalPages * itemsPerPage, genOpts);
@@ -938,15 +904,9 @@
     }
 
     function selectEngWizardGoal(levelId, el) {
-        currentLevelId = levelId;
         document.querySelectorAll('#panel-wizard .kumon-wizard-card').forEach(card => card.classList.remove('active'));
         if (el) el.classList.add('active');
-
-        saveState();
-        renderLevelList();
-        refreshDifficultySlider();
-        updateParamPanel();
-        refreshPreview();
+        switchToLevel(levelId);
     }
 
     function selectEngWizardPace(pages, lines, btn) {
@@ -1018,11 +978,13 @@
 
         window.addEventListener('kumongen:student_changed', () => {
             refreshDifficultySlider();
+            updateParamPanel();
             refreshPreview();
         });
         window.addEventListener('kumongen:stage_changed', (e) => {
             if (e && e.detail && e.detail.subjectKey === 'ingles') {
                 refreshDifficultySlider();
+                updateParamPanel();
                 refreshPreview();
             }
         });
@@ -1072,7 +1034,7 @@
     window.printSheet = () => {
         const level = LevelLibrary.ingles.find(l => l.id === currentLevelId);
         const totalPages = KumonGen.getTotalPagesRequested ? KumonGen.getTotalPagesRequested() : 2;
-        const genOpts = { stage: currentStage };
+        const genOpts = { stage: currentStage, theme: selectedTheme };
         const makeBatch = (cnt) => (typeof KumonGen.composeWorksheetItems === 'function')
             ? KumonGen.composeWorksheetItems({ subjectKey: 'ingles', level, totalCount: cnt, generatorFn: generateItemsForLevel, genOpts })
             : generateItemsForLevel(level, cnt, genOpts);
@@ -1094,7 +1056,7 @@
 
         const pagesEl = document.getElementById('pagesPerBook');
         const totalPages = pagesEl ? parseInt(pagesEl.value) : 2;
-        const genOpts = { stage: currentStage };
+        const genOpts = { stage: currentStage, theme: selectedTheme };
         const makeBatch = (cnt) => (typeof KumonGen.composeWorksheetItems === 'function')
             ? KumonGen.composeWorksheetItems({ subjectKey: 'ingles', level, totalCount: cnt, generatorFn: generateItemsForLevel, genOpts })
             : generateItemsForLevel(level, cnt, genOpts);
@@ -1110,7 +1072,7 @@
         if (!level) return;
 
         const totalPages = 10; // 5 dias x 2 páginas por dia
-        const genOpts = { stage: currentStage };
+        const genOpts = { stage: currentStage, theme: selectedTheme };
         const allItems = (typeof KumonGen.composeWorksheetItems === 'function')
             ? KumonGen.composeWorksheetItems({ subjectKey: 'ingles', level, totalCount: totalPages * itemsPerPage, generatorFn: generateItemsForLevel, genOpts })
             : generateItemsForLevel(level, totalPages * itemsPerPage, genOpts);

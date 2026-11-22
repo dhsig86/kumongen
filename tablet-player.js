@@ -1246,6 +1246,7 @@
         subjectKey: 'matematica',
         levelId: 'm2',
         currentStage: 1,
+        selectedTheme: 'all',
         autoAdvance: (() => {
             try {
                 const storage = window.SafeStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
@@ -2942,10 +2943,16 @@
                 ? window.KumonProgression.clampStage(subKey, lvlId, Session.currentStage || 1)
                 : (Session.currentStage || 1);
             Session.currentStage = stageVal;
-            if (typeof window !== 'undefined' && window.KumonProgression) {
-                return window.KumonProgression.stageToGeneratorOptions(subKey, lvlId, stageVal);
-            }
-            return { handicap: Session.handicap, stage: stageVal };
+            const activeSt = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getActive === 'function')
+                ? window.StudentProfileEngine.getActive()
+                : null;
+            const baseOpts = (typeof window !== 'undefined' && window.KumonProgression)
+                ? window.KumonProgression.stageToGeneratorOptions(subKey, lvlId, stageVal)
+                : { handicap: Session.handicap, stage: stageVal };
+            return Object.assign({}, baseOpts, {
+                theme: Session.selectedTheme || 'all',
+                studentId: activeSt ? activeSt.id : null
+            });
         },
 
         openDrawer() {
@@ -3513,8 +3520,18 @@
             const qSub = urlParams.get('subject') || (sharedMission && sharedMission.subject);
             const qLvl = urlParams.get('level') || (sharedMission && sharedMission.level);
             const qStage = urlParams.get('stage') || (sharedMission && sharedMission.stage ? String(sharedMission.stage) : null);
+            const qTheme = urlParams.get('theme');
             const qMode = urlParams.get('mode');
             const autoStart = urlParams.get('autostart') === 'true' || qMode === 'weakness';
+
+            if (qTheme && typeof qTheme === 'string') {
+                const validThemes = (window.KumonVocabulary && Array.isArray(window.KumonVocabulary.THEMES))
+                    ? window.KumonVocabulary.THEMES.map(t => t.id)
+                    : ['all', 'animais', 'casa', 'escola', 'comida', 'natureza', 'cotidiano'];
+                Session.selectedTheme = validThemes.includes(qTheme) ? qTheme : 'all';
+            } else {
+                Session.selectedTheme = 'all';
+            }
 
             if (qMode === 'weakness') {
                 Session.adaptiveWeaknessMode = true;
