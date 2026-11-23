@@ -74,7 +74,7 @@
         // Para syllables
         syllableFamilies: {
             'BA': true, 'BE': true, 'BI': true, 'BO': true, 'BU': true,
-            'CA': true, 'CE': true, 'CI': true, 'CO': true, 'CU': true,
+            'CA': true, 'CE': true, 'CI': true, 'CO': true,
             'DA': true, 'DE': true, 'DI': true, 'DO': true, 'DU': true,
             'FA': true, 'FE': true, 'FI': true, 'FO': true, 'FU': true,
             'GA': true, 'GE': true, 'GI': true, 'GO': true, 'GU': true,
@@ -154,7 +154,7 @@
             { word: 'SOPA', parts: ['SO','PA'] },
             { word: 'VIDA', parts: ['VI','DA'] }
         ],
-        wordRepeat: 2
+        wordRepeat: 1
     };
 
     // ---------- PERSISTÊNCIA (LOCAL STORAGE) ----------
@@ -175,11 +175,14 @@
                 }
                 if (Array.isArray(parsed.traceSelected)) customParams.traceSelected = parsed.traceSelected;
                 if (parsed.traceRepeat) customParams.traceRepeat = parseInt(parsed.traceRepeat, 10) || 2;
-                if (parsed.syllableFamilies && typeof parsed.syllableFamilies === 'object') customParams.syllableFamilies = Object.assign({}, customParams.syllableFamilies, parsed.syllableFamilies);
+                if (parsed.syllableFamilies && typeof parsed.syllableFamilies === 'object') {
+                    customParams.syllableFamilies = Object.assign({}, customParams.syllableFamilies, parsed.syllableFamilies);
+                    delete customParams.syllableFamilies.CU;
+                }
                 if (parsed.syllableComplexFamilies && typeof parsed.syllableComplexFamilies === 'object') customParams.syllableComplexFamilies = Object.assign({}, customParams.syllableComplexFamilies, parsed.syllableComplexFamilies);
                 if (parsed.syllableDigraphFamilies && typeof parsed.syllableDigraphFamilies === 'object') customParams.syllableDigraphFamilies = Object.assign({}, customParams.syllableDigraphFamilies, parsed.syllableDigraphFamilies);
                 if (parsed.syllableRepeat) customParams.syllableRepeat = parseInt(parsed.syllableRepeat, 10) || 2;
-                if (parsed.wordRepeat) customParams.wordRepeat = parseInt(parsed.wordRepeat, 10) || 2;
+                if (parsed.wordRepeat) customParams.wordRepeat = Math.max(1, Math.min(5, parseInt(parsed.wordRepeat, 10) || 1));
                 if (typeof parsed.selectedTheme === 'string') selectedTheme = parsed.selectedTheme;
             } catch (e) {
                 console.error("Erro ao ler parametros salvos de portugues", e);
@@ -414,18 +417,45 @@
                 const allSel = Object.keys(sylMap).filter(s => sylMap[s]);
                 const hasExplicitStage = (effOpts.vocabStage !== undefined || effOpts.stage !== undefined);
 
+                const pickShuffle = (arr, n) => {
+                    const cp = arr.slice();
+                    for (let i = cp.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        const t = cp[i]; cp[i] = cp[j]; cp[j] = t;
+                    }
+                    return cp.slice(0, n);
+                };
+
                 let selectedSyllables = allSel;
-                if (hasExplicitStage && allSel.length >= 8) {
+                if (hasExplicitStage && allSel.length >= 5) {
                     const stg = Math.max(1, Math.min(4, parseInt(effOpts.vocabStage || effOpts.stage, 10) || 1));
-                    const chunk = Math.ceil(allSel.length / 4);
-                    const start = (stg - 1) * chunk;
-                    const curBand = allSel.slice(start, Math.min(allSel.length, start + chunk));
-                    const prevBand = stg > 1 ? allSel.slice(Math.max(0, start - chunk), start) : [];
-                    if (stg === 4 && lvlId === 'p5') {
-                        selectedSyllables = allSel;
-                    } else if (curBand.length > 0) {
-                        const revCount = prevBand.length > 0 ? Math.max(1, Math.round(curBand.length * 0.25)) : 0;
-                        selectedSyllables = [...curBand, ...prevBand.slice(0, revCount)];
+                    let bandMatchers = null;
+                    if (lvlId === 'p2') {
+                        bandMatchers = [/^[BCDF]/, /^[GJL]/, /^[MNPR]/, /^[STVZ]/];
+                    } else if (lvlId === 'p5') {
+                        bandMatchers = [/^(BR|CR|DR)/, /^(FR|GR|PR|TR)/, /^(BL|CL|FL|GL|PL)/, null];
+                    } else if (lvlId === 'p6') {
+                        bandMatchers = [/^CH/, /^LH/, /^NH/, /^(QU|GU)/];
+                    }
+
+                    if (bandMatchers) {
+                        if (stg === 4 && lvlId === 'p5') {
+                            selectedSyllables = allSel;
+                        } else {
+                            const curRx = bandMatchers[stg - 1];
+                            const prevRx = stg > 1 ? bandMatchers[stg - 2] : null;
+                            const curBand = curRx ? allSel.filter(s => curRx.test(s)) : allSel;
+                            if (stg === 4 && (lvlId === 'p2' || lvlId === 'p6')) {
+                                // Degrau 4 ("S–Z & Completo" / "QU / GU & Tudo"): foco na 4ª banda + revisão geral das anteriores
+                                const others = curRx ? allSel.filter(s => !curRx.test(s)) : [];
+                                const revQuota = others.length > 0 ? Math.max(3, Math.round(curBand.length * 0.45)) : 0;
+                                selectedSyllables = curBand.length > 0 ? [...curBand, ...pickShuffle(others, revQuota)] : allSel;
+                            } else if (curBand.length > 0) {
+                                const prevBand = prevRx ? allSel.filter(s => prevRx.test(s)) : [];
+                                const revQuota = (stg > 1 && prevBand.length > 0) ? Math.max(1, Math.round(curBand.length * 0.2)) : 0;
+                                selectedSyllables = [...curBand, ...pickShuffle(prevBand, revQuota)];
+                            }
+                        }
                     }
                 } else if (poolRatio < 1) {
                     const sliceLen = Math.max(4, Math.ceil(allSel.length * poolRatio));
@@ -450,6 +480,7 @@
                             levelId: lvlId,
                             stage: effOpts.vocabStage || effOpts.stage || 1,
                             count: target,
+                            repeat: effOpts.wordRepeat || 1,
                             theme: effOpts.theme || (lvlId === currentLevelId ? selectedTheme : 'all'),
                             studentId: effOpts.studentId || null
                         });
@@ -580,7 +611,7 @@
                 stage: currentStage,
                 selectedTheme,
                 accentHex: '#059669',
-                repeatVal: customParams.wordRepeat || 2,
+                repeatVal: customParams.wordRepeat || 1,
                 onThemeChange: (nextTheme) => {
                     selectedTheme = nextTheme || 'all';
                     saveState();
@@ -978,7 +1009,7 @@
         if (!level) return;
 
         const totalPages = KumonGen.getTotalPagesRequested ? KumonGen.getTotalPagesRequested() : 2;
-        const genOpts = { stage: currentStage, theme: selectedTheme };
+        const genOpts = { stage: currentStage, theme: selectedTheme, wordRepeat: customParams.wordRepeat || 1 };
         lastGeneratedItems = (typeof KumonGen.composeWorksheetItems === 'function')
             ? KumonGen.composeWorksheetItems({ subjectKey: 'portugues', level, totalCount: totalPages * itemsPerPage, generatorFn: generateItemsForLevel, genOpts })
             : generateItemsForLevel(level, totalPages * itemsPerPage, genOpts);
@@ -1172,7 +1203,7 @@
     window.printSheet = () => {
         const level = LevelLibrary.portugues.find(l => l.id === currentLevelId);
         const totalPages = KumonGen.getTotalPagesRequested ? KumonGen.getTotalPagesRequested() : 2;
-        const genOpts = { stage: currentStage, theme: selectedTheme };
+        const genOpts = { stage: currentStage, theme: selectedTheme, wordRepeat: customParams.wordRepeat || 1 };
         const makeBatch = (cnt) => (typeof KumonGen.composeWorksheetItems === 'function')
             ? KumonGen.composeWorksheetItems({ subjectKey: 'portugues', level, totalCount: cnt, generatorFn: generateItemsForLevel, genOpts })
             : generateItemsForLevel(level, cnt, genOpts);
@@ -1194,7 +1225,7 @@
 
         const pagesEl = document.getElementById('pagesPerBook');
         const totalPages = pagesEl ? parseInt(pagesEl.value) : 2;
-        const genOpts = { stage: currentStage, theme: selectedTheme };
+        const genOpts = { stage: currentStage, theme: selectedTheme, wordRepeat: customParams.wordRepeat || 1 };
         const makeBatch = (cnt) => (typeof KumonGen.composeWorksheetItems === 'function')
             ? KumonGen.composeWorksheetItems({ subjectKey: 'portugues', level, totalCount: cnt, generatorFn: generateItemsForLevel, genOpts })
             : generateItemsForLevel(level, cnt, genOpts);
@@ -1210,7 +1241,7 @@
         if (!level) return;
 
         const totalPages = 10; // 5 dias x 2 páginas por dia
-        const genOpts = { stage: currentStage, theme: selectedTheme };
+        const genOpts = { stage: currentStage, theme: selectedTheme, wordRepeat: customParams.wordRepeat || 1 };
         const allItems = (typeof KumonGen.composeWorksheetItems === 'function')
             ? KumonGen.composeWorksheetItems({ subjectKey: 'portugues', level, totalCount: totalPages * itemsPerPage, generatorFn: generateItemsForLevel, genOpts })
             : generateItemsForLevel(level, totalPages * itemsPerPage, genOpts);

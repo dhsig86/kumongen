@@ -1,6 +1,6 @@
 {
-  "total": 38,
-  "passed": 38,
+  "total": 40,
+  "passed": 40,
   "failed": 0,
   "assertions": [
     {
@@ -151,12 +151,22 @@
     {
       "status": "PASS",
       "message": "Sync Papel↔Tablet: palavra extra personalizada aparece com prioridade no Tablet Player sem vazamento I2",
-      "details": "{\"ok\":true,\"count\":10,\"words\":[\"CLOUDY\",\"CAN\",\"SHE\",\"PLANET\",\"IT\",\"YOU\"]}"
+      "details": "{\"ok\":true,\"count\":10,\"words\":[\"TO\",\"PLANET\",\"CLOUDY\",\"ROBOT\",\"SEE\",\"ON\"]}"
     },
     {
       "status": "PASS",
       "message": "Português Sprint 6: Wizard P4 sem vazamento de P3, slider 4 degraus e auto-split BORBOLETA -> BOR BO LE TA",
       "details": "{\"ok\":true,\"p4Evolves\":true,\"ptAutoSplit\":true,\"partsGot\":\"BOR BO LE TA\"}"
+    },
+    {
+      "status": "PASS",
+      "message": "Sprint 6.1 Papel/Sidebar: Frase 1-item multi-bloco (I6), frase desordenada no A4, #wordRepeat ativo e anti-XSS DOM",
+      "details": "{\"ok\":true,\"multiBlockSentOk\":true,\"scrambledOnPaperOk\":true,\"wordRepeatWorks\":true,\"uniqAtRep1\":16,\"uniqAtRep4\":4,\"noXssDom\":true}"
+    },
+    {
+      "status": "PASS",
+      "message": "Sprint 6.1 Tablet: Frase extra com >=3 chips clicáveis, badge de tema ativo e reset automático ao mudar nível",
+      "details": "{\"ok\":true,\"sentBlocksOk\":true,\"chipBtnsCount\":3,\"themeActiveBefore\":true,\"themeResetAfterSwitch\":true}"
     },
     {
       "status": "PASS",
@@ -197,10 +207,10 @@
   "consoleErrors": [],
   "networkErrors": [],
   "pageTimings": {
-    "index.html": 182,
-    "matematica.html": 93,
-    "portugues.html": 54,
-    "ingles.html": 49,
-    "tablet.html": 174
+    "index.html": 148,
+    "matematica.html": 99,
+    "portugues.html": 66,
+    "ingles.html": 52,
+    "tablet.html": 164
   }
 }

@@ -947,15 +947,96 @@ function runContentQualityAudit() {
                 ['THIS', 'ingles', 'i3', 'TH I S'],
                 ['FISH', 'ingles', 'i3', 'F I SH'],
                 ['CAKE', 'ingles', 'i5', 'C A KE'],
+                ['TABLE', 'ingles', 'i5', 'T A BLE'],
+                ['WRITE', 'ingles', 'i5', 'WR I TE'],
                 ['BANANA', 'portugues', 'p4', 'BA NA NA'],
                 ['BORBOLETA', 'portugues', 'p4', 'BOR BO LE TA'],
-                ['GALINHA', 'portugues', 'p4', 'GA LI NHA']
+                ['GALINHA', 'portugues', 'p4', 'GA LI NHA'],
+                ['RAINHA', 'portugues', 'p4', 'RA I NHA']
             ];
             for (const [w, sKey, lId, expected] of splitCases) {
                 const got = kv.autoSplitParts(w, sKey, lId).join(' ');
                 if (got !== expected) {
                     stageFailures.push(`autoSplitParts(${w}) esperava "${expected}", retornou "${got}"`);
                 }
+            }
+
+            // Sprint 6.1: Aleatoriedade de alternativas em P7 e I7 (options[0] NÃO pode ser 100% gabarito)
+            for (const [sKey, lId] of [['portugues', 'p7'], ['ingles', 'i7']]) {
+                const subMod = sandbox.KumonSubjects[sKey];
+                const lvlObj = subMod.levels.find(l => l.id === lId);
+                const sample30 = subMod.generate(lvlObj, 30, { stage: 2, vocabStage: 2 });
+                const firstHits = sample30.filter(it => Array.isArray(it.options) && it.options[0] === it.target).length;
+                if (firstHits >= 26 || firstHits === 0) {
+                    stageFailures.push(`${sKey}:${lId} alternativas viciadas na posição 0 (${firstHits}/30 acertos na 1ª opção)`);
+                }
+            }
+
+            // Sprint 6.1: Distratores inteligentes sem colisão em P7 (ESCOLA->SACOLA sem BOLA) e I7 (FAST->SLOW sem FAST)
+            const rPairEn = kv.addCustomItem('ingles', 'i7', { word: 'FAST', target: 'SLOW' }, 'student', 'audit_pair');
+            if (!rPairEn.success || rPairEn.item.options.length !== 3 || rPairEn.item.options.includes('FAST') || !rPairEn.item.options.includes('SLOW')) {
+                stageFailures.push(`Distrator colidiu em I7 FAST->SLOW: ${JSON.stringify(rPairEn.item && rPairEn.item.options)}`);
+            }
+            const rPairPt = kv.addCustomItem('portugues', 'p7', { word: 'ESCOLA', target: 'SACOLA' }, 'student', 'audit_pair');
+            if (!rPairPt.success || rPairPt.item.options.length !== 3 || rPairPt.item.options.includes('BOLA') || rPairPt.item.options.includes('ESCOLA')) {
+                stageFailures.push(`Distrator com rima acidental em P7 ESCOLA->SACOLA: ${JSON.stringify(rPairPt.item && rPairPt.item.options)}`);
+            }
+            kv.clearCustomItemsForLevel('ingles', 'i7', 'audit_pair');
+            kv.clearCustomItemsForLevel('portugues', 'p7', 'audit_pair');
+
+            // Sprint 6.1: Fidelidade estrita de famílias silábicas P2, P5 e P6 contra rótulos dos degraus
+            const porMod = sandbox.KumonSubjects.portugues;
+            const p2Lvl = porMod.levels.find(l => l.id === 'p2');
+            const p5Lvl = porMod.levels.find(l => l.id === 'p5');
+            const p6Lvl = porMod.levels.find(l => l.id === 'p6');
+
+            const p2All = [1, 2, 3, 4].flatMap(s => porMod.generate(p2Lvl, 30, { stage: s }).map(x => x.syllable));
+            if (p2All.includes('CU')) stageFailures.push('P2 gerou sílaba isolada CU inadequada para faixa 5-6 anos');
+            const p2s1 = porMod.generate(p2Lvl, 30, { stage: 1 }).map(x => x.syllable);
+            if (p2s1.some(s => !/^[BCDF]/.test(s))) stageFailures.push(`P2 Degrau 1 (B-F) vazou sílaba fora de B-F: ${p2s1.join(',')}`);
+            const p2s2 = porMod.generate(p2Lvl, 30, { stage: 2 }).map(x => x.syllable);
+            if (p2s2.some(s => /^[MNPRSTVZ]/.test(s))) stageFailures.push(`P2 Degrau 2 (G-L) vazou sílaba futura: ${p2s2.join(',')}`);
+
+            const p5s2 = porMod.generate(p5Lvl, 40, { stage: 2 }).map(x => x.syllable);
+            if (!p5s2.some(s => /^TR/.test(s)) || p5s2.some(s => /^(BL|CL|FL|GL|PL)/.test(s))) {
+                stageFailures.push(`P5 Degrau 2 (FR/GR/PR/TR) sem TR ou vazando L-blends: ${[...new Set(p5s2)].join(',')}`);
+            }
+            const p5s3 = porMod.generate(p5Lvl, 40, { stage: 3 }).map(x => x.syllable);
+            if (!p5s3.some(s => /^(FL|GL|PL)/.test(s))) {
+                stageFailures.push(`P5 Degrau 3 (BL/CL/FL/GL/PL) omitiu FL/GL/PL: ${[...new Set(p5s3)].join(',')}`);
+            }
+
+            const p6s1 = porMod.generate(p6Lvl, 20, { stage: 1 }).map(x => x.syllable);
+            if (p6s1.some(s => !/^CH/.test(s))) stageFailures.push(`P6 Degrau 1 (CH) vazou outro dígrafo: ${[...new Set(p6s1)].join(',')}`);
+            const p6s2 = porMod.generate(p6Lvl, 24, { stage: 2 }).map(x => x.syllable);
+            if (!p6s2.includes('LHA') || p6s2.some(s => /^(NH|QU|GU)/.test(s))) {
+                stageFailures.push(`P6 Degrau 2 (LH) perdeu LHA ou vazou NH/QU/GU: ${[...new Set(p6s2)].join(',')}`);
+            }
+            const p6s4 = new Set(porMod.generate(p6Lvl, 30, { stage: 4 }).map(x => x.syllable));
+            if (!p6s4.has('QUA') || !p6s4.has('GUA') || p6s4.size < 8) {
+                stageFailures.push(`P6 Degrau 4 (QU/GU & Tudo) incompleto: ${[...p6s4].join(',')}`);
+            }
+
+            // Sprint 6.1: Leitner buildAdaptiveSessionItems nunca vaza nível avançado (M9/I7) para nível básico (M1/I2)
+            const m1Lvl = sandbox.KumonSubjects.matematica.levels.find(l => l.id === 'm1');
+            const m6Lvl = sandbox.KumonSubjects.matematica.levels.find(l => l.id === 'm6');
+            const mixedReviewPool = [
+                { id: 'rv_m9', subjectKey: 'matematica', levelId: 'm9', box: 0, dueRound: 0, item: { type: 'math', operand1: 36, operator: '÷', operand2: 6, result: 6 } },
+                { id: 'rv_m2', subjectKey: 'matematica', levelId: 'm2', box: 0, dueRound: 0, item: { type: 'math', operand1: 4, operator: '+', operand2: 3, result: 7 } }
+            ];
+            const packM1 = sandbox.KumonProgression.buildAdaptiveSessionItems({
+                subjectKey: 'matematica', level: m1Lvl, stage: 1, totalCount: 10,
+                generatorFn: sandbox.KumonSubjects.matematica.generate, reviewItems: mixedReviewPool, currentRoundNumber: 2
+            });
+            const packM6 = sandbox.KumonProgression.buildAdaptiveSessionItems({
+                subjectKey: 'matematica', level: m6Lvl, stage: 1, totalCount: 10,
+                generatorFn: sandbox.KumonSubjects.matematica.generate, reviewItems: mixedReviewPool, currentRoundNumber: 2
+            });
+            if (packM1.injectedReviewCount !== 0) {
+                stageFailures.push(`Leitner vazou revisão avançada (M2/M9) para dentro de M1 (${packM1.injectedReviewCount} injetados)`);
+            }
+            if (packM6.injectedReviewCount !== 1 || packM6.reviewIds[0] !== 'rv_m2') {
+                stageFailures.push(`Leitner em M6 deveria consolidar M2 sem puxar M9, obtido: ${JSON.stringify(packM6.reviewIds)}`);
             }
         }
     } else {

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-22T23:21:32.340Z",
+  "timestamp": "2026-11-23T02:35:17.787Z",
   "environment": {
     "nodeVersion": "v24.15.0",
     "platform": "win32",
@@ -27,7 +27,7 @@
     "totalStagesAudited": 132,
     "stageFailuresCount": 0,
     "overallStatus": "PASS",
-    "durationMs": 44
+    "durationMs": 52
   },
   "stageAudit": {
     "totalStagesAudited": 132,
@@ -37,7 +37,7 @@
     "matematica": {
       "levelsCount": 10,
       "passedCount": 10,
-      "averageScore": 99.2,
+      "averageScore": 99.3,
       "status": "PASS"
     },
     "portugues": {
@@ -98,12 +98,12 @@
         "d2_kumon": 100,
         "d3_correctness": 100,
         "d4_concrete": 95,
-        "d5_variability": 95,
-        "weighted": 98.5
+        "d5_variability": 100,
+        "weighted": 99.3
       },
       "metrics": {
-        "entropy": 0.841,
-        "uniqueCount": 7,
+        "entropy": 0.874,
+        "uniqueCount": 8,
         "consecDuplicates": 0
       },
       "weakestDimension": {
@@ -218,12 +218,12 @@
         "d2_kumon": 100,
         "d3_correctness": 100,
         "d4_concrete": 95,
-        "d5_variability": 100,
-        "weighted": 99.3
+        "d5_variability": 95,
+        "weighted": 98.5
       },
       "metrics": {
-        "entropy": 0.892,
-        "uniqueCount": 8,
+        "entropy": 0.821,
+        "uniqueCount": 7,
         "consecDuplicates": 0
       },
       "weakestDimension": {
@@ -282,8 +282,8 @@
         "weighted": 99.3
       },
       "metrics": {
-        "entropy": 0.947,
-        "uniqueCount": 10,
+        "entropy": 0.924,
+        "uniqueCount": 9,
         "consecDuplicates": 0
       },
       "weakestDimension": {
@@ -308,21 +308,18 @@
         "d2_kumon": 100,
         "d3_correctness": 100,
         "d4_concrete": 95,
-        "d5_variability": 90,
-        "weighted": 97.8
+        "d5_variability": 95,
+        "weighted": 98.5
       },
       "metrics": {
-        "entropy": 0.833,
+        "entropy": 0.844,
         "uniqueCount": 8,
-        "consecDuplicates": 4
+        "consecDuplicates": 2
       },
       "weakestDimension": {
-        "name": "Variabilidade/Entropia",
-        "score": 90,
-        "notes": [
-          "Entropia moderada (0.833)",
-          "Repetições imediatas pontuais (4)"
-        ]
+        "name": "Apoio Concreto",
+        "score": 95,
+        "notes": []
       },
       "status": "PASS",
       "passed": true
@@ -405,8 +402,8 @@
         "weighted": 99.7
       },
       "metrics": {
-        "entropy": 1,
-        "uniqueCount": 20,
+        "entropy": 0.954,
+        "uniqueCount": 18,
         "consecDuplicates": 0
       },
       "weakestDimension": {
@@ -495,8 +492,8 @@
         "weighted": 99.7
       },
       "metrics": {
-        "entropy": 1,
-        "uniqueCount": 20,
+        "entropy": 0.977,
+        "uniqueCount": 19,
         "consecDuplicates": 0
       },
       "weakestDimension": {

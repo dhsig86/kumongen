@@ -1027,6 +1027,109 @@ async function runSmokeTests() {
         assert(porVocabFlow.ok, 'Português Sprint 6: Wizard P4 sem vazamento de P3, slider 4 degraus e auto-split BORBOLETA -> BOR BO LE TA', JSON.stringify(porVocabFlow));
 
         // -------------------------------------------------------------
+        // TESTE 15 (Sprint 6.1 — Blindagem dos 9 Bugs: XSS, Frase 1-item I6, Papel P8/I6/P7/I7, #wordRepeat & Tema no Tablet)
+        // -------------------------------------------------------------
+        console.log('\n[TESTE 15] Sprint 6.1: Blindagem Anti-XSS, Frases 1-Item, Embaralhamento Impresso, #wordRepeat e Reset de Tema');
+
+        await page.goto(`${baseUrl}/ingles.html`, { waitUntil: 'networkidle' });
+        await page.waitForTimeout(300);
+
+        const sprint61PaperCheck = await page.evaluate(() => {
+            window.__xssFired = false;
+            const kv = window.KumonVocabulary;
+            kv.clearCustomItemsForLevel('ingles', 'i6');
+            kv.clearCustomItemsForLevel('ingles', 'i4');
+
+            // 1. Bug #2: Frase adicionada no modo 1-item em I6 usa " | " e salva múltiplos blocos (nunca 1 bloco único)
+            window.selectEngWizardGoal('i6');
+            const acc = document.getElementById('advancedAccordion');
+            if (acc) acc.open = true;
+            const inpW = document.getElementById('newWord');
+            const inpP = document.getElementById('newParts');
+            if (inpW) {
+                inpW.value = 'THE CAT IS HAPPY';
+                inpW.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            const pipeSuggested = (inpP?.value || '').includes('|');
+            document.getElementById('addWordBtn')?.click();
+            const savedSent = kv.getCustomItems('ingles', 'i6')[0];
+            const multiBlockSentOk = !!(pipeSuggested && savedSent && Array.isArray(savedSent.parts) && savedSent.parts.length >= 3);
+
+            // 2. Bug #4: Na folha A4 de I6, as frases impressas exibem blocos embaralhados (separados por ·) e não a frase corrida pronta
+            const sheetI6Html = document.getElementById('a4-sheet')?.innerHTML || '';
+            const scrambledOnPaperOk = sheetI6Html.includes('·') && document.querySelectorAll('#a4-sheet .exercise-content').length >= 16;
+
+            // 3. Bug #7: #wordRepeat realmente controla repetição na folha A4
+            window.selectEngWizardGoal('i2');
+            const repInput = document.getElementById('wordRepeat');
+            if (repInput) {
+                repInput.value = '1';
+                repInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            const getSheetWords = () => Array.from(document.querySelectorAll('#a4-sheet .exercise-content')).map(r => {
+                const boxes = Array.from(r.querySelectorAll('span.bg-slate-100')).map(s => s.textContent.trim());
+                return boxes.join('');
+            }).filter(Boolean);
+            const uniqAtRep1 = new Set(getSheetWords()).size;
+            if (repInput) {
+                repInput.value = '4';
+                repInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            const uniqAtRep4 = new Set(getSheetWords()).size;
+            if (repInput) {
+                repInput.value = '1';
+                repInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            const wordRepeatWorks = uniqAtRep1 >= 12 && uniqAtRep4 <= 6;
+
+            // 4. Bug #1 (DOM E2E): tentativa de XSS via input na sidebar não executa script na folha A4
+            window.selectEngWizardGoal('i4');
+            const inpW2 = document.getElementById('newWord');
+            if (inpW2) {
+                inpW2.value = '<img src=x onerror="window.__xssFired=true">WOLF';
+                inpW2.dispatchEvent(new Event('input', { bubbles: true }));
+                document.getElementById('addWordBtn')?.click();
+            }
+            const noXssDom = window.__xssFired === false && !document.querySelector('#a4-sheet img[onerror]');
+
+            return {
+                ok: multiBlockSentOk && scrambledOnPaperOk && wordRepeatWorks && noXssDom,
+                multiBlockSentOk, scrambledOnPaperOk, wordRepeatWorks, uniqAtRep1, uniqAtRep4, noXssDom
+            };
+        });
+        assert(sprint61PaperCheck.ok, 'Sprint 6.1 Papel/Sidebar: Frase 1-item multi-bloco (I6), frase desordenada no A4, #wordRepeat ativo e anti-XSS DOM', JSON.stringify(sprint61PaperCheck));
+
+        // 5. Verifica no Tablet: frase extra de I6 tem >=3 botões de ordenar + tema ?theme=animais exibe badge e reseta ao trocar de nível
+        await page.goto(`${baseUrl}/tablet.html?subject=ingles&level=i6&stage=1&theme=escola&autostart=true`, { waitUntil: 'networkidle' });
+        await page.waitForTimeout(350);
+        const sprint61TabletCheck = await page.evaluate(() => {
+            const dismiss = document.getElementById('dismissExampleBtn');
+            if (dismiss) dismiss.click();
+            const tp = window.TabletPlayer;
+            const kv = window.KumonVocabulary;
+            const customSentInSession = (tp.Session.items || []).find(it => it.sentence === 'THE CAT IS HAPPY');
+            const sentBlocksOk = !!(customSentInSession && Array.isArray(customSentInSession.parts) && customSentInSession.parts.length >= 3);
+            const chipBtnsCount = document.querySelectorAll('.sentence-chip').length;
+            const themeActiveBefore = tp.Session.selectedTheme === 'escola' && (document.getElementById('pickerLevelTitle')?.textContent || '').includes('🎒');
+
+            // Troca de nível pelo Level Picker deve limpar o filtro de tema preso
+            tp.showLevelPickerModal();
+            const i4Card = document.querySelector('.level-card-btn[data-subject="ingles"][data-level-id="i4"]');
+            if (i4Card) i4Card.click();
+            const themeResetAfterSwitch = tp.Session.selectedTheme === 'all' && !(document.getElementById('pickerLevelTitle')?.textContent || '').includes('🎒');
+
+            if (kv) {
+                kv.clearCustomItemsForLevel('ingles', 'i6');
+                kv.clearCustomItemsForLevel('ingles', 'i4');
+            }
+            return {
+                ok: sentBlocksOk && chipBtnsCount >= 3 && themeActiveBefore && themeResetAfterSwitch,
+                sentBlocksOk, chipBtnsCount, themeActiveBefore, themeResetAfterSwitch
+            };
+        });
+        assert(sprint61TabletCheck.ok, 'Sprint 6.1 Tablet: Frase extra com >=3 chips clicáveis, badge de tema ativo e reset automático ao mudar nível', JSON.stringify(sprint61TabletCheck));
+
+        // -------------------------------------------------------------
         // CENÁRIO 6: PWA, MANIFEST E RESILIÊNCIA DE STORAGE
         // -------------------------------------------------------------
         console.log('\n[CENÁRIO 6] Auditoria PWA, Manifest e Storage');

@@ -76,7 +76,7 @@
                 }
                 if (Array.isArray(parsed.traceSelected)) customParams.traceSelected = parsed.traceSelected;
                 if (parsed.traceRepeat) customParams.traceRepeat = parseInt(parsed.traceRepeat, 10) || 2;
-                if (parsed.wordRepeat) customParams.wordRepeat = parseInt(parsed.wordRepeat, 10) || 2;
+                if (parsed.wordRepeat) customParams.wordRepeat = Math.max(1, Math.min(5, parseInt(parsed.wordRepeat, 10) || 1));
                 if (typeof parsed.selectedTheme === 'string') selectedTheme = parsed.selectedTheme;
             } catch (e) {
                 console.error("Erro ao ler parametros salvos de ingles", e);
@@ -367,7 +367,7 @@
         traceSelected: [],
         traceRepeat: 2,
         wordList: [...DEFAULT_WORDS_I2],
-        wordRepeat: 2
+        wordRepeat: 1
     };
 
     function generateItemsForLevel(level, count, options = {}) {
@@ -409,6 +409,7 @@
                             levelId: lvlId,
                             stage: effStage,
                             count: target,
+                            repeat: effOpts.wordRepeat || 1,
                             theme: effOpts.theme || (lvlId === currentLevelId ? selectedTheme : 'all'),
                             studentId: effOpts.studentId || null
                         });
@@ -540,7 +541,7 @@
                 stage: currentStage,
                 selectedTheme,
                 accentHex: '#dc2626',
-                repeatVal: customParams.wordRepeat || 2,
+                repeatVal: customParams.wordRepeat || 1,
                 onThemeChange: (nextTheme) => {
                     selectedTheme = nextTheme || 'all';
                     saveState();
@@ -840,7 +841,7 @@
         if (!level) return;
 
         const totalPages = KumonGen.getTotalPagesRequested ? KumonGen.getTotalPagesRequested() : 2;
-        const genOpts = { stage: currentStage, theme: selectedTheme };
+        const genOpts = { stage: currentStage, theme: selectedTheme, wordRepeat: customParams.wordRepeat || 1 };
         lastGeneratedItems = (typeof KumonGen.composeWorksheetItems === 'function')
             ? KumonGen.composeWorksheetItems({ subjectKey: 'ingles', level, totalCount: totalPages * itemsPerPage, generatorFn: generateItemsForLevel, genOpts })
             : generateItemsForLevel(level, totalPages * itemsPerPage, genOpts);
@@ -1034,7 +1035,7 @@
     window.printSheet = () => {
         const level = LevelLibrary.ingles.find(l => l.id === currentLevelId);
         const totalPages = KumonGen.getTotalPagesRequested ? KumonGen.getTotalPagesRequested() : 2;
-        const genOpts = { stage: currentStage, theme: selectedTheme };
+        const genOpts = { stage: currentStage, theme: selectedTheme, wordRepeat: customParams.wordRepeat || 1 };
         const makeBatch = (cnt) => (typeof KumonGen.composeWorksheetItems === 'function')
             ? KumonGen.composeWorksheetItems({ subjectKey: 'ingles', level, totalCount: cnt, generatorFn: generateItemsForLevel, genOpts })
             : generateItemsForLevel(level, cnt, genOpts);
@@ -1056,7 +1057,7 @@
 
         const pagesEl = document.getElementById('pagesPerBook');
         const totalPages = pagesEl ? parseInt(pagesEl.value) : 2;
-        const genOpts = { stage: currentStage, theme: selectedTheme };
+        const genOpts = { stage: currentStage, theme: selectedTheme, wordRepeat: customParams.wordRepeat || 1 };
         const makeBatch = (cnt) => (typeof KumonGen.composeWorksheetItems === 'function')
             ? KumonGen.composeWorksheetItems({ subjectKey: 'ingles', level, totalCount: cnt, generatorFn: generateItemsForLevel, genOpts })
             : generateItemsForLevel(level, cnt, genOpts);
@@ -1072,7 +1073,7 @@
         if (!level) return;
 
         const totalPages = 10; // 5 dias x 2 páginas por dia
-        const genOpts = { stage: currentStage, theme: selectedTheme };
+        const genOpts = { stage: currentStage, theme: selectedTheme, wordRepeat: customParams.wordRepeat || 1 };
         const allItems = (typeof KumonGen.composeWorksheetItems === 'function')
             ? KumonGen.composeWorksheetItems({ subjectKey: 'ingles', level, totalCount: totalPages * itemsPerPage, generatorFn: generateItemsForLevel, genOpts })
             : generateItemsForLevel(level, totalPages * itemsPerPage, genOpts);

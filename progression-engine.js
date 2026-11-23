@@ -668,10 +668,18 @@
             }
         };
 
-        // Filtra candidatos válidos da matéria (priorizando mesmo nível e caixas Leitner mais baixas/devidas)
+        // Filtra candidatos válidos da matéria (sem vazar níveis curriculares superiores para níveis básicos!)
+        const orderArr = SUBJECT_CURRICULUM_ORDER[subjectKey] || [];
+        const curLvlId = (level && level.id) ? String(level.id).toLowerCase() : '';
+        const curLvlIdx = curLvlId ? orderArr.indexOf(curLvlId) : -1;
+
         const sameSubjectDue = reviewPool
             .filter(entry => entry && entry.item && (entry.subjectKey || subjectKey) === subjectKey)
             .filter(entry => {
+                if (curLvlIdx >= 0 && entry.levelId) {
+                    const entIdx = orderArr.indexOf(String(entry.levelId).toLowerCase());
+                    if (entIdx > curLvlIdx) return false;
+                }
                 if (forceWeaknessMode) return true;
                 const dueRound = typeof entry.dueRound === 'number' ? entry.dueRound : 0;
                 return dueRound <= currentRoundNumber;

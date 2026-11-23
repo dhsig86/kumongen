@@ -738,7 +738,7 @@
     // ============================================================
     // 3. AUTO-SEPARADOR INTELIGENTE (EN FONÉTICO & PT-BR SILÁBICO)
     // ============================================================
-    const EN_DIGRAPHS = ['SH', 'CH', 'TH', 'WH', 'PH', 'QU', 'CK', 'NG', 'LL', 'EE', 'OO', 'AI', 'AY', 'OA', 'OU', 'OW', 'EA', 'AR', 'ER', 'IR', 'OR', 'UR'];
+    const EN_DIGRAPHS = ['SH', 'CH', 'TH', 'WH', 'PH', 'QU', 'WR', 'KN', 'CK', 'NG', 'LL', 'EE', 'OO', 'AI', 'AY', 'OA', 'OU', 'OW', 'EA', 'AR', 'ER', 'IR', 'OR', 'UR'];
     const PT_VOWELS = 'AEIOUÁÉÍÓÚÂÊÔÃÕÜ';
     const PT_INSEP_PAIRS = new Set(['CH', 'LH', 'NH', 'QU', 'GU', 'BR', 'CR', 'DR', 'FR', 'GR', 'PR', 'TR', 'VR', 'BL', 'CL', 'FL', 'GL', 'PL', 'TL']);
     const PT_DIPHTHONGS = new Set(['AI', 'EI', 'OI', 'UI', 'AU', 'EU', 'OU', 'ÃO', 'ÕE', 'ÃE', 'ÁI', 'ÉI', 'ÓI', 'ÉU', 'ÓU', 'IU']);
@@ -764,7 +764,7 @@
         }
         if (vowelsIdx.length <= 1) return [w];
 
-        // Agrupa ditongos canônicos como único núcleo vocálico
+        // Agrupa ditongos canônicos como único núcleo vocálico (exceto hiatos antes de NH ou Z/L/R final tônico: RA-I-NHA, RA-IZ)
         const nuclei = [];
         for (let i = 0; i < vowelsIdx.length; i++) {
             const pos = vowelsIdx[i];
@@ -772,7 +772,10 @@
                 const prev = nuclei[nuclei.length - 1];
                 if (pos === prev.end + 1) {
                     const pair = w[prev.end] + w[pos];
-                    if (PT_DIPHTHONGS.has(pair)) {
+                    const nextTwo = w.slice(pos + 1, pos + 3);
+                    const isHiatusBeforeNh = (w[pos] === 'I' || w[pos] === 'U') && nextTwo === 'NH';
+                    const isHiatusFinalZLR = (w[pos] === 'I' || w[pos] === 'U') && pos + 2 === w.length && 'ZLRM'.includes(w[pos + 1]);
+                    if (PT_DIPHTHONGS.has(pair) && !isHiatusBeforeNh && !isHiatusFinalZLR) {
                         prev.end = pos;
                         continue;
                     }
@@ -827,7 +830,13 @@
         if (levelId === 'i2' && w.length === 3) {
             return w.split('');
         }
-        // Magic E (I5): agrupa consoante + E final (ex.: CAKE -> C A KE, SNAKE -> S NA KE)
+        // Sílaba final consoante + LE (ex.: TABLE -> T A BLE, APPLE -> A P PLE, LITTLE -> L I T TLE)
+        if (w.length >= 5 && /[BPTDGKZ]LE$/.test(w)) {
+            const stem = w.slice(0, -3);
+            const leTail = w.slice(-3);
+            return [..._splitEnWord(stem, 'i3'), leTail];
+        }
+        // Magic E (I5): agrupa consoante + E final (ex.: CAKE -> C A KE, SNAKE -> S NA KE, WRITE -> WR I TE)
         if (levelId === 'i5' && w.length >= 4 && w.endsWith('E')) {
             const tail = w.slice(-2); // ex: KE, ME, TE, BE
             const head = w.slice(0, -2);
@@ -907,53 +916,114 @@
         } catch (e) {}
     }
 
+    // Sanitização estrita anti-XSS (remove tags HTML, handlers e caracteres fora do domínio pedagógico)
+    function _cleanLexicalToken(raw, maxLen = 24, allowSentencePunct = false) {
+        if (raw == null) return '';
+        let s = String(raw)
+            .replace(/<[^>]*>?/g, '')
+            .replace(/\bon\w+\s*=/gi, '')
+            .replace(/[<>"'`&=/\\{}[\]()$;]/g, '');
+        if (allowSentencePunct) {
+            s = s.replace(/[^a-zA-ZÀ-ÿ0-9\s.,!?'-]/g, '').replace(/\s+/g, ' ').trim();
+        } else {
+            s = s.replace(/[^a-zA-ZÀ-ÿ'-]/g, '').trim();
+        }
+        return s.toUpperCase().slice(0, maxLen);
+    }
+
+    function _pickSafePairOptions(subjectKey, word, target, rawOptions) {
+        const cleanProvided = Array.isArray(rawOptions)
+            ? rawOptions.map(o => _cleanLexicalToken(o, 24, false)).filter(o => o && o !== word && o !== target)
+            : [];
+
+        if (subjectKey === 'portugues') {
+            // Evita distratores que rimem acidentalmente com word ou target (ex.: ESCOLA -> SACOLA nunca recebe BOLA!)
+            const tEnd2 = target.slice(-2);
+            const tEnd3 = target.slice(-3);
+            const wEnd2 = word.slice(-2);
+            const wEnd3 = word.slice(-3);
+            const isAccidentalRhyme = (cand) => (
+                (tEnd2.length >= 2 && cand.endsWith(tEnd2)) ||
+                (wEnd2.length >= 2 && cand.endsWith(wEnd2)) ||
+                (tEnd3.length >= 3 && cand.endsWith(tEnd3)) ||
+                (wEnd3.length >= 3 && cand.endsWith(wEnd3))
+            );
+            const fallbackPt = ['NUVEM', 'LIVRO', 'TIGRE', 'PORTA', 'VERDE', 'BARCO', 'CHUVA', 'PEDRA', 'FOLHA', 'LAPIS'];
+            const validDist = [...cleanProvided.filter(c => !isAccidentalRhyme(c)), ...fallbackPt.filter(c => c !== word && c !== target && !isAccidentalRhyme(c))];
+            const uniqDist = Array.from(new Set(validDist)).slice(0, 2);
+            return _shuffle([target, ...uniqDist]);
+        }
+
+        // Inglês I7 (Opposites): exclui word, target e o par canônico ambíguo do catálogo se houver
+        const catI7 = (CATALOG.ingles && CATALOG.ingles.i7) || [];
+        const forbidden = new Set([word, target]);
+        catI7.forEach(pair => {
+            if (pair.word === word || pair.target === word) {
+                forbidden.add(pair.word);
+            }
+        });
+        const fallbackEn = ['SMALL', 'COLD', 'SLOW', 'SAD', 'SHORT', 'DRY', 'EMPTY', 'FAR', 'WEAK', 'LOUD', 'CLEAN', 'QUIET'];
+        const validDist = [...cleanProvided.filter(c => !forbidden.has(c)), ...fallbackEn.filter(c => !forbidden.has(c))];
+        const uniqDist = Array.from(new Set(validDist)).slice(0, 2);
+        return _shuffle([target, ...uniqDist]);
+    }
+
     function _sanitizeEntry(entry, scope) {
         if (!entry || typeof entry !== 'object') return null;
         const subjectKey = entry.subjectKey === 'portugues' ? 'portugues' : 'ingles';
-        const levelId = String(entry.levelId || '').toLowerCase();
+        const levelId = String(entry.levelId || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6);
         if (!levelId) return null;
 
+        const safeId = entry.id
+            ? String(entry.id).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40)
+            : '';
         const base = {
-            id: String(entry.id || ('cv_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6))),
+            id: safeId || ('cv_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6)),
             subjectKey,
             levelId,
-            type: entry.type || (levelId === 'i6' || levelId === 'p8' ? 'sentence' : (levelId === 'i7' ? 'opposite' : (levelId === 'p7' ? 'rhyme' : 'word'))),
+            type: ['word', 'sentence', 'opposite', 'rhyme'].includes(entry.type)
+                ? entry.type
+                : (levelId === 'i6' || levelId === 'p8' ? 'sentence' : (levelId === 'i7' ? 'opposite' : (levelId === 'p7' ? 'rhyme' : 'word'))),
             theme: THEME_MAP[entry.theme] ? entry.theme : 'escola',
             scope: scope === 'shared' ? 'shared' : 'student',
             isCustom: true,
-            createdAt: entry.createdAt || new Date().toISOString()
+            createdAt: typeof entry.createdAt === 'string' ? entry.createdAt.slice(0, 32) : new Date().toISOString()
         };
 
         if (base.type === 'sentence') {
-            const sent = String(entry.sentence || entry.word || '').trim().toUpperCase().slice(0, 60);
-            if (!sent) return null;
-            const parts = Array.isArray(entry.parts) && entry.parts.length > 0
-                ? entry.parts.map(p => String(p).trim().toUpperCase()).filter(Boolean)
+            const sent = _cleanLexicalToken(entry.sentence || entry.word || '', 60, true);
+            if (!sent || sent.replace(/[^A-ZÀ-Ÿ]/g, '').length < 2) return null;
+            let parts = Array.isArray(entry.parts) && entry.parts.length > 0
+                ? entry.parts.map(p => _cleanLexicalToken(p, 40, true)).filter(Boolean)
                 : autoSplitParts(sent, subjectKey, levelId);
+            // Se veio como bloco único mas a frase tem múltiplas palavras, divide automaticamente em blocos pedagógicos
+            if (parts.length <= 1 && sent.includes(' ')) {
+                parts = autoSplitParts(sent, subjectKey, levelId);
+            }
             return Object.assign(base, { sentence: sent, parts });
         }
 
         if (base.type === 'opposite' || base.type === 'rhyme') {
-            const word = String(entry.word || '').trim().toUpperCase().slice(0, 24);
-            const target = String(entry.target || '').trim().toUpperCase().slice(0, 24);
-            if (!word || !target) return null;
-            const distractors = Array.isArray(entry.options) && entry.options.length >= 2
-                ? entry.options.map(o => String(o).trim().toUpperCase()).filter(Boolean)
-                : [target, subjectKey === 'portugues' ? 'MESA' : 'FAST', subjectKey === 'portugues' ? 'BOLA' : 'COLD'];
-            if (!distractors.includes(target)) distractors.unshift(target);
-            const uniqOpts = Array.from(new Set(distractors)).slice(0, 3);
+            const word = _cleanLexicalToken(entry.word || '', 24, false);
+            const target = _cleanLexicalToken(entry.target || '', 24, false);
+            if (!word || word.length < 2 || !target || target.length < 2 || word === target) return null;
+            const uniqOpts = _pickSafePairOptions(subjectKey, word, target, entry.options);
             if (base.type === 'opposite') {
-                return Object.assign(base, { word, target, options: uniqOpts, icon: entry.icon || '🔄' });
+                const safeIcon = entry.icon
+                    ? String(entry.icon).replace(/<[^>]*>?/g, '').replace(/[<>"'`&=/\\{}[\]()$;a-zA-Z0-9]/g, '').trim().slice(0, 12)
+                    : '';
+                return Object.assign(base, { word, target, options: uniqOpts, icon: safeIcon || '🔄' });
             }
-            return Object.assign(base, { word, target, options: uniqOpts, rhymeEnding: entry.rhymeEnding || target.slice(-3) });
+            const safeEnding = _cleanLexicalToken(entry.rhymeEnding || target.slice(-3), 8, false) || target.slice(-2);
+            return Object.assign(base, { word, target, options: uniqOpts, rhymeEnding: safeEnding });
         }
 
-        const word = String(entry.word || '').trim().toUpperCase().slice(0, 24);
-        if (!word) return null;
+        const word = _cleanLexicalToken(entry.word || '', 24, false);
+        if (!word || word.replace(/[^A-ZÀ-Ÿ]/g, '').length < 2) return null;
         let parts = Array.isArray(entry.parts) && entry.parts.length > 0
-            ? entry.parts.map(p => String(p).trim().toUpperCase()).filter(Boolean)
+            ? entry.parts.map(p => _cleanLexicalToken(p, 24, false)).filter(Boolean)
             : autoSplitParts(word, subjectKey, levelId);
-        // Garante recomposição exata (se o usuário editou para algo que diverge, mantém o texto unido como fallback)
+        // Garante recomposição exata (se o usuário editou para algo que diverge, usa separação canônica)
         if (parts.join('') !== word.replace(/\s+/g, '')) {
             parts = autoSplitParts(word, subjectKey, levelId);
         }
@@ -1096,14 +1166,25 @@
                 Object.values(subCat).forEach(arr => {
                     if (Array.isArray(arr)) arr.forEach(it => { if (it && it.word) knownWords.add(it.word.toUpperCase()); });
                 });
-                const validTargetLevel = (subjectKey === 'ingles')
-                    ? (['i2', 'i3', 'i4', 'i5'].includes(currentLevelId) ? currentLevelId : 'i2')
-                    : (['p3', 'p4'].includes(currentLevelId) ? currentLevelId : 'p3');
-
                 legacyWordList.forEach(w => {
-                    const wordUp = w && w.word ? String(w.word).trim().toUpperCase() : '';
-                    if (wordUp && !knownWords.has(wordUp)) {
-                        const res = addCustomItem(subjectKey, validTargetLevel, { word: wordUp, parts: w.parts, theme: 'escola' }, 'student');
+                    const wordUp = w && w.word ? _cleanLexicalToken(w.word, 24, false) : '';
+                    if (wordUp && wordUp.length >= 2 && !knownWords.has(wordUp)) {
+                        let targetLvl;
+                        if (subjectKey === 'ingles') {
+                            if (wordUp.length === 3) {
+                                targetLvl = 'i2';
+                            } else if (wordUp.length >= 4 && wordUp.endsWith('E') && currentLevelId === 'i5') {
+                                targetLvl = 'i5';
+                            } else if (['i3', 'i4', 'i5'].includes(currentLevelId)) {
+                                targetLvl = currentLevelId;
+                            } else {
+                                targetLvl = 'i3';
+                            }
+                        } else {
+                            const sylCount = autoSplitParts(wordUp, 'portugues', 'p4').length;
+                            targetLvl = sylCount >= 3 ? 'p4' : 'p3';
+                        }
+                        const res = addCustomItem(subjectKey, targetLvl, { word: wordUp, parts: w.parts, theme: 'escola' }, 'student');
                         if (res.success) migrated++;
                     }
                 });
@@ -1150,7 +1231,7 @@
     function _cloneItem(it) {
         const c = Object.assign({}, it);
         if (Array.isArray(it.parts)) c.parts = it.parts.slice();
-        if (Array.isArray(it.options)) c.options = it.options.slice();
+        if (Array.isArray(it.options)) c.options = _shuffle(it.options);
         return c;
     }
 
@@ -1168,6 +1249,8 @@
         const levelId = opts.levelId || 'i2';
         const stage = Math.max(1, Math.min(4, parseInt(opts.stage, 10) || 1));
         const count = Math.max(1, parseInt(opts.count, 10) || 16);
+        const repeat = Math.max(1, Math.min(5, parseInt(opts.repeat, 10) || 1));
+        const uniqueTarget = repeat > 1 ? Math.max(1, Math.ceil(count / repeat)) : count;
         const theme = opts.theme || 'all';
         const studentId = opts.studentId || null;
 
@@ -1184,7 +1267,7 @@
             customPool = customPool.filter(it => it.theme === theme);
         }
 
-        const picked = [];
+        const pickedUnique = [];
         const usedKeys = new Set();
 
         const pushUniqueFrom = (sourceArr, quota) => {
@@ -1195,18 +1278,18 @@
                 const k = _itemKey(shuffled[i]);
                 if (!usedKeys.has(k)) {
                     usedKeys.add(k);
-                    picked.push(_cloneItem(shuffled[i]));
+                    pickedUnique.push(_cloneItem(shuffled[i]));
                     added++;
                 }
             }
         };
 
-        // 1. Prioridade garantida para "Minhas Extras" (até 50% do lote para nunca sumirem no degrau 1!)
-        const customQuota = customPool.length > 0 ? Math.min(customPool.length, Math.max(1, Math.ceil(count * 0.5))) : 0;
+        // 1. Prioridade garantida para "Minhas Extras" (até 50% do lote único para nunca sumirem no degrau 1!)
+        const customQuota = customPool.length > 0 ? Math.min(customPool.length, Math.max(1, Math.ceil(uniqueTarget * 0.5))) : 0;
         pushUniqueFrom(customPool, customQuota);
 
         // 2. Composição 80% Degrau Atual + 20% Revisão Leve do Degrau Anterior (quando stage >= 2)
-        const remaining = Math.max(0, count - picked.length);
+        const remaining = Math.max(0, uniqueTarget - pickedUnique.length);
         const reviewQuota = (stage > 1 && prevPool.length > 0 && remaining >= 4)
             ? Math.max(1, Math.round(remaining * 0.2))
             : 0;
@@ -1216,11 +1299,23 @@
         pushUniqueFrom(prevPool, reviewQuota);
 
         // 2.5 Quando há filtro temático ativo e o degrau teve menos itens que o lote, busca mais itens ÚNICOS do mesmo tema no módulo
-        if (hasThemeFilter && picked.length < count && themedAllCatalog.length > 0) {
-            pushUniqueFrom(themedAllCatalog, count - picked.length);
+        if (hasThemeFilter && pickedUnique.length < uniqueTarget && themedAllCatalog.length > 0) {
+            pushUniqueFrom(themedAllCatalog, uniqueTarget - pickedUnique.length);
         }
 
-        // 3. Completa se o caderno pedido for maior que o conjunto único disponível (mantendo fidelidade de tema e evitando repetições consecutivas)
+        // 2.8 Se repeat > 1 (fixação Kumon pedida pelo pai), repete cada item selecionado `repeat` vezes
+        const picked = [];
+        if (repeat > 1 && pickedUnique.length > 0) {
+            for (let r = 0; r < repeat; r++) {
+                for (let u = 0; u < pickedUnique.length && picked.length < count; u++) {
+                    picked.push(_cloneItem(pickedUnique[u]));
+                }
+            }
+        } else {
+            pickedUnique.forEach(it => picked.push(it));
+        }
+
+        // 3. Completa se o caderno pedido for maior que o conjunto disponível (mantendo fidelidade de tema e evitando repetições consecutivas)
         const fallbackPool = (hasThemeFilter && themedAllCatalog.length > 0)
             ? [..._shuffle(stagePool), ..._shuffle(customPool), ..._shuffle(themedAllCatalog)]
             : [..._shuffle(stagePool), ..._shuffle(customPool), ..._shuffle(prevPool), ..._shuffle(allCatalog)];
@@ -1373,7 +1468,7 @@
                 : (isPt ? 'Palavra (ex: BORBOLETA)' : 'Word (ex: THIS)'));
 
         const singlePlaceholderParts = isSentenceLevel
-            ? (isPt ? 'Blocos automáticos (editável)' : 'Auto blocks (editable)')
+            ? (isPt ? 'Blocos com | (ex: O GATO | PULA | ALTO)' : 'Blocks with | (ex: THE CAT | IS | HAPPY)')
             : (isPairLevel
                 ? (isPt ? 'Rima correta (ex: AQUARELA)' : 'Opposite (ex: SLOW)')
                 : (isPt ? 'Sílabas automáticas (ex: BOR BO LE TA)' : 'Auto parts (ex: TH I S)'));
@@ -1514,13 +1609,14 @@
         const scopeSel = container.querySelector('#vocabAddScopeSelect');
         if (scopeSel) scopeSel.addEventListener('change', (e) => { _uiState.addScope = e.target.value; });
 
-        // Auto-preenchimento ao vivo da separação silábica/fonética
+        // Auto-preenchimento ao vivo da separação silábica/fonética/frasal
         const newWordInp = container.querySelector('#newWord');
         const newPartsInp = container.querySelector('#newParts');
         if (newWordInp && newPartsInp && !isPairLevel) {
             newWordInp.addEventListener('input', () => {
                 const val = newWordInp.value.trim();
-                const suggested = autoSplitParts(val, subjectKey, levelId).join(' ');
+                const joinSep = isSentenceLevel ? ' | ' : ' ';
+                const suggested = autoSplitParts(val, subjectKey, levelId).join(joinSep);
                 // Atualiza automaticamente se usuário não sobrescreveu manualmente ou campo estava sincronizado
                 if (!newPartsInp.value.trim() || newPartsInp.value === _uiState.lastAutoSplitVal) {
                     newPartsInp.value = suggested;
@@ -1559,7 +1655,10 @@
                     }
                     payload = { word: wVal, target: pVal, theme: _uiState.addTheme };
                 } else if (isSentenceLevel) {
-                    const parts = pVal ? pVal.split(/\s*\|\s*|\s{2,}/).filter(Boolean) : autoSplitParts(wVal, subjectKey, levelId);
+                    const hasExplicitBlockSep = /\|/.test(pVal) || /\s{2,}/.test(pVal);
+                    const parts = (pVal && hasExplicitBlockSep)
+                        ? pVal.split(/\s*\|\s*|\s{2,}/).filter(Boolean)
+                        : autoSplitParts(wVal, subjectKey, levelId);
                     payload = { sentence: wVal, parts, theme: _uiState.addTheme };
                 } else {
                     const parts = pVal ? pVal.split(/\s+/).filter(Boolean) : autoSplitParts(wVal, subjectKey, levelId);

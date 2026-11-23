@@ -2866,6 +2866,9 @@
         },
 
         confirm() {
+            if (Session.subjectKey !== (this.selectedSubject || 'matematica') || Session.levelId !== (this.selectedLevel || 'm2')) {
+                Session.selectedTheme = 'all';
+            }
             Session.subjectKey = this.selectedSubject || 'matematica';
             Session.levelId = this.selectedLevel || 'm2';
             const fallbackStage = (window.StudentProfileEngine && typeof window.StudentProfileEngine.getLevelStage === 'function')
@@ -2904,6 +2907,18 @@
     // ============================================================
     // 6. MOTOR DO JOGO E CONTROLE DE TELAS
     // ============================================================
+    function _escT(val) {
+        if (typeof window !== 'undefined' && typeof window.escapeHtml === 'function') {
+            return window.escapeHtml(val);
+        }
+        return String(val == null ? '' : val)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
     const TabletPlayer = {
         init() {
             wakeLock.init();
@@ -3719,7 +3734,12 @@
             const titleEl = document.getElementById('pickerLevelTitle');
             const dotEl = document.getElementById('pickerSubjectDot');
             if (titleEl && curLevel) {
-                titleEl.innerText = curLevel.title;
+                let themeSuffix = '';
+                if (Session.selectedTheme && Session.selectedTheme !== 'all' && window.KumonVocabulary && Array.isArray(window.KumonVocabulary.THEMES)) {
+                    const tObj = window.KumonVocabulary.THEMES.find(t => t.id === Session.selectedTheme);
+                    if (tObj) themeSuffix = ` · ${tObj.emoji}`;
+                }
+                titleEl.innerText = curLevel.title + themeSuffix;
             }
             if (dotEl) {
                 if (Session.subjectKey === 'matematica') dotEl.className = 'w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm flex-shrink-0';
@@ -3805,6 +3825,9 @@
                     const chosenSub = btn.getAttribute('data-subject');
                     const chosenLvl = btn.getAttribute('data-level-id');
 
+                    if (Session.subjectKey !== chosenSub || Session.levelId !== chosenLvl) {
+                        Session.selectedTheme = 'all';
+                    }
                     Session.subjectKey = chosenSub;
                     Session.levelId = chosenLvl;
                     if (window.StudentProfileEngine && typeof window.StudentProfileEngine.getLevelStage === 'function') {
@@ -4171,8 +4194,8 @@
             } else if (item.type === 'rhyme') {
                 exampleHtml = `
                     <div class="text-xl md:text-2xl font-bold text-slate-800 flex flex-col items-center justify-center gap-2 my-6">
-                        <span>"${item.word}" rima com:</span>
-                        <span class="bg-indigo-100 text-indigo-700 px-4 py-2 rounded-2xl border-2 border-dashed border-indigo-400 font-black text-2xl">${solved}</span>
+                        <span>"${_escT(item.word)}" rima com:</span>
+                        <span class="bg-indigo-100 text-indigo-700 px-4 py-2 rounded-2xl border-2 border-dashed border-indigo-400 font-black text-2xl">${_escT(solved)}</span>
                     </div>
                 `;
             } else if (item.type === 'sentence') {
@@ -4180,7 +4203,7 @@
                 exampleHtml = `
                     <div class="text-lg md:text-xl font-bold text-slate-800 flex flex-col items-center justify-center gap-2 my-6">
                         <span>${isEng ? 'Sentence model:' : 'Frase modelo:'}</span>
-                        <span class="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-2xl border-2 border-dashed border-emerald-400 font-black text-xl">${sentText}</span>
+                        <span class="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-2xl border-2 border-dashed border-emerald-400 font-black text-xl">${_escT(sentText)}</span>
                         <button id="speakExampleBtn" type="button" class="mt-2 px-3 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-full font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-emerald-300">
                             <i class="fas fa-volume-up"></i> ${isEng ? 'Listen Sentence' : 'Ouvir Frase'}
                         </button>
@@ -4190,8 +4213,8 @@
                 const targetWord = item.target || solved;
                 exampleHtml = `
                     <div class="text-xl md:text-2xl font-bold text-slate-800 flex flex-col items-center justify-center gap-2 my-6">
-                        <span>Opposite of "${item.word}":</span>
-                        <span class="bg-purple-100 text-purple-700 px-4 py-2 rounded-2xl border-2 border-dashed border-purple-400 font-black text-2xl">${targetWord}</span>
+                        <span>Opposite of "${_escT(item.word)}":</span>
+                        <span class="bg-purple-100 text-purple-700 px-4 py-2 rounded-2xl border-2 border-dashed border-purple-400 font-black text-2xl">${_escT(targetWord)}</span>
                         <button id="speakExampleBtn" type="button" class="mt-2 px-3 py-1 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-full font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-purple-300">
                             <i class="fas fa-volume-up"></i> Listen Example
                         </button>
@@ -4202,7 +4225,7 @@
                     <div class="text-xl md:text-2xl font-bold text-slate-800 flex flex-col items-center justify-center gap-2 my-6">
                         <span>${isEng ? 'Target word:' : 'Palavra modelo:'}</span>
                         <div class="flex items-center gap-2">
-                            ${(item.parts || [item.word]).map(p => `<span class="bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-xl font-black text-xl border-2 border-dashed border-emerald-400">${p}</span>`).join('')}
+                            ${(item.parts || [item.word]).map(p => `<span class="bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-xl font-black text-xl border-2 border-dashed border-emerald-400">${_escT(p)}</span>`).join('')}
                         </div>
                         <button id="speakExampleBtn" type="button" class="mt-2 px-3 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-full font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-emerald-300">
                             <i class="fas fa-volume-up"></i> ${isEng ? 'Listen Word' : 'Ouvir Palavra'}
@@ -4213,7 +4236,7 @@
                 exampleHtml = `
                     <div class="text-xl md:text-2xl font-bold text-slate-800 flex flex-col items-center justify-center gap-2 my-6">
                         <span>Sílaba modelo:</span>
-                        <span class="bg-blue-100 text-blue-700 px-6 py-3 rounded-2xl border-2 border-dashed border-blue-400 font-black text-4xl">${item.syllable}</span>
+                        <span class="bg-blue-100 text-blue-700 px-6 py-3 rounded-2xl border-2 border-dashed border-blue-400 font-black text-4xl">${_escT(item.syllable)}</span>
                         <button id="speakExampleBtn" type="button" class="mt-2 px-3 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-full font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-blue-300">
                             <i class="fas fa-volume-up"></i> Ouvir Sílaba
                         </button>
@@ -4979,7 +5002,7 @@
                     <!-- Contexto da Palavra Alvo com Alto Contraste -->
                     <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-950 font-bold text-sm mb-4 shadow-sm">
                         <span class="text-emerald-700 text-xs font-semibold">${isEng ? 'Target Word:' : 'Palavra Alvo:'}</span>
-                        <span class="text-emerald-950 font-black tracking-widest text-base uppercase">${word}</span>
+                        <span class="text-emerald-950 font-black tracking-widest text-base uppercase">${_escT(word)}</span>
                     </div>
 
                     <!-- Palavra sendo montada -->
@@ -4989,9 +5012,9 @@
 
                     <!-- Sílabas disponíveis como botões táteis -->
                     <div id="syllableChipsWrapper" class="flex flex-wrap items-center justify-center gap-3 max-w-md">
-                        ${allChips.map(chip => `
-                            <button class="syllable-chip px-6 py-4 bg-white border-2 border-emerald-500 hover:bg-emerald-50 text-emerald-800 text-2xl font-black rounded-2xl shadow-md active:scale-95 transition-transform cursor-pointer" data-syllable="${chip}">
-                                ${chip}
+                        ${allChips.map((chip, cIdx) => `
+                            <button class="syllable-chip px-6 py-4 bg-white border-2 border-emerald-500 hover:bg-emerald-50 text-emerald-800 text-2xl font-black rounded-2xl shadow-md active:scale-95 transition-transform cursor-pointer" data-chip-idx="${cIdx}" data-syllable="${_escT(chip)}">
+                                ${_escT(chip)}
                             </button>
                         `).join('')}
                     </div>
@@ -5019,7 +5042,7 @@
                 } else {
                     slotsContainer.innerHTML = assembled.map(s => `
                         <div class="px-4 py-2 rounded-xl font-black text-2xl shadow" style="background-color:#059669;color:#ffffff;">
-                            ${s}
+                            ${_escT(s)}
                         </div>
                     `).join('');
                 }
@@ -5030,7 +5053,8 @@
                     if (Session.isTransitionLocked) return;
                     sound.init();
                     sound.playClick();
-                    const syl = btn.getAttribute('data-syllable');
+                    const cIdx = parseInt(btn.getAttribute('data-chip-idx'), 10);
+                    const syl = Number.isInteger(cIdx) && allChips[cIdx] !== undefined ? allChips[cIdx] : btn.getAttribute('data-syllable');
                     speakWord(syl, lang, 1.04, 0.84);
                     assembled.push(syl);
                     btn.classList.add('opacity-40', 'pointer-events-none');
@@ -5225,13 +5249,13 @@
                     </div>
 
                     <div class="text-3xl md:text-4xl font-black text-indigo-900 bg-indigo-50 border-2 border-indigo-300 px-8 py-4 rounded-3xl shadow-inner mb-6 tracking-wide">
-                        ${baseWord}
+                        ${_escT(baseWord)}
                     </div>
 
                     <div class="flex flex-col gap-3 w-full max-w-xs">
-                        ${options.map(opt => `
-                            <button class="rhyme-choice-btn py-3.5 px-4 bg-white border-2 border-indigo-400 hover:bg-indigo-50 text-indigo-900 rounded-2xl text-lg md:text-xl font-black shadow-md active:scale-95 transition-transform text-center cursor-pointer" data-word="${opt}">
-                                ${opt}
+                        ${options.map((opt, oIdx) => `
+                            <button class="rhyme-choice-btn py-3.5 px-4 bg-white border-2 border-indigo-400 hover:bg-indigo-50 text-indigo-900 rounded-2xl text-lg md:text-xl font-black shadow-md active:scale-95 transition-transform text-center cursor-pointer" data-opt-idx="${oIdx}" data-word="${_escT(opt)}">
+                                ${_escT(opt)}
                             </button>
                         `).join('')}
                     </div>
@@ -5247,7 +5271,8 @@
             container.querySelectorAll('.rhyme-choice-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     if (Session.isTransitionLocked) return;
-                    const chosen = btn.getAttribute('data-word');
+                    const oIdx = parseInt(btn.getAttribute('data-opt-idx'), 10);
+                    const chosen = Number.isInteger(oIdx) && options[oIdx] !== undefined ? options[oIdx] : btn.getAttribute('data-word');
                     speakWord(chosen, 'pt-BR', 1.04, 0.84);
                     if (chosen === targetWord) {
                         this.registerSuccess(btn);
@@ -5285,7 +5310,7 @@
                     <!-- Contexto da Frase Modelo com Alto Contraste -->
                     <div class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-100/90 border border-emerald-300 text-emerald-950 font-bold text-sm md:text-base mb-3 shadow-sm max-w-md text-center">
                         <span class="text-emerald-700 font-medium whitespace-nowrap">${isEng ? 'Target Sentence:' : 'Frase Modelo:'}</span>
-                        <span class="text-emerald-950 font-black tracking-wide">${sentence}</span>
+                        <span class="text-emerald-950 font-black tracking-wide">${_escT(sentence)}</span>
                     </div>
 
                     <div id="sentenceTargetSlots" class="w-full max-w-md min-h-[70px] bg-white border-2 border-dashed border-emerald-500 rounded-2xl flex flex-wrap items-center justify-center gap-2 p-3 shadow-inner mb-5">
@@ -5294,8 +5319,8 @@
 
                     <div id="sentenceChipsWrapper" class="flex flex-wrap items-center justify-center gap-2.5 max-w-md">
                         ${scrambled.map((chip, idx) => `
-                            <button class="sentence-chip px-4 py-3 bg-white border-2 border-emerald-500 hover:bg-emerald-50 text-emerald-900 text-base md:text-lg font-black rounded-2xl shadow-md active:scale-95 transition-transform cursor-pointer" data-chip="${chip}" data-idx="${idx}">
-                                ${chip}
+                            <button class="sentence-chip px-4 py-3 bg-white border-2 border-emerald-500 hover:bg-emerald-50 text-emerald-900 text-base md:text-lg font-black rounded-2xl shadow-md active:scale-95 transition-transform cursor-pointer" data-chip="${_escT(chip)}" data-idx="${idx}">
+                                ${_escT(chip)}
                             </button>
                         `).join('')}
                     </div>
@@ -5323,7 +5348,7 @@
                 } else {
                     slotsContainer.innerHTML = assembled.map(s => `
                         <div class="px-3 py-1.5 rounded-xl font-black text-sm md:text-base shadow" style="background-color:#059669;color:#ffffff;">
-                            ${s}
+                            ${_escT(s)}
                         </div>
                     `).join('');
                 }
@@ -5334,7 +5359,8 @@
                     if (Session.isTransitionLocked) return;
                     sound.init();
                     sound.playClick();
-                    const chipVal = btn.getAttribute('data-chip');
+                    const sIdx = parseInt(btn.getAttribute('data-idx'), 10);
+                    const chipVal = Number.isInteger(sIdx) && scrambled[sIdx] !== undefined ? scrambled[sIdx] : btn.getAttribute('data-chip');
                     speakWord(chipVal, lang, 1.04, 0.84);
                     assembled.push(chipVal);
                     btn.classList.add('opacity-40', 'pointer-events-none');
@@ -5391,14 +5417,14 @@
                     </div>
 
                     <div class="flex items-center gap-3 bg-purple-50 border-2 border-purple-300 px-8 py-4 rounded-3xl shadow-inner mb-6">
-                        <span class="text-2xl">${icon}</span>
-                        <span class="text-3xl md:text-4xl font-black text-purple-900 tracking-wider">${word}</span>
+                        <span class="text-2xl">${_escT(icon)}</span>
+                        <span class="text-3xl md:text-4xl font-black text-purple-900 tracking-wider">${_escT(word)}</span>
                     </div>
 
                     <div class="flex flex-col gap-3 w-full max-w-xs">
-                        ${options.map(opt => `
-                            <button class="opposite-choice-btn py-3.5 px-4 bg-white border-2 border-purple-400 hover:bg-purple-50 text-purple-900 rounded-2xl text-lg md:text-xl font-black shadow-md active:scale-95 transition-transform text-center cursor-pointer" data-word="${opt}">
-                                ${opt}
+                        ${options.map((opt, oIdx) => `
+                            <button class="opposite-choice-btn py-3.5 px-4 bg-white border-2 border-purple-400 hover:bg-purple-50 text-purple-900 rounded-2xl text-lg md:text-xl font-black shadow-md active:scale-95 transition-transform text-center cursor-pointer" data-opt-idx="${oIdx}" data-word="${_escT(opt)}">
+                                ${_escT(opt)}
                             </button>
                         `).join('')}
                     </div>
@@ -5414,7 +5440,8 @@
             container.querySelectorAll('.opposite-choice-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     if (Session.isTransitionLocked) return;
-                    const chosen = btn.getAttribute('data-word');
+                    const oIdx = parseInt(btn.getAttribute('data-opt-idx'), 10);
+                    const chosen = Number.isInteger(oIdx) && options[oIdx] !== undefined ? options[oIdx] : btn.getAttribute('data-word');
                     speakWord(chosen, 'en-US', 1.04, 0.84);
                     if (chosen === target) {
                         this.registerSuccess(btn);

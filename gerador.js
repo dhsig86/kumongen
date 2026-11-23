@@ -222,7 +222,7 @@ const KumonGen = (function() {
                 </div>
             `;
         } else if (item.type === 'word') {
-            const curVal = item.parts ? item.parts.join('-') : (item.word || '');
+            const curVal = sanitizeText(item.parts ? item.parts.join('-') : (item.word || ''));
             fieldsHtml = `
                 <div class="flex flex-col my-4">
                     <label class="text-xs font-bold text-slate-500 mb-1.5">Palavra (hífen separa sílabas, ex: BO-LA):</label>
@@ -233,7 +233,7 @@ const KumonGen = (function() {
             fieldsHtml = `
                 <div class="flex flex-col items-center my-4">
                     <label class="text-xs font-bold text-slate-500 mb-1.5">Letra do traçado pontilhado:</label>
-                    <input type="text" id="editChar" maxlength="1" value="${item.char}" class="w-20 text-center text-4xl font-black uppercase bg-slate-100 border-2 border-slate-300 rounded-2xl p-2">
+                    <input type="text" id="editChar" maxlength="1" value="${sanitizeText(item.char || '')}" class="w-20 text-center text-4xl font-black uppercase bg-slate-100 border-2 border-slate-300 rounded-2xl p-2">
                 </div>
             `;
         } else if (item.type === 'syllable') {
@@ -665,29 +665,35 @@ const KumonGen = (function() {
                         content.innerHTML = `<span class="text-sm">____ , ${item.center} , ____</span> <span class="answer-line"></span>`;
                     }
                     break;
-                case 'trace':
+                case 'trace': {
+                    const safeChar = sanitizeText(item.char || '');
                     if (isWorkedExample) {
-                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-3xl font-black text-slate-500 border-2 border-dashed border-slate-400 px-1.5">${item.char}</span> <span class="flex-1 border-b-2 border-dotted border-slate-400 mx-1"></span> <span class="trace-cell flex items-center justify-center font-black text-slate-700 text-sm">${item.char}</span>`;
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-3xl font-black text-slate-500 border-2 border-dashed border-slate-400 px-1.5">${safeChar}</span> <span class="flex-1 border-b-2 border-dotted border-slate-400 mx-1"></span> <span class="trace-cell flex items-center justify-center font-black text-slate-700 text-sm">${safeChar}</span>`;
                     } else {
-                        content.innerHTML = `<span class="text-3xl font-black text-slate-400 border-2 border-dashed border-slate-400 px-1.5">${item.char}</span> <span class="flex-1 border-b-2 border-dotted border-slate-400 mx-1"></span> <span class="trace-cell"></span>`;
+                        content.innerHTML = `<span class="text-3xl font-black text-slate-400 border-2 border-dashed border-slate-400 px-1.5">${safeChar}</span> <span class="flex-1 border-b-2 border-dotted border-slate-400 mx-1"></span> <span class="trace-cell"></span>`;
                     }
                     break;
-                case 'syllable':
+                }
+                case 'syllable': {
+                    const safeSyl = sanitizeText(item.syllable || '');
                     if (isWorkedExample) {
-                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-xl font-bold text-slate-600 border-r pr-1 mr-1">${item.syllable}</span> <span class="example-answer">${item.syllable}</span>`;
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-xl font-bold text-slate-600 border-r pr-1 mr-1">${safeSyl}</span> <span class="example-answer">${safeSyl}</span>`;
                     } else {
-                        content.innerHTML = `<span class="text-xl font-bold text-slate-500 border-r pr-1 mr-1">${item.syllable}</span> <span class="answer-line w-6"></span> <span class="answer-line w-6"></span>`;
+                        content.innerHTML = `<span class="text-xl font-bold text-slate-500 border-r pr-1 mr-1">${safeSyl}</span> <span class="answer-line w-6"></span> <span class="answer-line w-6"></span>`;
                     }
                     break;
-                case 'word':
-                    const partsHtml = item.parts.map(p => `<span class="bg-slate-100 border px-1 text-sm">${p}</span>`).join('<span class="mx-0.5">+</span>');
+                }
+                case 'word': {
+                    const rawParts = Array.isArray(item.parts) && item.parts.length > 0 ? item.parts : [item.word || ''];
+                    const partsHtml = rawParts.map(p => `<span class="bg-slate-100 border px-1 text-sm">${sanitizeText(p)}</span>`).join('<span class="mx-0.5">+</span>');
                     if (isWorkedExample) {
-                        const wordAns = item.word || (item.parts ? item.parts.join('') : '');
+                        const wordAns = sanitizeText(item.word || rawParts.join(''));
                         content.innerHTML = `<span class="example-badge">EXEMPLO</span> <div class="flex items-center gap-0.5">${partsHtml}</div> <span class="example-answer ml-2">${wordAns}</span>`;
                     } else {
                         content.innerHTML = `<div class="flex items-center gap-0.5">${partsHtml}</div> <span class="w-16 border-b-4 border-double border-slate-400 ml-2"></span>`;
                     }
                     break;
+                }
                 case 'fraction': {
                     const num = item.numerator;
                     const den = item.denominator;
@@ -705,29 +711,74 @@ const KumonGen = (function() {
                     }
                     break;
                 }
-                case 'rhyme':
+                case 'rhyme': {
+                    const safeWord = sanitizeText(item.word || '');
+                    const safeTarget = sanitizeText(item.target || '');
+                    if (!Array.isArray(item._paperOptions) && Array.isArray(item.options)) {
+                        const sh = item.options.slice();
+                        for (let k = sh.length - 1; k > 0; k--) {
+                            const j = Math.floor(Math.random() * (k + 1));
+                            const tmp = sh[k]; sh[k] = sh[j]; sh[j] = tmp;
+                        }
+                        item._paperOptions = sh;
+                    }
+                    const optsArr = item._paperOptions || item.options || [];
                     if (isWorkedExample) {
-                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-xs text-slate-500">Rima com</span> <span class="font-black text-indigo-700 bg-indigo-50 px-1 border rounded text-xs">${item.word}</span> <span class="text-xs text-slate-400">→</span> <span class="example-answer font-bold text-xs">${item.target}</span>`;
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-xs text-slate-500">Rima com</span> <span class="font-black text-indigo-700 bg-indigo-50 px-1 border rounded text-xs">${safeWord}</span> <span class="text-xs text-slate-400">→</span> <span class="example-answer font-bold text-xs">${safeTarget}</span>`;
                     } else {
-                        const opts = Array.isArray(item.options) ? item.options.join(' · ') : '';
-                        content.innerHTML = `<span class="text-xs text-slate-500">Rima com</span> <span class="font-bold text-slate-800 bg-slate-100 px-1 border rounded text-xs">${item.word}</span> <span class="text-[10px] text-slate-400">(${opts})</span> <span class="answer-line ml-auto w-14"></span>`;
+                        const opts = optsArr.map(o => sanitizeText(o)).join(' · ');
+                        content.innerHTML = `<span class="text-xs text-slate-500">Rima com</span> <span class="font-bold text-slate-800 bg-slate-100 px-1 border rounded text-xs">${safeWord}</span> <span class="text-[10px] text-slate-400">(${opts})</span> <span class="answer-line ml-auto w-14"></span>`;
                     }
                     break;
-                case 'sentence':
+                }
+                case 'sentence': {
+                    const rawSent = String(item.sentence || '').trim();
+                    const safeSent = sanitizeText(rawSent);
+                    const baseParts = (Array.isArray(item.parts) && item.parts.length >= 2)
+                        ? item.parts.slice()
+                        : rawSent.split(/\s+/).filter(Boolean);
+                    if (!Array.isArray(item._paperParts)) {
+                        const sh = baseParts.slice();
+                        for (let k = sh.length - 1; k > 0; k--) {
+                            const j = Math.floor(Math.random() * (k + 1));
+                            const tmp = sh[k]; sh[k] = sh[j]; sh[j] = tmp;
+                        }
+                        // Garante que os blocos impressos estejam genuinamente fora da ordem original
+                        if (sh.length >= 2 && sh.join(' ').toUpperCase() === rawSent.toUpperCase()) {
+                            sh.push(sh.shift());
+                        }
+                        item._paperParts = sh;
+                    }
+                    const scrambledHtml = item._paperParts
+                        .map(p => `<span class="bg-slate-100 border border-slate-300 rounded px-1 text-[10px] font-bold text-slate-800 leading-tight">${sanitizeText(p)}</span>`)
+                        .join('<span class="text-slate-400 text-[10px]">·</span>');
                     if (isWorkedExample) {
-                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-xs font-black text-slate-700 tracking-wide">${item.sentence}</span> <span class="example-answer ml-auto text-[11px]">${item.sentence}</span>`;
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <div class="flex flex-wrap items-center gap-0.5">${scrambledHtml}</div> <span class="text-xs text-slate-400">→</span> <span class="example-answer ml-auto text-[11px]">${safeSent}</span>`;
                     } else {
-                        content.innerHTML = `<div class="flex flex-col w-full gap-0.5"><span class="text-xs font-bold text-slate-800 tracking-wide">${item.sentence}</span><span class="w-full border-b border-dotted border-slate-300 h-3"></span></div>`;
+                        content.innerHTML = `<div class="flex flex-col w-full gap-0.5"><div class="flex flex-wrap items-center gap-0.5">${scrambledHtml}</div><span class="w-full border-b border-dotted border-slate-300 h-3"></span></div>`;
                     }
                     break;
-                case 'opposite':
+                }
+                case 'opposite': {
+                    const safeWord = sanitizeText(item.word || '');
+                    const safeTarget = sanitizeText(item.target || '');
+                    if (!Array.isArray(item._paperOptions) && Array.isArray(item.options)) {
+                        const sh = item.options.slice();
+                        for (let k = sh.length - 1; k > 0; k--) {
+                            const j = Math.floor(Math.random() * (k + 1));
+                            const tmp = sh[k]; sh[k] = sh[j]; sh[j] = tmp;
+                        }
+                        item._paperOptions = sh;
+                    }
+                    const optsArr = item._paperOptions || item.options || [];
                     if (isWorkedExample) {
-                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-xs text-slate-500">Opposite of</span> <span class="font-black text-purple-700 bg-purple-50 px-1 border rounded text-xs">${item.word}</span> <span class="text-xs text-slate-400">→</span> <span class="example-answer font-bold text-xs">${item.target}</span>`;
+                        content.innerHTML = `<span class="example-badge">EXEMPLO</span> <span class="text-xs text-slate-500">Opposite of</span> <span class="font-black text-purple-700 bg-purple-50 px-1 border rounded text-xs">${safeWord}</span> <span class="text-xs text-slate-400">→</span> <span class="example-answer font-bold text-xs">${safeTarget}</span>`;
                     } else {
-                        const opts = Array.isArray(item.options) ? item.options.join(' · ') : '';
-                        content.innerHTML = `<span class="text-xs text-slate-500">Opposite:</span> <span class="font-bold text-slate-800 bg-slate-100 px-1 border rounded text-xs">${item.word}</span> <span class="text-[10px] text-slate-400">(${opts})</span> <span class="answer-line ml-auto w-14"></span>`;
+                        const opts = optsArr.map(o => sanitizeText(o)).join(' · ');
+                        content.innerHTML = `<span class="text-xs text-slate-500">Opposite:</span> <span class="font-bold text-slate-800 bg-slate-100 px-1 border rounded text-xs">${safeWord}</span> <span class="text-[10px] text-slate-400">(${opts})</span> <span class="answer-line ml-auto w-14"></span>`;
                     }
                     break;
+                }
                 default:
                     content.innerHTML = `<span class="text-slate-300">?</span>`;
             }

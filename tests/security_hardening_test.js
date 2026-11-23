@@ -60,10 +60,14 @@ function createEnvironment() {
         }
     };
     ctx.window.window = ctx.window;
+    ctx.global = ctx.window;
+    ctx.globalThis = ctx.window;
     vm.createContext(ctx);
 
     const code = fs.readFileSync(path.join(__dirname, '..', 'student-profiles.js'), 'utf-8');
     vm.runInContext(code, ctx);
+    const vocabCode = fs.readFileSync(path.join(__dirname, '..', 'vocabulary-engine.js'), 'utf-8');
+    vm.runInContext(vocabCode, ctx);
 
     return { ctx, memoryStore, mockLocalStorage };
 }
@@ -253,6 +257,59 @@ test('vercel.json define CSP, nosniff, SAMEORIGIN e Referrer-Policy', () => {
     assert.strictEqual(headerMap['X-Frame-Options'], 'SAMEORIGIN');
     assert.strictEqual(headerMap['Referrer-Policy'], 'strict-origin-when-cross-origin');
     assert(headerMap['Permissions-Policy'], 'Deve definir Permissions-Policy');
+});
+
+// ====================================================================
+// CENÁRIO 6: BLINDAGEM XSS EM KUMONVOCABULARY & BACKUP CUSTOMVOCAB (SPRINT 6.1)
+// ====================================================================
+console.log('\n[CENÁRIO 6] Blindagem Anti-XSS em Vocabulário Personalizado & Backup customVocab');
+
+const env6 = createEnvironment();
+const kv6 = env6.ctx.window.KumonVocabulary;
+const sp6 = env6.ctx.window.StudentProfileEngine;
+
+test('Rejeita payload XSS puro (<svg/onload=alert(1)>) e remove tags/handlers de palavras extras', () => {
+    const pureXss = kv6.addCustomItem('ingles', 'i4', { word: '<svg/onload=alert(1)>' }, 'student', 'std_sec');
+    assert.strictEqual(pureXss.success, false, 'Payload sem letras válidas após strip deve ser rejeitado');
+
+    const mixedXss = kv6.addCustomItem('ingles', 'i4', { word: '<img src=x onerror=alert(1)>TIGER', parts: ['" onclick="evil()'] }, 'student', 'std_sec');
+    assert.strictEqual(mixedXss.success, true);
+    assert.strictEqual(mixedXss.item.word, 'TIGER');
+    assert(!JSON.stringify(mixedXss.item).includes('<'), 'Item salvo jamais pode conter <');
+    assert(!JSON.stringify(mixedXss.item).includes('>'), 'Item salvo jamais pode conter >');
+    assert(!JSON.stringify(mixedXss.item).toLowerCase().includes('onerror'), 'Item salvo jamais pode conter onerror');
+});
+
+test('Sanitiza vetores XSS em frases, opções e ícones importados via importBackup(customVocab)', () => {
+    const maliciousBackup = {
+        app: 'KumonGen',
+        version: '4.6.0',
+        activeStudentId: 'std_sec',
+        students: [{ id: 'std_sec', name: 'Clara', ageTier: 'age_6_7', mascot: 'jaguar' }],
+        customVocab: {
+            byStudent: {
+                std_sec: [
+                    { subjectKey: 'ingles', levelId: 'i6', type: 'sentence', sentence: '<script>evil()</script>THE CAT RUNS', parts: ['<img src=x>THE CAT', 'RUNS'] }
+                ]
+            },
+            shared: [
+                { subjectKey: 'ingles', levelId: 'i7', type: 'opposite', word: 'BIG', target: 'SMALL', options: ['" onclick="alert(1)', 'SMALL', 'HOT'], icon: '<svg onload=alert(1)>🐘' }
+            ]
+        }
+    };
+
+    const res = sp6.importBackup(JSON.stringify(maliciousBackup));
+    assert.strictEqual(res.success, true);
+
+    const i6Items = kv6.getCustomItems('ingles', 'i6', 'std_sec');
+    const i7Items = kv6.getCustomItems('ingles', 'i7', 'std_sec');
+    assert.strictEqual(i6Items.length, 1);
+    assert.strictEqual(i7Items.length, 1);
+
+    const dumped = JSON.stringify({ i6Items, i7Items });
+    assert(!dumped.includes('<') && !dumped.includes('>'), 'Nenhum < ou > pode sobreviver na restauração de customVocab');
+    assert(!dumped.toLowerCase().includes('onload') && !dumped.toLowerCase().includes('onclick'), 'Nenhum event handler pode sobreviver');
+    assert(i6Items[0].parts.length >= 2, 'Frase restaurada deve manter múltiplos blocos');
 });
 
 // ====================================================================
